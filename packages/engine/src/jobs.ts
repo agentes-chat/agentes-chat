@@ -77,6 +77,7 @@ import {
   relayQueuedFeedback,
   sendQueuedFeedback,
 } from "./feedback";
+import { fireFirstDeliveries } from "./first-delivery";
 import { FOLLOW_UP_JOB, wakeFollowUp } from "./follow-through";
 import { cutText } from "./format";
 import type { GitHubAppAccess } from "./git/github-call";
@@ -138,7 +139,7 @@ import { activateDeliveredSecret, discardClosedSecret } from "./secrets";
 import { describeSkill, SKILL_DESCRIBE_JOB } from "./skill-library";
 import { runSkillUpdates, SKILL_UPDATES_JOB } from "./skill-updates";
 import type { SkillDeps } from "./skills";
-import { TEAM_HELLO_JOB } from "./standing";
+import { FIRST_DELIVERY_JOB, TEAM_HELLO_JOB } from "./standing";
 import { ROUTE_RELEASED_JOB } from "./steering";
 import { purgeOrgFiles, purgeUserFiles, runMigration, type StorageDeps } from "./storage";
 import { postStretchCard, STRETCH_JOB, type StretchHold } from "./stretch";
@@ -1124,6 +1125,10 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     // The team says hi in #general once it can work (ADR 0162).
     [TEAM_HELLO_JOB]: async (job) => {
       await sayTeamHello(deps, orgOf(job), job.payload);
+    },
+    // The first deliveries that can fire now (ADR 0264 addendum): the plan, the AI and the computer all there.
+    [FIRST_DELIVERY_JOB]: async (job) => {
+      await fireFirstDeliveries(deps, orgOf(job));
     },
     [FEEDBACK_JOB]: async (job) => {
       if (isFeedbackRelay((job.payload.feedback as Feedback | undefined)?.to)) {

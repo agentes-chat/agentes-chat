@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { ApiError } from "@agenteschat/client";
 import { knownErrorText } from "@agenteschat/client/lib/errors";
 import { planHoldPhoneLine } from "@agenteschat/client/lib/no-ai";
-import { railState } from "@agenteschat/client/lib/onboarding";
+import { phoneRail } from "@agenteschat/client/lib/onboarding";
 import { isInviteToken } from "../../src/features/auth/links";
 import { PURPOSES, stepFailedText, workspaceAnswer, zoneCity, zoneLabel } from "../../src/features/onboarding/logic";
 import { translator } from "./fixtures";
@@ -75,36 +75,27 @@ test("a step that failed says why the server refused it, else that it didn't sav
 
 const src = (f: string) => readFileSync(new URL(`../../src/features/${f}`, import.meta.url), "utf8");
 
-test("the phone's steps are the web's, read from the workspace's data (ADR 0162)", () => {
-  // The phone keeps its rail (`funnel: null`): no AI step, and a personal workspace opens once made.
-  const base = {
-    orgId: "o1",
-    standing: undefined,
-    billingUrl: null,
-    context: "",
-    team: 0,
-    picked: null,
-    funnel: null,
-  };
+test("the phone's steps, its own until it takes the web's, read from the workspace's data (ADR 0162)", () => {
+  // The phone keeps its rail (`phoneRail`): no AI step, and a personal workspace opens once made.
+  const base = { orgId: "o1", standing: undefined, billingUrl: null, context: "", team: 0 };
   // agentes.chat Cloud, before the workspace exists: its billing service is there, so the plan step will come.
-  expect(railState({ ...base, orgId: null, billingUrl: "https://billing.example.com" }).steps).toEqual([
+  expect(phoneRail({ ...base, orgId: null, billingUrl: "https://billing.example.com" }).steps).toEqual([
     "name",
     "business",
     "team",
     "plan",
   ]);
   // A server of one's own: no plan step, and the team made opens the workspace.
-  expect(railState({ ...base, orgId: null }).steps).toEqual(["name", "business", "team"]);
-  expect(railState({ ...base, context: "Loja online", team: 3 }).at).toBe("open");
+  expect(phoneRail({ ...base, orgId: null }).steps).toEqual(["name", "business", "team"]);
+  expect(phoneRail({ ...base, context: "Loja online", team: 3 }).at).toBe("open");
   // Waiting for its plan with its team made: the plan step, resumed there from any visit.
   const held = { ...base, standing: { state: "hold" as const, reason: "payment" }, context: "Loja online", team: 3 };
-  expect(railState(held)).toMatchObject({ step: "plan", index: 3 });
+  expect(phoneRail(held)).toEqual({ steps: ["name", "business", "team", "plan"], at: "plan" });
   // A team made with no AI still opens: the phone's card connects it.
-  expect(railState({ ...base, context: "Loja online", team: 3 }).steps).not.toContain("ai");
-  expect(railState({ ...base, personal: true }).at).toBe("open");
+  expect(phoneRail({ ...base, context: "Loja online", team: 3 }).steps).not.toContain("ai");
+  expect(phoneRail({ ...base, personal: true }).at).toBe("open");
   const flow = src("onboarding/OnboardingFlow.tsx");
-  expect(flow).toContain("railState({");
-  expect(flow).toContain("funnel: null,");
+  expect(flow).toContain("phoneRail({");
   // Nothing is finished behind the person's back: only an answered workspace with no plan to wait for opens by itself.
   // Only the step on screen opens it, once per first run (Tentar de novo asks again), never while it is opening.
   expect(flow).toContain(

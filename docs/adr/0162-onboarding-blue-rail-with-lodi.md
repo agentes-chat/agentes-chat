@@ -10,7 +10,7 @@
   row), `lib/push-offer.ts` (`pushAskAt`), `lib/billing.ts` (`planOfferOf`); engine `team-templates.ts`
   (`sayTeamHello`), `standing.ts` (`TEAM_HELLO_JOB` queued by `setBillingHold`), `billing-link.ts` (`plan`); web
   `pages/OnboardingPage.tsx`, `pages/onboarding/*` (`TeamSource.tsx`: `useTeamSource`, `TeamSource`; `TeamStart.tsx`; `AiStep.tsx`:
-  `AiHost`, `AiStep`, `AiStage`; `PeopleStep.tsx`), `components/invite/EmailChips.tsx` (`chipsFrom`),
+  `AiHost`, `AiStep`, `AiStage`; `PeopleStep.tsx`), `components/invite/AddressTokens.tsx` (`chipsFrom`, `addressToken`),
   `components/Sky.tsx` (`OnboardingProgress`, `TeamAsleepSky`), `lib/plan-offer.ts`,
   `lib/arrival.ts` (`ARRIVAL_BETA_ONLY`), `components/arrival/Arrival.tsx`, `components/FirstRun.tsx`,
   `components/Standing.tsx` (`HoldBanner`), `components/WebPush.tsx` (`PushAskInline`), `routes/onboarding.tsx`; phone
@@ -189,8 +189,9 @@ on where it opens.
   #general, or the right hand's DM when the plan was left for later. The phone (`funnel: null`) is unchanged.
 - **Inviting people, a team's last step.** A team's rail on the web ends on "Convidar pessoas", after the AI step, so
   reaching a connected AI takes no more steps than before: "Quem trabalha com você?", the addresses as chips with each
-  one's role, and the workspace's link a click away, with the invite dialog's own pieces (ADR 0090: `EmailChips`,
-  `ChipRole`, `InviteLinkPanel`, the batch invite) on the step rather than a form of its own. Its button sends the
+  one's role, and the workspace's link a click away, with the invite dialog's own pieces (ADR 0090: its To field, the
+  kit's `ChipField` of `addressToken`s, each with its `ChipRole` on the token's line; `InviteLinkPanel`, the batch
+  invite) on the step rather than a form of its own. Its button sends the
   invitations and finishes the onboarding; "Convidar depois" under it finishes it with none. A server that sends no
   email shows the link alone, with "Entrar no workspace". A personal workspace and the phone (`funnel: null`) have no
   such step.
@@ -259,4 +260,169 @@ and the wide window's stage.
   shows its mark alone then, so every step fits the bar.
 - **The phone's step bar keeps its height.** Its row is `max-content`: an `auto` row let a tall step squeeze the bar,
   whose overflow is hidden, under its own items.
+
+
+## Amended 2026-11-26: one box on the sky, and the first agent asked of the person's own AI
+
+People reached a workspace with a team they had not chosen (a template) or with none, and the rail asked about the
+business and the person before anything useful happened. The web onboarding now asks the person's own AI for a first
+agent (ADR 0264), shows that agent's first week, and hires it with the plan. Amends §1 to §3 and the amendments of
+2026-11-10 to 2026-11-21 on the rail, the team step, the person's own step, the plan step and the AI step.
+
+- **The frame.** The blue rail, its progress strip and the preview are gone from the web onboarding. One box stands in
+  the middle of the page's own sky (`World`, `Box`): the logo and the way back to another workspace at the top left,
+  the account's menu at the top right, the step's agents standing on the box's top edge with the right hand's line in a
+  bubble, or a header of the box's own (the apps' wall, the team's sky at night or in daylight, its photo). "Step N of
+  M" sits over the title up to the plan, never after it. On a phone the same box fills the width, 16px from the edges.
+  `StepRail`, `OnboardingProgress` and `OnboardingHorizon` stay for New agent.
+- **The steps.** A team's: what it is for, its name (1), how to start (2), the first agent's week (3), the plan (4),
+  then connecting the AI and inviting people, past the count. Started from scratch there is no week: name, start, plan
+  (3). "What you do" and "About you" are gone; the workspace's context comes from what the AI said when an agent is
+  picked (ADR 0264). `RailStep` is `name | start | week | plan | ai | people`. No new stored step: `agents` answers both
+  the start left with no agent and the week seen, so the week is on the rail unless the start was left with none.
+- **How to start.** The box's header is a wall of the catalog's own app marks with a few agents among them, its lead the
+  catalog's count in tens ("more than 70"). Two rows: ask your AI (Claude, ChatGPT, Gemini or another finds the tasks
+  that take most of the person's time and proposes an agent for each) or start from scratch (the right hand, the agents'
+  HR, builds each agent with the person later). The ready-made team templates are gone from the onboarding.
+- **Asking the AI and picking** (ADR 0264). The assistants in a row, most used first, then "Another agent app", which
+  opens the import (ADR 0055). Connecting agentes.chat by MCP and the request to paste, numbered; the proposal is read
+  every 4 s while the step is open; with no connector, the same request asking for a JSON answer and a field to paste
+  it. The options stand as stacked job descriptions (rank, name and role, responsibilities, the apps they need) with the
+  AI's reason under them; "Create <name>" makes that one agent with its routine and its place, nothing before.
+- **The week.** A planner page for the picked agent: the next seven days from today in a plain strip, in the routine's
+  zone (today in a dark circle, the agent's days in its color), today with what it delivers at "Now", and the routine's
+  next day at its time with how it repeats (from the cron the server read in the person's zone, else the AI's own
+  words), then what the AI said about the workspace. An agent brought from another app shows its own first scheduled
+  routine. Its Continue saves `agents`.
+- **The plan, "Hire the team".** The team asleep at night beside its computer on the box's header; who is hired (the
+  first agent with its role and first task, the right hand as the agents' HR; the right hand alone from scratch); the
+  recommended plan in two lines, its name and price with "See all plans", then what it includes. The people a plan
+  includes are said only when the billing service's `plans.json` gives them (an optional `people` per plan, read by
+  `planOfferOf`); this server still names no plan or price. A personal workspace is offered the list's plan for one
+  person (`recommendedAlone`, see above). "Not now" leaves the plan for
+  later as before (the workspace opens in the right hand's DM); the button opens the plan's Checkout. The hint on why
+  the Cloud is paid stays beside the plan's name.
+- **Back from Checkout, the team's photo.** In the plan step's place, once per payment (ADR 0079's moment): the team
+  in daylight with the person among them and a few pixels of confetti, the right hand saying hello, "<org>'s team ·
+  since <date>", who is in it, and what is left (the plan checked, the AI, the people, then the first agent's
+  deliveries). Its one button connects the AI, or goes on when the team already thinks. "Download the team photo" in
+  its footer ("your team's" in a personal workspace) saves that photo as a picture to share: a PNG of 1600×1000 (drawn
+  at twice the pixels) made on a canvas in the browser, nothing sent anywhere. The day sky and its confetti, the right
+  hand with its hello, the person (their photo, drawn portrait or initials, as their face shows) and the agents, each
+  drawn by the agent engine in its own look, then the photo's words (the team and since when, the welcome, who is in
+  it, the person by their first name in place of "You") and the product's name, small. Always in the light theme's
+  colors. It goes through the app's saver as the other downloads do (the desktop app puts it in Downloads), named
+  after the workspace ("acme-team.png"); the button waits while it draws, and a failure says so in a toast. It replaces
+  the paid scene in the onboarding; the arrival's paid dialog elsewhere in the app is unchanged.
+- **The AI step.** "Now, the AI you already pay for": the team awake on a daylight header (no computer drawn there: its
+  state is not this step's to say), the plan bought in this tab over the title, Connect an AI's choices as before, and
+  the ways out in the footer: "Without an AI, agents don't answer." with "Connect later", then Continue (a team's) or
+  "Go to the workspace" once connected.
+- **The people step.** After a plan, "Meanwhile, invite the people you work with": it takes a few minutes, and each
+  person invited creates, on joining, the agent for their own work. With no plan, the same lead under the old title.
+- **Where it opens.** As before: #general, or the right hand's DM for a personal workspace or a plan left for later, on
+  the arrival, which is now the welcome wizard (ADR 0160): `?arrival=beta` once the AI was offered, else `?arrival=1`.
+- **A personal workspace** (ADR 0159): what it is for, then how to start (1), asking its AI and the pick (2), the week
+  (3) and the plan (4); from scratch, how to start and the plan. No name and no people step, and its own words: the
+  tasks "at work or outside it", "Hire <name>", "Welcome to your team". Back from how to start asks what it is for
+  again, "For me" picked, saving nothing: "For me" goes back, "For my team" switches it to a team's (ADR 0159 §4) and
+  asks its name (step 1 of 4), whose Back asks the question again; a team's name step, once the workspace exists, goes
+  back to the same question too, where "For me" switches it to personal, under the personal name, on to how to start.
+- **The phone** keeps its own steps (`phoneRail`: the name, what the workspace does, a template team and the plan in
+  words) until it takes the web's.
+- **Code.** Client `lib/onboarding.ts` (`railSteps`, `railStepAt`, `railState`, `stepCount`, `phoneRail`),
+  `lib/billing.ts` (`planOfferOf`'s `people`); web `pages/OnboardingPage.tsx`, `pages/onboarding/Shell.tsx` (`World`,
+  `Box`, `PickRows`, `Pass`, `Photo`, `AppWall`), `AskStep.tsx` (`AskYourAi`), `PickStep.tsx` (`FirstAgentPick`),
+  `WeekStep.tsx` (`FirstWeek`), `HireStep.tsx` (`HireTeam`), `CelebrateStep.tsx` (`TeamWelcome`), `team-photo.ts`
+  (the photo to download), `AiStep.tsx`, `PeopleStep.tsx`.
+
+## Amended 2026-11-27: the work first, its agent, the plan, the AI, then the photo
+
+Asking the person's AI first, then a week, a plan and the AI before anything worked, kept the value far from the
+start. The web onboarding now starts from the work the first agent does, shows that agent with the apps it works in,
+and promises its first delivery, which the server makes in the person's DM as soon as the workspace has a plan and the
+agent an AI (ADR 0264, addendum of 2026-11-27). Amends the amendment of 2026-11-26 on the steps, how to start, the
+week, the plan, the photo, the AI step and the people step.
+
+- **The steps.** What it is for (1), which now makes the workspace, named from the work e-mail's domain ("Acme"), or the
+  person's first name for a webmail address; the work (2); its agent (3); the plan (4, agentes.chat Cloud only); then
+  the AI and the photo, past the count. A self-hosted server counts three. `RailStep` is
+  `area | agent | plan | ai | celebrate`; `agents` is stored by the agent step's Continue, `computer` by a plan step
+  shown, `ai` by "Continue without AI". The name step, how to start, the pick, the week and the people step are gone;
+  people are invited from the app (the welcome wizard's list keeps its row).
+- **The work.** "What will your first agent do?" over the apps' wall (the areas' agents among the marks, never the
+  right hand). The areas as the kit's flat rows (`OptionLinks flat`): the area's bare icon, its title and line, the
+  apps it works in and the chevron on the title's line; a team's six (support, sales, finance, marketing, my day,
+  engineering), a personal workspace's six (life in order, working for myself, studies, travel, home, health), then
+  "Other". One tap makes the agent. Under them, "Prefer another way?": asking the person's AI (ADR 0264's request, in a
+  dialog over the step, a sheet on a phone; its top option, the task it found repeated most, is made) and bringing
+  agents from another app (the import). The footer says the workspace's name and time zone with "Change", the old name
+  step's two fields in a small dialog.
+- **The agent.** Its portrait as the box's header: an even grid of faint small agents, the middle clear, the agent big
+  in its own color with a soft glow of it. "<Name>, for <area>", what it does, and the apps it works in as flat rows,
+  each with Connect through the app's real connect flow (a mailbox through the mail flow); connecting brings the app's
+  routine for this agent (ADR 0242) with its first run left to the first delivery, and the row says the account and when
+  the routine runs. Back from an app's sign-in, the flow reopens on its confirmation. Continue once one app is
+  connected; at once for work that starts without one (marketing, whose agent starts with its routine) or where none
+  can connect here. "Other": the agent's name and what it does, then the catalog's apps searched. Continue arms the
+  first delivery.
+- **The plan.** The first agent asleep at night in the middle of four empty places (the kit's empty slot), each with
+  another area's icon, joined to it by dotted pixels; "<org>'s team starts with <agent>", what it delivers today and
+  that more agents come later, the areas they could be under it; the plan's name and price on one line, "Unlimited
+  agents and up to N people" from the billing service's list, "See all plans"; "Not now" and "Subscribe to the <plan>
+  plan". No hiring words.
+- **The AI**, right after Checkout: the plan said active over the title, the agent on its daylight sky, Connect an AI's
+  choices as flat rows (the same in the Connect dialog everywhere). "Connect later" asks first, in the kit's confirm
+  dialog: without an AI the first delivery doesn't happen.
+- **The photo** now ends the onboarding: the person and the first agent only, the plan and the AI checked (or "Connect
+  the AI" to do), and the first delivery on its way with the kit's working sign (muted while no AI is connected). Its
+  button opens the person's DM with the agent, with the welcome wizard over it, whose last step leads with the delivery.
+- **A member** (ADR 0264's addendum of 2026-11-26) takes the work and agent steps, then the AI only when none answers
+  for their agent, and lands in their DM with it.
+- **Code.** Client `lib/onboarding.ts` (`railSteps`, `railStepAt`, `railState`, `stepCount`), `lib/first-areas.ts`
+  (`FIRST_AREAS`, `areaAgentInput`, `openAreaRoutine`, `workspaceNameOf`); web `pages/OnboardingPage.tsx`,
+  `MemberOnboardingPage.tsx`, `pages/onboarding/AreaStep.tsx`, `AgentStep.tsx`, `areas.ts`, `Shell.tsx` (`Meet`),
+  `HireStep.tsx`, `AiStep.tsx`, `CelebrateStep.tsx`, `components/connect-here.tsx` (a connect flow opened for one agent),
+  `lib/first-delivery.ts` (the wizard's row); kit `OptionLinks`'s `flat`.
+
+## Amended 2026-11-27 (later): what the first run through it changed
+
+Going through the new onboarding on a test server left the person stuck or unsure in a few places. Amends the
+amendment above.
+
+- **A team names its workspace again**, on its own step after what it is for: the name from the work e-mail to start
+  with, its logo (the crop dialog; sent once the workspace exists) and its time zone. Continue makes the workspace. A
+  team counts five steps on agentes.chat Cloud, four self-hosted (`stepCount`'s `named`); a personal workspace has no
+  name step.
+- **The work step leads with one way in besides the list.** One "Ask your AI" button over the areas, its marks (the AI
+  makers', then two agent apps') on a line over its words, then the sign-in's "or", then the areas. It opens one
+  dialog, "Start from what you already use": the person's AI (the three most used by name, the rest as "Another AI")
+  opens the ask flow on it in the same dialog, with Back; an agent app (three by name, the rest as "Another app") opens
+  the import on it. A member's has no apps. "Prefer another way?" and its two buttons are gone. The ask flow's row
+  lists one assistant per maker, the most used first (a maker's coding tool asked the same AI again).
+- **One first agent.** Asking the AI again, or after an area's agent, takes the earlier one's place (ADR 0264's
+  `replace` on the pick), so the onboarding never leaves several.
+- **The agent step never holds the person.** Continue goes on with or without an app. An app signed in through its own
+  MCP server is a server row with its address: the catalog's app by that address counts as connected, and its return
+  (`connected=custom:<id>`) reopens its confirmation. Past the apps listed, "Search apps" (a stack of a few apps' marks)
+  opens the app's picker that Criar agente uses; "Other" lists no apps of its own, only that button.
+- **"Not now" on the plan asks first**: "Continue without a plan?" (the agent doesn't start and the first delivery
+  waits), with the plan's Checkout as its main button. Confirmed, the photo comes next, with no AI step (on agentes.chat
+  Cloud an AI's sign-in needs the computer a plan brings): the plan's row to do, the delivery waiting; its button opens
+  the right hand's DM, whose card leads with the plan.
+- **The AI step shows once** after Checkout even where the agents already think (a server's own key): Continue there,
+  "Connect later" and its question where they don't; the stored `ai` moves past it, and an AI connected through it
+  stores it once the agents think.
+- **The photo** offers "Change your photo": the avatar builder and the photo upload, for the person's face on it.
+- **The box is never taller than the window**: the header and the title stay, only the answer scrolls inside, the
+  footer stays in view; the box sits higher (104px under the top bar, 92px on a phone), and a window up to 860px tall
+  shows the apps' wall in two rows.
+- **The welcome wizard** has no Skip, its last list keeps every row one height, and it opens over a focus backdrop: the
+  page blurred under a near-solid tone of the sky with a still pixel dither (the kit Dialog's `scrimClassName`).
+- **Ten new workspaces a day count only the ones made**: a refused create, or the one being set up answered again,
+  gives its take back.
+- **"Not now" on the plan is kept** (2026-11-28): confirmed, it stores `ai` (past the plan and the AI steps, which a
+  workspace waiting for its plan skips), so a reload stays on the photo with the plan to do. The name and zone dialog of
+  the work step says why with a toast when its save fails. Once the first delivery is armed, the work and the agent's
+  steps are never offered again (ADR 0264, addendum of 2026-11-28).
 

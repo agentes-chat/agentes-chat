@@ -267,6 +267,7 @@ import {
 } from "./events";
 import { type Feedback, queueFeedback } from "./feedback";
 import type { PendingFeedbackOffer } from "./feedback-offers";
+import { deliverySummary } from "./first-delivery";
 import { comesBackHere, FOLLOW_UP_TOOL, wakesLater } from "./follow-through";
 import { cutText, hasQuestionMark } from "./format";
 import type { ModelGateway } from "./gateway";
@@ -2434,6 +2435,8 @@ async function executeRunInner(
   const triggerMessage = trigger ?? topTrigger ?? (await getMessage(db, run.orgId, run.triggerMessageId));
   const triggerNotice = (triggerMessage?.meta?.notice as { kind?: unknown } | undefined)?.kind;
   const wokenByResult = triggerNotice === "proposal_result" || triggerNotice === "wait_result";
+  /** Woken by a person's first delivery (`first-delivery.ts`): its replies carry `meta.firstDelivery`. */
+  const firstDelivery = triggerNotice === "first_delivery";
   if (
     !ctx.confidential &&
     isConfidential(triggerMessage?.meta) &&
@@ -2782,6 +2785,8 @@ async function executeRunInner(
         ...(files ? { artifacts: files } : {}),
         ...runMeta,
         ...tagged,
+        // The first delivery a person waits for (ADR 0264 addendum): each of its replies says so, with its one line.
+        ...(firstDelivery && !note ? { firstDelivery: { summary: deliverySummary(said) } } : {}),
         ...(readOutside && !note ? { readOutside: true } : {}),
         work,
         ...(teamChecks.length > 0 ? { teamChecks } : {}),

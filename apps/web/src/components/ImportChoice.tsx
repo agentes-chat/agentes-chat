@@ -46,13 +46,11 @@ export interface ChoiceSheet {
  */
 export function useChoiceSheet({
   flow,
-  standalone,
   todos,
   apply,
   onClose,
 }: {
   flow: ImportFlowState;
-  standalone: boolean;
   todos: ReactNode;
   apply: { mutate: () => void; isPending: boolean; isError: boolean; error: unknown };
   onClose: () => void;
@@ -371,9 +369,9 @@ export function useChoiceSheet({
         <Button variant="primary" size="lg" block onClick={() => setView({ step: step + 1, open: null })}>
           {t("common.continue")}
         </Button>
-      ) : nothing || !standalone ? (
+      ) : nothing ? (
         <Button variant="primary" size="lg" block onClick={onClose}>
-          {nothing ? t("common.close") : t("common.continue")}
+          {t("common.close")}
         </Button>
       ) : (
         <Button

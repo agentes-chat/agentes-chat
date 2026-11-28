@@ -103,6 +103,11 @@ describe("the billing link", () => {
     const another = await owner("/api/app/organizations", { json: { name: "Gama" } });
     expect(another.status).toBe(403);
     expect(await another.json()).toMatchObject({ error: { code: "org.create_unpaid", params: { orgId } } });
+    // Only a workspace made counts against the day's ten: a refusal, again and again, is never "too many".
+    for (let i = 0; i < 11; i++) {
+      const refusedAgain = await owner("/api/app/organizations", { json: { name: `Gama ${i}` } });
+      expect(refusedAgain.status).toBe(403);
+    }
   });
 });
 

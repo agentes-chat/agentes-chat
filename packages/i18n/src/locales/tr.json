@@ -920,7 +920,6 @@
     }
   },
   "onboarding": {
-    "stepsLabel": "Başlangıç adımları",
     "deleteLink": "Bu çalışma alanını sil",
     "optionalTag": "isteğe bağlı",
     "stepDone": "(tamamlandı)",
@@ -940,63 +939,21 @@
       "theo": "Tanıştığımıza memnun oldum, ben Theo. Ekibin görevlerini düzenlerim.",
       "atlas": "Selam, ben Atlas. Bilgisayarlarla ilgilenirim."
     },
-    "progress": {
-      "left_one": "{{count}} adım kaldı",
-      "left_other": "{{count}} adım kaldı",
-      "done": "Her şey hazır"
-    },
     "flow": {
       "steps": {
         "name": "Çalışma alanı adı",
         "business": "Ne yapıyorsunuz",
-        "you": "Hakkında",
         "team": "Ekibin",
-        "plan": "Ekibi başlat",
-        "ai": "Yapay zeka bağla",
-        "people": "Kişileri davet et",
-        "namePersonal": "Ne için kullanacaksın",
-        "teamPersonal": "Ajanların",
-        "planPersonal": "Ajanları başlat",
-        "aiPersonal": "Yapay zeka bağla"
+        "plan": "Ekibi başlat"
       },
       "stepOf": "Adım {{n}}/{{total}}",
       "lodi": {
         "name": "Merhaba {{first}}. Ben {{name}}. Ekibi seninle yaklaşık iki dakikada kuracağım.",
         "business": "Bununla ekibe kimi çağıracağımı biliyorum.",
         "team": "Ben olsam bu ekibi kurardım. Her şeyi sonra değiştirebilirsin.",
-        "teamMade": "Ekip zaten kuruldu. Hazır olduğunuzda devam ederiz.",
-        "teamMadePersonal": "Ajanlarınız zaten burada. Hazır olduğunuzda devam ederiz.",
         "plan": "Plandan sonra sadece bir yapay zeka bağlamak kalıyor. Nerede olduğunu gösteririm.",
-        "planThen": "Plan başlayınca sıradaki ekranda yapay zekanı bağlayacaksın.",
-        "you": "Ekipten önce biraz senden bahsedelim.",
-        "youPersonal": "Ajanlarından önce biraz senden bahsedelim.",
-        "ask": "Başka bir yerde zaten ekibin mi var? Hepsini buraya getiririm.",
-        "start": "Yaptığınız işe uygun hazır bir ekibim var. Ya da sadece ikimiz başlarız.",
-        "askPersonal": "Başka bir yerde zaten ajan mı kullanıyorsun? Hepsini buraya getiririm.",
-        "bring": "İsteği kopyala, {{app}} içine yapıştır ve cevabı getir. Gerisini ben hallederim.",
-        "bringFiles": "Uygulamanın dışa aktardığını buraya bırak. Gerisini ben hallederim.",
-        "bringMcp": "Uygulamadaki adımları izle, ajanları buraya kendisi oluşturur. Gelişlerini takip ediyorum.",
-        "found": "Ekibini buldum. Herkes burada mı, bir bak.",
-        "foundPersonal": "Ajanlarını buldum. Hepsi burada mı, bir bak.",
-        "ai": "Son adım. Zaten kullandığın yapay zekayı seç, ekip uyansın.",
-        "aiPersonal": "Son adım. Zaten kullandığın yapay zekayı seç, ben uyanayım.",
-        "aiThen": "Zaten kullandığın yapay zekayı seç, ekip uyansın. Sonra yalnızca kişileri davet etmek kalıyor.",
-        "aiThenAlone": "Zaten kullandığın yapay zekayı seç, ben uyanayım. Sonra yalnızca kişileri davet etmek kalıyor.",
-        "connected": "İşte oldu. Çalışma alanında bana seslen, gerisini göstereyim.",
-        "connectedThen": "İşte oldu. Geriye yalnızca birlikte çalıştığın kişileri davet etmek kaldı.",
         "people": "Şimdi sıra kişilerde. E-postalarını bana ver, davetleri göndereyim.",
         "peopleLink": "Şimdi sıra kişilerde. Onlara bağlantıyı gönder, her isteği sana göstereyim."
-      },
-      "you": {
-        "title": "Şimdi sen",
-        "lead": "Adın ve fotoğrafın ekibe ve ajanlara görünür.",
-        "leadPersonal": "Adın ve fotoğrafın ajanlarına görünür.",
-        "photo": "Fotoğrafın",
-        "build": "Avatar oluştur",
-        "edit": "Avatarı düzenle",
-        "upload": "Fotoğraf yükle",
-        "area": "Ne iş yapıyorsun?",
-        "areaHint": "İsteğe bağlı. Sadece agentes.chat'i kimlerin kullandığını anlamak için."
       },
       "area": {
         "options": {
@@ -1009,118 +966,30 @@
           "other": "Başka bir şey"
         }
       },
-      "preview": {
-        "label": "Sen cevapladıkça çalışma alanın",
-        "name": "Çalışma alanın",
-        "ghost": "Ekibin burada görünecek",
-        "ghostPersonal": "Ajanlarınız burada görünecek"
-      },
       "team": {
-        "title": "Ekibin",
-        "madeLead": "Zaten çalışma alanındalar. Her birini sonra ayarlayabilirsiniz.",
-        "start": {
-          "title": "Ekibe nasıl başlamak istersin?",
-          "lead": "Her şeyi sonra değiştirebilirsin, hiçbir şey kaybolmaz.",
-          "template": "Hazır bir ekiple başla",
-          "templateText_one": "{{template}} şablonundan {{count}} ajan, kendi kanalında, rutini hazır.",
-          "templateText_other": "{{template}} şablonundan {{count}} ajan, her biri kendi kanalında, rutinleri hazır.",
-          "scratch": "Sıfırdan başla",
-          "scratchText": "Sadece {{name}}, sağ kolun. Her ajanı sonra kendi tarzınla oluşturursun.",
-          "scratchWho": "{{name}} ve senin oluşturacakların",
-          "see": "Hazır ekibi gör",
-          "scratchGo": "Sadece {{name}} ile devam et"
-        },
-        "ask": {
-          "title": "Başka bir uygulamada zaten ajanın var mı?",
-          "lead": "Varsa bütün ekibi getiririm: talimatlar, beceriler ve rutinler.",
-          "leadPersonal": "Varsa hepsini getiririm: talimatlar, beceriler ve rutinler.",
-          "none": "Henüz hiçbirini kullanmıyorum",
-          "noneText": "Yaptığınız işe göre {{org}} için bir ekip kurarım.",
-          "noneTextPersonal": "Önce ikimiz başlıyoruz. Ajanlar sonra, istediğin zaman gelir.",
-          "from": "{{app}} uygulamasından getir",
-          "fresh": "Yeni bir ekip kur",
-          "freshPersonal": "Ajansız devam et",
-          "skip": "Bu adımı atla",
-          "skipText": "Ajanları sonra tek tek oluşturabilirsin."
-        },
-        "bring": {
-          "title": "Ekibini {{app}} uygulamasından getir",
-          "titlePersonal": "Ajanlarını {{app}} uygulamasından getir",
-          "titleOther": "Ekibini başka bir uygulamadan getir",
-          "titleOtherPersonal": "Ajanlarını başka bir uygulamadan getir",
-          "lead": "Bir dakika sürer. Orada hiçbir şey değişmez.",
-          "ask": "{{app}} uygulamasından dışa aktarmasını iste",
-          "paste": "{{app}} ile sohbetine yapıştır.",
-          "reply": "Bir JSON ile cevap verir: cevabın tamamını kopyala ve aşağıdaki alana yapıştır.",
-          "field": "{{app}} cevabını buraya yapıştır",
-          "placeholder": "Cevaptaki JSON",
-          "read": "Cevabı oku",
-          "fresh": "Yeni bir ekip kurmayı tercih ederim"
-        },
-        "found": {
-          "title_one": "{{app}} içinde {{count}} ajan buldum",
-          "title_other": "{{app}} içinde {{count}} ajan buldum",
-          "lead": "Zaten sahip oldukları talimatlar, beceriler ve rutinlerle gelirler. Her şeyi sonra değiştirebilirsin.",
-          "bring": "Ekibi getir",
-          "bringPersonal": "Ajanları getir"
-        }
+        "title": "Ekibin"
       },
       "plan": {
         "title": "Ekibini başlat",
-        "lead": "Ekibin hazır. Plan ve bir yapay zekayla bugün başlıyor.",
-        "leadAlone": "Plan ve bir yapay zekayla sağ kolun bugün başlıyor. Diğer ajanları sonra oluşturabilirsin.",
-        "asleep": "Plana kadar uykuda",
-        "price": "<b>{{name}} planı</b> · ayda {{price}}",
-        "name": "<b>{{name}} planı</b>",
         "generic": "Bir agentes.chat planı",
-        "cancel": "İstediğin zaman iptal et",
-        "cta": "Ekibi başlat",
         "all": "Tüm planları gör",
-        "skip": "Sonra başlat ve şimdilik çalışma alanına göz at",
-        "next": "Sırada: yapay zekanı bağlamak.",
-        "titlePersonal": "Ajanlarını başlat",
-        "leadPersonal": "Plan ve bir yapay zekayla bugün başlıyorlar.",
-        "asleepPersonal": "Plana kadar uykuda",
-        "ctaPersonal": "Ajanları başlat"
+        "skipTitle": "Plan olmadan devam edilsin mi?",
+        "skipText": "Plan olmadan {{agent}} çalışmaya başlamaz ve ilk teslim bekler. Daha sonra çalışma alanından abone olabilirsiniz.",
+        "skipGo": "Plan olmadan devam et"
       },
       "ai": {
-        "titlePersonal": "Ajanlarınız düşünebilsin diye bir yapay zeka bağlayın",
-        "titleAlone": "{{name}} düşünebilsin diye bir yapay zeka bağlayın",
+        "title": "Şimdi, zaten ödediğiniz yapay zeka",
+        "lead": "{{name}} onunla düşünür, burada ek ücret yok. Bağladığınız anda ilk teslimat başlar.",
         "later": "Sonra bağla",
-        "doneTitle": "Tamam. {{org}} ekibi artık düşünüyor.",
-        "doneTitlePersonal": "Tamam. {{name}} artık düşünüyor.",
-        "doneLead": "{{label}} tüm ajanlar adına cevap veriyor. Sonra tek tek değiştirebilirsin.",
-        "doneLeadAny": "Bağladığın yapay zeka tüm ajanlar adına cevap veriyor. Sonra tek tek değiştirebilirsin.",
-        "connected": "Bağlı",
-        "enter": "Çalışma alanına git",
-        "awake": "Ekibin uyandı",
-        "answer_one": "{{names}} artık cevap veriyor.",
-        "answer_other": "{{names}} artık cevap veriyor.",
-        "readyPersonal": "Ajanlarınız hazır",
-        "readyAlone": "{{name}} hazır",
-        "wakePersonal": "Uyanmak için tek eksik bir yapay zeka.",
-        "awakePersonal": "Ajanlarınız uyandı",
-        "awakeAlone": "{{name}} uyandı"
+        "skipTitle": "Yapay zeka olmadan devam edilsin mi?",
+        "skipText": "Yapay zeka olmadan {{name}} ilk teslimatı yapmaz ve yanıt vermez. Siz bir yapay zeka bağlayana kadar bekler.",
+        "skipGo": "Yapay zeka olmadan devam et",
+        "connectNow": "Şimdi bağla"
       },
-      "people": {
-        "title": "Seninle kim çalışıyor?",
-        "lead": "Ekibindeki kişileri davet et. Her biri katılmak için bir e-posta alır.",
-        "send": "Davetleri gönder",
-        "later": "Sonra davet et"
-      },
-      "account": "Hesabın"
-    },
-    "railValue": {
-      "context": "Yazıldı",
-      "skipped": "Atlandı",
-      "later": "Sonra",
-      "on": "Açık",
-      "ai": "Bağlı",
-      "invites_one": "{{count}} davet",
-      "invites_other": "{{count}} davet"
+      "account": "Hesabın",
+      "switchNote": "Daha sonra hiçbir şey kaybetmeden değiştirebilirsiniz."
     },
     "back": "Geri",
-    "leave": "{{name}} sayfasına dön",
     "leaveLater": "{{name}} sayfasına dön, sonra bitir",
     "actions": {
       "continue": "Devam",
@@ -1590,7 +1459,6 @@
       "go_other": "{{count}} öğeyi içe aktar",
       "nothingNew": "Bunların hepsi zaten burada.",
       "nothingToBring": "Buradan hiçbir şey gelemiyor. Her öğe nedenini söylüyor.",
-      "withTeam": "Ekibi getirdiğinde gelir.",
       "applying": "İçe aktarılıyor… {{done}}/{{total}}",
       "files": {
         "copy": "Dosyaları Drive'a kopyala",
@@ -1827,6 +1695,295 @@
     "confirmation": {
       "sent": "{{email}} adresine bir onay bağlantısı gönderdik.",
       "first": "Zaten davet edildiniz mi? Önce e-postanızı onaylayın."
+    },
+    "ask": {
+      "title": "İlk ajanınızı isteyin",
+      "titleMember": "Ajanınızı isteyin",
+      "lead": "Yapay zekanız işinizi zaten biliyor. agentes.chat bağlıyken en çok tekrarladığınız görevleri bulur ve her biri için bir ajan önerir. Nereden başlayacağınızı siz seçersiniz.",
+      "leadPersonal": "Yapay zekanız rutininizi zaten biliyor. agentes.chat bağlıyken iş ya da iş dışı fark etmeden en çok tekrarladığınız görevleri bulur ve her biri için bir ajan önerir. Nereden başlayacağınızı siz seçersiniz.",
+      "apps": "Sizin asistanınız",
+      "connect": "agentes.chat'i bağlayın",
+      "connected": "Bağlandı",
+      "paste": "Bu isteği yeni bir sohbete yapıştırın",
+      "pasteJson": "Bu isteği {{app}} ile yeni bir sohbete yapıştırın",
+      "copy": "İsteği kopyala",
+      "waiting": "{{app}} önerisi bekleniyor…",
+      "noConnector": "Bağlayıcı yok mu? Yanıtı yapıştırın",
+      "useConnector": "Bağlayıcıyı kullan",
+      "answer": "{{app}} yanıtının tamamını buraya yapıştırın",
+      "answerPlaceholder": "Yanıt olarak gelen JSON",
+      "read": "Yanıtı oku",
+      "notJson": "Bu yanıtta JSON yok. Yanıtın tamamını kopyalayıp yeniden yapıştırın.",
+      "later": "Şimdi değil",
+      "say": "Dinliyorum. Öneri burada görünecek.",
+      "stuck": "Birkaç dakika sonra hâlâ bir şey yok mu? O sohbette bağlayıcının açık olduğunu kontrol edip isteği yeniden gönderin.",
+      "prompt": {
+        "team": {
+          "open": "Buraya az önce bağladığım agentes.chat'i, günümden tekrar eden bir işi alacak bir yapay zeka ajanıyla kullanmaya başlamak istiyorum.",
+          "know": "1. Bana bir şey sormadan önce hakkımda zaten bildiklerini kullan: önceki sohbetlerimiz, belleğin ve erişebildiğin dosyalar ve uygulamalar. {{org}} ne yapıyor, kimin için yapıyor, hangi uygulamaları kullanıyoruz ve her hafta hangi görevleri tekrarlıyorum, anla.",
+          "send": "4. 3 seçeneği agentes.chat'in propose_first_agents aracıyla gönder, yanına {{org}} ne yapıyor diye iki üç cümlelik bir özet ekle. Hiçbir şey oluşturma: nereden başlayacağımı ben seçeceğim."
+        },
+        "member": {
+          "open": "Buraya bağladığım agentes.chat'te {{org}} çalışma alanına az önce katıldım ve ekipteki rolümden tekrar eden bir işi günümden alacak bir yapay zeka ajanıyla başlamak istiyorum.",
+          "know": "1. Bana bir şey sormadan önce hakkımda zaten bildiklerini kullan: önceki sohbetlerimiz, belleğin ve erişebildiğin dosyalar ve uygulamalar. {{org}} çalışma alanındaki rolümü, kimlerle çalıştığımı, hangi uygulamaları kullandığımı ve her hafta hangi görevleri tekrarladığımı anla.",
+          "send": "4. 3 seçeneği agentes.chat'in propose_first_agents aracıyla gönder, yanına {{org}} bünyesinde ne yaptığıma dair iki üç cümlelik bir özet ekle. Hiçbir şey oluşturma: nereden başlayacağımı ben seçeceğim."
+        },
+        "personal": {
+          "open": "Buraya az önce bağladığım agentes.chat'i, iş ya da iş dışı fark etmeden günümden tekrar eden bir işi alacak bir yapay zeka ajanıyla kullanmaya başlamak istiyorum.",
+          "know": "1. Bana bir şey sormadan önce hakkımda zaten bildiklerini kullan: önceki sohbetlerimiz, belleğin ve erişebildiğin dosyalar ve uygulamalar. Ne yaptığımı, haftamın nasıl geçtiğini, hangi uygulamaları kullandığımı ve hangi görevleri tekrarladığımı anla.",
+          "send": "4. 3 seçeneği agentes.chat'in propose_first_agents aracıyla gönder, yanına benim hakkımda iki üç cümlelik bir özet ekle. Hiçbir şey oluşturma: nereden başlayacağımı ben seçeceğim."
+        },
+        "interview": "2. Önemli bir şey eksikse benimle görüşme yap: her seferinde tek soru, en fazla 3, öneriyi en çok değiştirecek sorudan başlayarak. Bir yanıtı bilmiyorsam en iyi tahmininle devam et ve tahminin ne olduğunu söyle.",
+        "design": "3. Vaktimi en çok alan 3 tekrarlayan görevi seç. Her biri için bir iş ilanı gibi bir ajan tasarla: kısa bir ad, rol, 3 sorumluluk (kendi başına ne yapar, ne zaman çalışır, beni ne zaman çağırır), ihtiyaç duyduğu uygulamalar, gün ve saatiyle rutini ve ilk gününde teslim edebileceği şeyler. Vaktimi en çok alandan en az alana doğru sırala ve gördüklerine dayanarak her birini neden seçtiğini tek cümleyle söyle.",
+        "json": {
+          "team": "agentes.chat'i, günümden tekrar eden bir işi alacak bir yapay zeka ajanıyla kullanmaya başlamak istiyorum.",
+          "member": "agentes.chat'te {{org}} çalışma alanına az önce katıldım ve ekipteki rolümden tekrar eden bir işi günümden alacak bir yapay zeka ajanıyla başlamak istiyorum.",
+          "personal": "agentes.chat'i, iş ya da iş dışı fark etmeden günümden tekrar eden bir işi alacak bir yapay zeka ajanıyla kullanmaya başlamak istiyorum.",
+          "cron": "Her rutinin gününü ve saatini de benim saat dilimimde 5 alanlı bir cron olarak ver.",
+          "send": "4. Yalnızca bu biçimde bir JSON ile yanıt ver, öncesinde ya da sonrasında metin olmasın:",
+          "example": "{\"about\":\"…\",\"options\":[{\"name\":\"…\",\"role\":\"…\",\"why\":\"…\",\"tasks\":[\"…\",\"…\",\"…\"],\"apps\":[\"…\"],\"routine\":{\"title\":\"…\",\"schedule\":\"her pazartesi 8:00\",\"cron\":\"0 8 * * 1\",\"prompt\":\"…\"},\"today\":[\"…\",\"…\"],\"instructions\":\"…\"}]}"
+        }
+      }
+    },
+    "areas": {
+      "title": "İlk ajanınız ne yapacak?",
+      "lead": "Bir iş seçin. Diğer ajanları sonra oluşturursunuz.",
+      "other": "Diğer",
+      "otherLine": "Ajanınızı oluşturun ve uygulamalarını seçin",
+      "ask": "Yapay zekanıza sor",
+      "askLine": "Yapay zekanız ilk ajanı önerir. Ya da başka bir uygulamadan ajan getirin.",
+      "askLineAlone": "Yapay zekanız, zaten yaptıklarınıza göre ilk ajanı önerir.",
+      "startTitle": "Zaten kullandıklarınızla başlayın",
+      "startAi": "Yapay zekanız",
+      "startAiLine": "Zaten yaptıklarınıza göre ilk ajanı önerir",
+      "startApps": "Başka bir uygulamadaki ajanlar",
+      "startAppsLine": "Ajanları talimatları ve rutinleriyle birlikte getirir",
+      "startMoreAi": "Başka bir yapay zeka",
+      "startMoreApp": "Başka bir uygulama",
+      "startMore": "{{names}} ve daha fazlası",
+      "askTitle": "İlk ajanınızı yapay zekanızdan isteyin",
+      "place": "{{name}} · {{zone}}",
+      "change": "Değiştir",
+      "changeTitle": "Ad ve saat dilimi",
+      "list": {
+        "support": {
+          "title": "Destek",
+          "line": "Müşteri e-postalarını ve taleplerini yanıtlar",
+          "role": "Destek",
+          "heading": "{{name}}, destek ajanı",
+          "does": "Müşteri e-postalarını ve taleplerini yanıtlar, her biri için hazır bir taslak bırakır. Onayınız olmadan hiçbir şey gönderilmez.",
+          "connect": "Müşterilerin yazdığı yerleri bağlayın",
+          "today": "yanıt bekleyen e-postalar için taslakları",
+          "working": "{{name}} e-postalarınızı okuyor",
+          "instructions": "Müşteri desteğinden siz sorumlusunuz: müşteri e-postalarını ve taleplerini okur, yanıt bekleyenleri ayırır ve her biri için hazır bir taslak bırakırsınız. Sizi isteyen kişinin onayı olmadan hiçbir şey gönderilmez.",
+          "task": "Son 7 günün e-postalarını okuyun, kaçının yanıt beklediğini söyleyin ve bugünküler için hazır bir taslak bırakın."
+        },
+        "sales": {
+          "title": "Satış",
+          "line": "Yeni potansiyel müşterileri ve duran fırsatları takip eder",
+          "role": "Satış",
+          "heading": "{{name}}, satış ajanı",
+          "does": "Yeni potansiyel müşterileri ve duran fırsatları takip eder, her biri için sonraki mesajı hazır bırakır. Onayınız olmadan hiçbir şey gönderilmez.",
+          "connect": "Müşterilerinizin olduğu yerleri bağlayın",
+          "today": "ilgi bekleyen fırsatlar için sonraki mesajları",
+          "working": "{{name}} fırsatlarınıza bakıyor",
+          "instructions": "Satıştan siz sorumlusunuz: yeni potansiyel müşterileri ve duran fırsatları takip eder, her biri için sonraki mesajı hazır bırakırsınız. Sizi isteyen kişinin onayı olmadan hiçbir şey gönderilmez.",
+          "task": "Yeni potansiyel müşterilere ve 7 günden uzun süredir duran fırsatlara bakın, kaçının ilgi beklediğini söyleyin ve en önemlileri için sonraki mesajı hazır bırakın."
+        },
+        "finance": {
+          "title": "Finans",
+          "line": "Sorunlu ödemeleri bildirir",
+          "role": "Finans",
+          "heading": "{{name}}, finans ajanı",
+          "does": "Sorunlu ödemeleri bulur ve müşteriye gidecek hatırlatmayı hazır bırakır. Onayınız olmadan hiçbir şey gönderilmez.",
+          "connect": "Ödeme aldığınız yerleri bağlayın",
+          "today": "sorunlu ödemeler için hatırlatmaları",
+          "working": "{{name}} ödemelerinize bakıyor",
+          "instructions": "Finanstan siz sorumlusunuz: başarısız olan ya da geciken ödemeleri bulur, her müşteri için hatırlatmayı hazır bırakırsınız. Sizi isteyen kişinin onayı olmadan hiçbir şey gönderilmez.",
+          "task": "Son 7 günün ödemelerine bakın, kaçının başarısız olduğunu ya da geciktiğini söyleyin ve her müşteri için hatırlatmayı hazır bırakın."
+        },
+        "marketing": {
+          "title": "Pazarlama",
+          "line": "Şirket hakkında söylenenleri ve içerik fikirlerini bulur",
+          "role": "Pazarlama",
+          "heading": "{{name}}, pazarlama ajanı",
+          "does": "İnternette {{org}} hakkında söylenenleri bulur ve yanıt gerektirenleri getirir.",
+          "connect": "Zaten internetle başlıyor. Daha ileri gitmek için bağlayın",
+          "today": "internette {{org}} hakkında söylenenlerin özetini",
+          "working": "{{name}}, {{org}} hakkında söylenenleri arıyor",
+          "instructions": "Pazarlamadan siz sorumlusunuz: internette ve sosyal medyada {{org}} hakkında söylenenleri bulur, yanıt gerektirenleri getirir ve içerik fikirleri önerirsiniz. Sizi isteyen kişinin onayı olmadan hiçbir şey yayımlanmaz.",
+          "task": "Son 7 günde internette {{org}} hakkında söylenenleri arayın, neyin yanıt gerektirdiğini söyleyin ve 3 içerik fikri getirin."
+        },
+        "day": {
+          "title": "Günüm",
+          "line": "Bugünün e-postaları, toplantıları ve görevleri",
+          "role": "Gününüz",
+          "heading": "{{name}}, gününüz için",
+          "does": "Her sabah bugünün e-postalarını, toplantılarını ve görevlerini tek bir özette toplar.",
+          "connect": "Günlerinizin geçtiği yerleri bağlayın",
+          "today": "gününüzün özetini",
+          "working": "{{name}} gününüzü hazırlıyor",
+          "instructions": "Sizi isteyen kişinin gününü siz düzenlersiniz: her sabah yanıt bekleyen e-postaları, toplantıları ve bugünün görevlerini kısa bir özette toplarsınız.",
+          "task": "Bugünün özetini hazırlayın: toplantılar, son tarihi gelen görevler ve yanıt bekleyen e-postalar."
+        },
+        "tech": {
+          "title": "Mühendislik",
+          "line": "İnceleme bekleyen PR'ları ve yeni hataları bulur",
+          "role": "Mühendislik",
+          "heading": "{{name}}, mühendislik ajanı",
+          "does": "İnceleme bekleyen PR'ları ve yeni hataları bulur, önce neye bakılacağını söyler.",
+          "connect": "Ekibin çalıştığı yerleri bağlayın",
+          "today": "dikkat isteyen PR'ların ve hataların listesini",
+          "working": "{{name}} PR'lara ve hatalara bakıyor",
+          "instructions": "Mühendislikten siz sorumlusunuz: inceleme bekleyen PR'ları ve yeni hataları bulur, ekibin önce neye bakması gerektiğini söylersiniz. Sizi isteyen kişinin onayı olmadan hiçbir şey değiştirilmez.",
+          "task": "İnceleme bekleyen PR'ları ve son 7 günün yeni hatalarını listeleyin, önce neye bakılacağını söyleyin."
+        },
+        "life": {
+          "title": "Düzenli bir hayat",
+          "line": "Takvim, hatırlatmalar ve faturalar",
+          "role": "Düzenli bir hayat",
+          "heading": "{{name}}, düzenli bir hayat için",
+          "does": "Bugünün toplantılarını, görevlerini ve e-postalarını tek bir özette toplar.",
+          "connect": "Günlerinizin geçtiği yerleri bağlayın",
+          "today": "gününüzün özetini",
+          "working": "{{name}} gününüzü hazırlıyor",
+          "instructions": "Sizi isteyen kişinin hayatını düzende tutarsınız: takvim, hatırlatmalar ve faturalar. Her sabah bugünün toplantılarını, görevlerini ve e-postalarını tek bir özette toplarsınız.",
+          "task": "Bugünün özetini hazırlayın: toplantılar, görevler, yanıt bekleyen e-postalar ve bu hafta ödenecek faturalar."
+        },
+        "freelance": {
+          "title": "Kendi işimi yapıyorum",
+          "line": "Müşteriler, faturalar ve takvim",
+          "role": "İş",
+          "heading": "{{name}}, işiniz için",
+          "does": "Müşterilerinizi, faturalarınızı ve takviminizi takip eder, bugün sizi bekleyenleri söyler.",
+          "connect": "Çalıştığınız yerleri bağlayın",
+          "today": "sizi bekleyen işlerin listesini",
+          "working": "{{name}} müşterilerinize bakıyor",
+          "instructions": "Sizi isteyen kişi kendi işini yapıyor ve siz onun işiyle ilgilenirsiniz: müşteriler, faturalar ve takvim. Dikkat gerektirenleri bildirir, hazırlanabilecek olanı hazır bırakırsınız. Sizi isteyen kişinin onayı olmadan hiçbir şey gönderilmez.",
+          "task": "Müşteri e-postalarına, ödenmemiş faturalara ve bu haftanın takvimine bakın, bugün neyin dikkat gerektirdiğini söyleyin."
+        },
+        "study": {
+          "title": "Dersler ve fikirler",
+          "line": "Ders planı, tekrarlar ve yazılar",
+          "role": "Dersler",
+          "heading": "{{name}}, dersleriniz için",
+          "does": "Ders planınızı hazırlar, tekrarları hatırlatır ve fikirlerinizi düzenlemenize yardım eder.",
+          "connect": "Notlarınızın olduğu yerleri bağlayın",
+          "today": "haftanın ders planını",
+          "working": "{{name}} planınızı hazırlıyor",
+          "instructions": "Sizi isteyen kişinin dersleri ve fikirleriyle siz ilgilenirsiniz: ders planını hazırlar, tekrarları hatırlatır ve yazdıklarını düzenlemesine yardım edersiniz.",
+          "task": "Son notları okuyun, bu haftanın ders planını hazırlayın ve önce neyin tekrar edileceğini söyleyin."
+        },
+        "travel": {
+          "title": "Seyahat",
+          "line": "En ince ayrıntısına kadar planlanmış seyahatler",
+          "role": "Seyahat",
+          "heading": "{{name}}, seyahatleriniz için",
+          "does": "Her seyahat için rezervasyonları, saatleri ve eksikleri tek bir yerde toplar.",
+          "connect": "Rezervasyonlarınızın geldiği yerleri bağlayın",
+          "today": "sonraki seyahatleriniz için eksiklerin listesini",
+          "working": "{{name}} seyahatlerinize bakıyor",
+          "instructions": "Sizi isteyen kişinin seyahatleriyle siz ilgilenirsiniz: rezervasyonları, uçuşları ve saatleri toplar, her seyahat için eksik olanı bildirirsiniz.",
+          "task": "Önümüzdeki 60 günün rezervasyonlarını ve seyahatlerini arayın, her biri için neyin eksik olduğunu söyleyin."
+        },
+        "home": {
+          "title": "Ev",
+          "line": "Alışveriş, ev işleri ve faturalar",
+          "role": "Ev",
+          "heading": "{{name}}, eviniz için",
+          "does": "Alışveriş listesini, ev işlerini ve ayın faturalarını takip eder.",
+          "connect": "Listelerinizin olduğu yerleri bağlayın",
+          "today": "evin bu hafta ihtiyaç duyduklarının listesini",
+          "working": "{{name}} evinizin işlerine bakıyor",
+          "instructions": "Sizi isteyen kişinin eviyle siz ilgilenirsiniz: alışveriş listesi, ev işleri ve ayın faturaları. Ödeme günü gelenleri ve eksikleri hatırlatırsınız.",
+          "task": "Listelere ve takvime bakın, evin bu hafta neye ihtiyacı olduğunu söyleyin: alışveriş, ev işleri ve ödenecek faturalar."
+        },
+        "health": {
+          "title": "Sağlık",
+          "line": "Antrenman ve beslenme",
+          "role": "Sağlık",
+          "heading": "{{name}}, sağlığınız için",
+          "does": "Haftanın antrenmanlarını ve öğünlerini takviminize yerleştirir, doğru zamanda hatırlatır.",
+          "connect": "Takviminizin olduğu yeri bağlayın",
+          "today": "haftalık antrenman planınızı",
+          "working": "{{name}} haftanızı planlıyor",
+          "instructions": "Sizi isteyen kişinin sağlığıyla siz ilgilenirsiniz: antrenman ve beslenme. Haftayı takvimine yerleştirir, doğru zamanda hatırlatırsınız.",
+          "task": "Bu haftanın takvimine bakın, antrenmanlar ve öğünler için saat önerin."
+        }
+      }
+    },
+    "meet": {
+      "eyebrow": "{{step}} · İlk ajanınız",
+      "eyebrowAlone": "İlk ajanınız",
+      "apps": "Çalıştığı uygulamaları bağlayın",
+      "connect": "Bağla",
+      "connected": "Bağlı",
+      "account": "{{account}} · {{when}}",
+      "customTitle": "Ajanınızı oluşturun",
+      "name": "Ad",
+      "does": "Ne yapıyor?",
+      "appsUsed": "Kullandığı uygulamalar",
+      "search": "Uygulama ara"
+    },
+    "hire": {
+      "the": "{{name}}",
+      "title": "{{org}} ekibi {{agent}} ile başlıyor",
+      "titlePersonal": "Ajanlarınız {{agent}} ile başlıyor",
+      "lead": "Bugün {{today}} hazırlayacak. Ardından istediğiniz kadar ajan oluşturun, birbirlerine iş devrederler.",
+      "leadAny": "İlk teslimatına bugün başlıyor. Ardından istediğiniz kadar ajan oluşturun, birbirlerine iş devrederler.",
+      "next": "Sonra:",
+      "plan": "{{name}} planı",
+      "perMonth": "aylık ücret",
+      "fine_one": "Sınırsız ajan ve en fazla {{count}} kişi. Tek tıkla iptal edin.",
+      "fine_other": "Sınırsız ajan ve en fazla {{count}} kişi. Tek tıkla iptal edin.",
+      "finePersonal": "Sınırsız ajan, yalnızca sizin için. Tek tıkla iptal edin.",
+      "fineAny": "Sınırsız ajan. Tek tıkla iptal edin.",
+      "later": "Şimdi değil",
+      "subscribe": "{{name}} planına abone ol",
+      "subscribeAny": "Plana abone ol"
+    },
+    "celebrate": {
+      "say": "Merhaba {{first}}. Bugün başlıyoruz.",
+      "sayAny": "Merhaba, bugün başlıyoruz.",
+      "eyebrow": "{{org}} ekibi · {{date}} tarihinden beri",
+      "eyebrowPersonal": "Ajanlarınız · {{date}} tarihinden beri",
+      "title": "{{org}} ekibine hoş geldiniz",
+      "titlePersonal": "Ekibinize hoş geldiniz",
+      "you": "Siz",
+      "lead": "{{you}} ve {{agent}}, ekibin ilk ajanı. Bugünden itibaren birlikte, gece gündüz.",
+      "leadNoPlan": "{{you}} ve {{agent}}, ekibin ilk ajanı. Bugünden itibaren birlikte.",
+      "leadPersonal": "{{you}} ve {{agent}}, ilk ajanınız. Bugünden itibaren günleriniz için birlikte.",
+      "plan": "{{name}} planı etkin",
+      "planAny": "Plan etkin",
+      "planLater": "{{name}} planına abone ol",
+      "planLaterAny": "Bir plana abone ol",
+      "aiDone": "{{label}} bağlandı",
+      "aiDoneAny": "Yapay zeka bağlandı",
+      "connect": "Yapay zekayı bağla",
+      "working": "{{name}} ilk teslimatı hazırlıyor",
+      "workingLine": "İlk teslimat birkaç dakika içinde gelir.",
+      "waiting": "{{name}} ajanının ilk teslimatı",
+      "enter": "Çalışma alanını keşfet",
+      "download": "Ekip fotoğrafını indir",
+      "downloadPersonal": "Ekibinizin fotoğrafını indirin",
+      "yourPhoto": "Fotoğrafınızı değiştirin",
+      "photoFile": "{{slug}}-ekibi.png",
+      "photoFileAny": "ekip-fotografi.png",
+      "photoFilePersonal": "ekibim.png",
+      "photoFailed": "Fotoğraf oluşturulamadı. Yeniden deneyin."
+    },
+    "member": {
+      "title": "{{org}} çalışma alanına hoş geldiniz, {{first}}",
+      "titleNoName": "{{org}} çalışma alanına hoş geldiniz",
+      "titlePersonal": "Hoş geldiniz, {{first}}",
+      "titleNoNamePersonal": "Hoş geldiniz",
+      "intro": "Burada herkes, kendi sorunlarından birini çözen ajanı getirir.",
+      "noPermission": "Ajanınızı oluşturmak için bir yöneticiden ajan oluşturma izni isteyin.",
+      "enter": "{{org}} çalışma alanını aç",
+      "enterPersonal": "Çalışma alanını aç",
+      "later": "Şimdi değil, {{org}} çalışma alanını aç",
+      "laterPersonal": "Şimdi değil, çalışma alanını aç",
+      "laterShort": "Şimdi değil"
     }
   },
   "desktopNotice": {
@@ -7719,7 +7876,8 @@
       "memberHint": "Herkesin yapabildikleri",
       "member": "zaten {{org}} içinde",
       "memberPersonal": "zaten burada",
-      "invited": "zaten davet edildi"
+      "invited": "zaten davet edildi",
+      "sent": "davet edildi"
     },
     "dialog": {
       "title": "{{org}} çalışma alanına davet et",
@@ -16306,6 +16464,14 @@
     "teamProposal": {
       "undoExpired": "Bu ekip oluşturulalı bir günden fazla oldu, bu yüzden burada geri alınamaz. Ajanları kendi sayfalarından arşivle."
     },
+    "firstAgents": {
+      "needsAdmin": "Bu çalışma alanında ajan oluşturmak için bir yönetici gerekir. Bir yöneticiden sizin için oluşturmasını isteyin.",
+      "invalid": "Bu yanıt istediğimiz biçimde değil. İsteği yeniden kopyalayın ve yapay zekanızın yanıtının tamamını yapıştırın.",
+      "picking": "Bu ajan zaten oluşturuluyor. Biraz bekleyin.",
+      "rateLimited": "Şimdilik çok fazla deneme yapıldı. Birazdan yeniden deneyin.",
+      "kept": "İlk ajanınız zaten oluşturuldu, bu yüzden bu ajan oluşturulmadı.",
+      "failed": "Ajan oluşturulmadı. Tekrar deneyin."
+    },
     "proposal": {
       "changed": "Bu, uygulandıktan sonra değişti: elle düzenleyin.",
       "notApplied": "Bu değişiklik uygulanmadı, bu yüzden geri alınacak bir şey yok.",
@@ -19696,6 +19862,7 @@
       "action_update_skills": "Becerileri güncelle",
       "action_approvals": "Sizi bekleyen onaylar",
       "welcome_member": "{{org}} çalışma alanına az önce katıldın. **Burada nelerle ilgileniyorsun?** Bana anlat, ilk ajanını birlikte kuralım.",
+      "welcome_member_agent": "{{org}} ekibine yeni katıldınız ve ilk ajanınız zaten ekipte. Bana ihtiyacınız olduğunda seslenmeniz yeterli.",
       "action_open_page": "Bir ekran aç",
       "action_voice_setup": "Sesli mesajları aç",
       "calendar_proposal": "Etkinlik önerisi: {{title}}",
@@ -22253,23 +22420,174 @@
     }
   },
   "arrival": {
-    "beta": {
-      "word": "BETA",
-      "title": "Erken geldiniz. Çok sevindik.",
-      "text": "agentes.chat beta aşamasında: onunla şimdiden gerçek iş yapabilirsiniz, biz de hâlâ cilalıyoruz.",
-      "weekly": {
-        "title": "Her hafta daha iyi oluyor",
-        "text": "Yenilikler ve düzeltmeler sürekli çıkıyor."
+    "welcome": {
+      "stepOf": "Adım {{n}}/{{total}}",
+      "next": "İleri",
+      "start": "Hadi başlayalım",
+      "hello": {
+        "title": "{{org}} çalışma alanına hoş geldiniz, {{first}}",
+        "titleNoName": "{{org}} çalışma alanına hoş geldiniz",
+        "titlePersonal": "Hoş geldiniz, {{first}}",
+        "titleNoNamePersonal": "Hoş geldiniz",
+        "text": "Burada siz ve ajanlar gece gündüz birlikte çalışırsınız. Bir dakikada en önemlileri.",
+        "textPersonal": "Burada siz ve ajanlarınız gece gündüz birlikte çalışırsınız. Bir dakikada en önemlileri.",
+        "say": "Merhaba {{first}}. Ben {{name}}, ajanların İK'sıyım.",
+        "sayNoName": "Merhaba, ben {{name}}, ajanların İK'sıyım."
       },
-      "fails": {
-        "title": "Bazen bir şeyler ters gider",
-        "text": "Takılırsa ya da tuhaf görünürse sorun bizde, sizde değil."
+      "computer": {
+        "title": "Her ajanın kendi bilgisayarı var",
+        "text": "Bilgisayarlarında siteleri açar, uygulamaları kullanır ve kod çalıştırırlar, kendi başlarına. İstediğiniz zaman canlı izler ya da kontrolü alırsınız.",
+        "tab": "Görevler",
+        "rows": {
+          "a": {
+            "name": "Müşteriye yanıt",
+            "when": "Dün",
+            "state": "Gecikti"
+          },
+          "b": {
+            "name": "Haftalık rapor",
+            "when": "Bugün",
+            "state": "Yapılacak"
+          },
+          "c": {
+            "name": "Fiyatları güncelle",
+            "when": "09.00",
+            "state": "Bitti"
+          }
+        },
+        "say": "Bir yanıt gecikti. Taslak onayınızı bekliyor.",
+        "tabPersonal": "Bu ayın faturaları",
+        "rowsPersonal": {
+          "a": {
+            "name": "Elektrik",
+            "amount": "890 ₺",
+            "state": "Son gün bugün"
+          },
+          "b": {
+            "name": "Telefon",
+            "amount": "450 ₺",
+            "state": "5 gün içinde"
+          },
+          "c": {
+            "name": "Kira",
+            "amount": "14.000 ₺",
+            "state": "Ödendi"
+          }
+        },
+        "sayPersonal": "Elektrik faturasının son günü bugün. Ödeme onayınızı bekliyor."
       },
-      "feedback": {
-        "title": "Sıradakini sizin geri bildiriminiz belirler",
-        "text": "Neyin eksik kaldığını ya da rahatsız ettiğini anlatın. Hepsini okuyoruz."
+      "channels": {
+        "title": "Her konu kendi kanalında",
+        "titlePersonal": "Her konu kendi sohbetinde",
+        "text": "Ekipten birine yazar gibi yazın. Konuyu bilen yanıtlar, insan ya da ajan. Bir ajanla konuşmak için adını söylemeniz yeterli.",
+        "textPersonal": "Güvendiğiniz birine yazar gibi yazın. Her ajan kendi konusuyla ilgilenir, biriyle konuşmak için adını söylemeniz yeterli.",
+        "list": {
+          "a": "satış",
+          "b": "destek",
+          "c": "finans",
+          "d": "projeler"
+        },
+        "listPersonal": {
+          "a": "Ev",
+          "b": "Faturalar",
+          "c": "Seyahat",
+          "d": "Sağlık"
+        },
+        "ask": "Dünkü müşteriye yanıt veren oldu mu?",
+        "answer": "Bu sabah 09.10'da yanıtladım ve talebi wiki'ye not ettim.",
+        "askPersonal": "Elektrik faturası ödendi mi?",
+        "answerPersonal": "Dün 14.20'de ödendi. Makbuzu kaydettim."
       },
-      "where": "Bize yazmak için kenar çubuğunun altındaki Geri bildirim gönder seçeneğini kullanın."
+      "wiki": {
+        "title": "Wiki, {{org}} belgeleridir",
+        "titlePersonal": "Wiki önemli olanı saklar",
+        "text": "Şirketin ortak belgeleri: süreçler, fiyatlar, müşteriyle nasıl konuşulacağı. Ajanlar yanıt vermeden önce okur, yeni bir şey öğrendiklerinde yazar.",
+        "textPersonal": "Notlarınız tek bir yerde: faturalar, belgeler, işlerin nasıl yapılmasını sevdiğiniz. Ajanlarınız yanıt vermeden önce okur, yeni bir şey öğrendiklerinde yazar.",
+        "pages": {
+          "left": "Fiyatlar",
+          "right": "{{org}} ne yapar",
+          "front": "Müşteri hizmetleri"
+        },
+        "pagesPersonal": {
+          "left": "Belgeler",
+          "right": "Benim hakkımda",
+          "front": "Evin faturaları"
+        }
+      },
+      "memory": {
+        "title": "Önemli olanı hatırlarlar",
+        "text": "Her sohbette tercihleri, kararları ve kimin neyle ilgilendiğini saklarlar. Neyin belleğe gireceğini siz gözden geçirirsiniz.",
+        "notes": {
+          "a": "{{org}} 18.00'de kapanır",
+          "b": "{{first}} kısa özetleri sever",
+          "c": "Hatırlatmalar yalnızca hafta içi",
+          "d": "Ekip toplantısı pazartesileri"
+        },
+        "notesPersonal": {
+          "a": "Haftada üç gün, 18.00'de spor",
+          "b": "{{first}} kısa özetleri sever",
+          "c": "Hatırlatmalar yalnızca hafta içi",
+          "d": "Kiranın son günü ayın 10'u"
+        },
+        "likes": "Kısa özetleri sever"
+      },
+      "routines": {
+        "title": "Kendiliğinden yapılan işler",
+        "text": "Rutinler, “her gün 9'da” gibi istediğiniz saatte çalışır. Gönderme, ödeme ya da silme gibi ciddi işler onayınızı bekler.",
+        "routine": "Günün özeti",
+        "routineText": "5 yeni mesaj, 1 yanıt gecikti",
+        "ask": "Yanıt müşteriye gönderilsin mi?",
+        "routinePersonal": "Sizin gününüz",
+        "routineTextPersonal": "3 e-posta yanıt bekliyor, 1 faturanın son günü bugün",
+        "askPersonal": "890 ₺ elektrik faturası ödensin mi?",
+        "asks": "{{name}} onayınızı istiyor",
+        "refuse": "Reddet",
+        "approve": "Onayla"
+      },
+      "ready": {
+        "title": "Başlamak için her şey hazır",
+        "word": "BETA",
+        "left_one": "Yalnızca bir şey kaldı.",
+        "left_other": "{{count}} şey kaldı.",
+        "later": "Sonraya bırakırsanız bu liste {{name}} ile olan sohbetinizde kalır, istediğiniz zaman bitirirsiniz.",
+        "none": "Her şey yerinde. Artık ekiple konuşmanız yeterli.",
+        "nonePersonal": "Her şey yerinde. Artık ajanlarınızla konuşmanız yeterli.",
+        "noAi": "{{name}} ajanının henüz düşünmek için bir yapay zekası yok. İlk teslimatın başlaması için bir tane bağlayın.",
+        "beta": "Beta aşamasındayız.",
+        "betaText": "Her hafta daha iyi oluyor, bir şey ters giderse sorun bizde.",
+        "feedback": "Eksik olanı kenar çubuğunun en altındaki {{where}} bölümünden bize söyleyin.",
+        "delivery": {
+          "done": "{{name}} ajanının ilk teslimatı hazır",
+          "working": "{{name}} hâlâ çalışıyor",
+          "workingLine": "Bitirince bu sohbette haber verecek.",
+          "see": "Teslimatı gör",
+          "open": "Sohbete git"
+        },
+        "rows": {
+          "plan": "{{plan}} planı etkin",
+          "planAny": "Plan etkin",
+          "planTodo": "Ekibi başlatın",
+          "planTodoPersonal": "Ajanlarınızı başlatın",
+          "planAction": "Planları gör",
+          "ai": "{{label}} bağlandı",
+          "aiAny": "Bir yapay zeka bağlandı",
+          "aiTodo": "Bir yapay zeka bağlayın",
+          "aiAction": "Bağla",
+          "people_one": "Ekipte {{count}} kişi",
+          "people_other": "Ekipte {{count}} kişi",
+          "invited_one": "{{count}} kişi davet edildi",
+          "invited_other": "{{count}} kişi davet edildi",
+          "peopleNone": "Şimdilik yalnızca siz",
+          "peopleTodo": "Birlikte çalıştığınız kişileri davet edin",
+          "peopleAction": "Davet et",
+          "apps_one": "{{apps}} bağlandı",
+          "apps_other": "{{apps}} bağlandı",
+          "appsNone": "Şimdilik uygulama yok",
+          "appsTodo": "İş uygulamalarınızı bağlayın",
+          "appsTodoPersonal": "Uygulamalarınızı bağlayın",
+          "appsAction": "Seç"
+        }
+      }
     },
     "stage": {
       "ready": "Ekibiniz hazır",
@@ -22282,8 +22600,7 @@
       "text": "Zaten sahip olduğunuz bir aboneliği kullanın. Planınızda hiçbir şey değişmez.",
       "others": "Başka bir plan",
       "free": "Ücretsiz başlayın",
-      "freeText": "OpenCode'un ücretsiz modelleriyle",
-      "noPlan": "Abonelik yok",
+      "freeText": "Abonelik olmadan, OpenCode'un ücretsiz modelleriyle",
       "without": "Yapay zeka olmadan ajanlar yanıt vermez.",
       "later": "Şimdi değil"
     }

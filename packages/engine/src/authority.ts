@@ -16,7 +16,8 @@ const { agentRuns, messages, routineRuns } = schema;
  *   person behind the run that wrote it), or work came back to a run of theirs (an answer, a note's
  *   reply, the end of a wait or of a background task, a decision on a folder or on a proposed agent, a
  *   follow-up), or they wrote on GitHub with their linked account, or a background work ended after taking on what
- *   they passed on to it (a `github_event` or `work_follow_up` notice's server-set `refs.personId`). Tools act on
+ *   they passed on to it, or they asked for an agent's first delivery on the onboarding (a `github_event`,
+ *   `work_follow_up` or `first_delivery` notice's server-set `refs.personId`). Tools act on
  *   their behalf, within their permissions and the agent's scopes.
  * - `routine`: a routine's background run. Nobody is behind it: its creator set it up and stays
  *   accountable (notifications, approvals), but the run never acts as them. What it may do comes only
@@ -159,8 +160,9 @@ async function walkRoot(db: Executor, orgId: string, messageId: string, walked: 
     }
     // What happened on GitHub (`git/github-events.ts`): the member whose linked account wrote it, or who asked the
     // agent to answer it; nobody for anyone else. What a person passed on to a work that ended (`followUpWork`): that
-    // person, not who asked for the work.
-    if (notice?.kind === "github_event" || notice?.kind === "work_follow_up") {
+    // person, not who asked for the work. A first delivery (`first-delivery.ts`, ADR 0264 addendum): the person who
+    // asked for it as they set the agent up on the onboarding.
+    if (notice?.kind === "github_event" || notice?.kind === "work_follow_up" || notice?.kind === "first_delivery") {
       const personId = notice.refs?.personId;
       if (typeof personId !== "string" || !personId) return { kind: "agent" };
       return notice.refs?.relayed === "1" ? { kind: "person", personId, relayed: true } : { kind: "person", personId };

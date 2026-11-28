@@ -27,6 +27,7 @@ export const NOTICE_KINDS = [
   "joined",
   "left",
   "member_joined",
+  "first_delivery",
 ] as const;
 export type NoticeKind = (typeof NOTICE_KINDS)[number];
 
@@ -58,6 +59,8 @@ export const AGENT_ONLY_NOTICES: ReadonlySet<string> = new Set<NoticeKind>([
   "work_check_in",
   "work_follow_up",
   "member_joined",
+  // The brief of a person's first delivery (ADR 0264 addendum): the agent's reply is what they read.
+  "first_delivery",
 ]);
 
 /** A message that is a notice only its agent reads: left out of the conversation. */
@@ -301,6 +304,7 @@ export function noticeView(
     case "channel_work":
     case "talker_reply":
     case "run_stopped":
+    case "first_delivery":
       return line("chat.notice.other", { name: names.author });
     default:
       kind satisfies never;

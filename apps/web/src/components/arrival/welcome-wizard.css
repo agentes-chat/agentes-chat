@@ -1,0 +1,259 @@
+/*
+ * The welcome wizard (ADR 0160, addendum of 2026-11-26): its picture on top (welcome-art.css), the step's words, the
+ * last step's list and beta line, and the way on. The words come in once as each step opens, unless the person asked
+ * for less motion.
+ */
+.ac-dialog.wiz {
+  overflow: hidden;
+}
+.wiz__art {
+  position: relative;
+  flex: none;
+  height: 252px;
+  overflow: hidden;
+  isolation: isolate;
+  container: wiz-art / inline-size;
+}
+.wiz__main {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+/* A few px of the foot's room under the words: a last line's letters reach a pixel past its line box, which would
+   make the words scroll by that pixel. */
+.wiz__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 22px 28px 4px;
+}
+.wiz__dots {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+.wiz__dots i {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line2);
+}
+.wiz__dots i[data-done] {
+  background: color-mix(in srgb, var(--ink) 35%, transparent);
+}
+.wiz__dots i[data-on] {
+  width: 22px;
+  background: var(--ink);
+}
+.wiz__title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 650;
+  line-height: 30px;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+.wiz__text {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 22px;
+  text-wrap: pretty;
+}
+.wiz__foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 28px 24px;
+}
+.wiz__acts {
+  display: flex;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+@media (max-width: 560px) {
+  .wiz__art {
+    height: 212px;
+  }
+  .wiz__body {
+    padding: 18px var(--dialog-pad) 4px;
+  }
+  .wiz__title {
+    font-size: 21px;
+    line-height: 27px;
+  }
+  .wiz__foot {
+    padding: 16px var(--dialog-pad) 20px;
+  }
+}
+
+/* ---------- the last step: what is left to do, and the beta line ---------- */
+.wiz-board {
+  display: flex;
+  flex-direction: column;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.wiz-board li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* Every row as tall as one with its small button: the hairlines evenly spaced, with or without an action. */
+  min-height: calc(var(--control-h-sm) + 12px);
+  padding: 6px 0;
+  font-size: 14.5px;
+  line-height: 20px;
+}
+.wiz-board li + li {
+  border-top: 1px solid var(--line);
+}
+.wiz-board__text {
+  flex: 1;
+  min-width: 0;
+  text-wrap: pretty;
+}
+.wiz-board li[data-done] .wiz-board__text,
+.wiz-board li[data-dim] .wiz-board__text {
+  color: var(--muted);
+}
+.wiz-board li > .ac-btn {
+  flex: none;
+}
+.wiz-board__mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--line-strong);
+}
+.wiz-board li[data-done] .wiz-board__mark {
+  background: var(--ok);
+  box-shadow: none;
+  color: #fff;
+}
+/* The first delivery, the list's first row: its agent's face on the first line, a quiet line under it. */
+.wiz-board li.wiz-board__delivery {
+  align-items: flex-start;
+  padding: 10px 0;
+}
+.wiz-board__face {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 20px;
+}
+.wiz-board__face .ac-avatar {
+  width: 20px;
+  height: 20px;
+}
+.wiz-board__delivery .wiz-board__text {
+  display: flex;
+  flex-direction: column;
+  font-weight: 600;
+}
+.wiz-board__sub {
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 19px;
+  font-weight: 400;
+}
+/* At the row's end while it works: the kit's spinner (a canvas), 16px on the first line's 20px. */
+.wiz-board__delivery > .ac-pixspin {
+  flex: none;
+  margin-top: 2px;
+}
+.wiz-betaline {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 19px;
+}
+/* The row is an .ac-iconline: the icon on the first line's capitals. */
+.wiz-betaline .ac-icon {
+  color: var(--ink);
+}
+.wiz-betaline b {
+  color: var(--ink);
+  font-weight: 600;
+}
+/* Under the list, its hairline where the next row's would be. */
+.wiz-board + .wiz-betaline {
+  margin-top: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .wiz__body {
+    animation: wiz-fade 0.4s ease-out both;
+  }
+}
+@keyframes wiz-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/*
+ * The tour's own backdrop (WelcomeWizard's `scrimClassName`), never another dialog's: the page blurred under the sky's
+ * tone, and a quiet pixel dither of the sky over it, rising from the bottom as the sky's horizon does (2px pixels,
+ * one in four, then every other one near the bottom). It comes in once, a little slower than a dialog's scrim. Where
+ * the browser blurs nothing behind, the sky's tone is just deeper. The tones are the sky's (`SKY_TONES` by day,
+ * `TEAM_NIGHT` at night, packages/ui/src/sky/math.ts).
+ */
+.ac-dialog__scrim.wiz-scrim {
+  /* The sky's pale day tone, near solid: the page behind is only a shape under it. */
+  --wiz-sky: rgba(206, 224, 250, 0.84);
+  --wiz-pixel: rgba(75, 147, 255, 0.24);
+  background: var(--wiz-sky);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+}
+[data-theme="dark"] .ac-dialog__scrim.wiz-scrim {
+  --wiz-sky: rgba(8, 12, 28, 0.86);
+  --wiz-pixel: rgba(43, 83, 173, 0.4);
+}
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .ac-dialog__scrim.wiz-scrim {
+    --wiz-sky: rgba(206, 224, 250, 0.96);
+  }
+  [data-theme="dark"] .ac-dialog__scrim.wiz-scrim {
+    --wiz-sky: rgba(8, 12, 28, 0.96);
+  }
+}
+.ac-dialog__scrim.wiz-scrim::before,
+.ac-dialog__scrim.wiz-scrim::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.ac-dialog__scrim.wiz-scrim::before {
+  background: conic-gradient(var(--wiz-pixel) 0 25%, transparent 0) 0 0 / 4px 4px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 10%, #000 75%);
+  mask-image: linear-gradient(to bottom, transparent 10%, #000 75%);
+}
+.ac-dialog__scrim.wiz-scrim::after {
+  background: conic-gradient(var(--wiz-pixel) 0 25%, transparent 0) 2px 2px / 4px 4px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 55%, #000);
+  mask-image: linear-gradient(to bottom, transparent 55%, #000);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ac-dialog__scrim.wiz-scrim[data-state="open"] {
+    animation: ac-fade-in 0.48s var(--out);
+  }
+}

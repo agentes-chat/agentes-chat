@@ -941,7 +941,6 @@
     }
   },
   "onboarding": {
-    "stepsLabel": "Étapes pour commencer",
     "deleteLink": "Supprimer cet espace de travail",
     "optionalTag": "facultatif",
     "stepDone": "(fait)",
@@ -961,64 +960,21 @@
       "theo": "Enchanté, je suis Theo. J'organise les tâches de l'équipe.",
       "atlas": "Salut, ici Atlas. Je m'occupe des ordinateurs."
     },
-    "progress": {
-      "left_one": "Encore {{count}} étape",
-      "left_many": "Encore {{count}} étapes",
-      "left_other": "Encore {{count}} étapes",
-      "done": "Tout est prêt"
-    },
     "flow": {
       "steps": {
         "name": "Nom de l'espace de travail",
         "business": "Ce que vous faites",
-        "you": "À propos de vous",
         "team": "Votre équipe",
-        "plan": "Activer l'équipe",
-        "ai": "Connecter une IA",
-        "people": "Inviter des personnes",
-        "namePersonal": "Pour quoi faire",
-        "teamPersonal": "Vos agents",
-        "planPersonal": "Activer les agents",
-        "aiPersonal": "Connecter une IA"
+        "plan": "Activer l'équipe"
       },
       "stepOf": "Étape {{n}} sur {{total}}",
       "lodi": {
         "name": "Bonjour {{first}}. Je suis {{name}}. Je monte l'équipe avec vous en deux minutes environ.",
         "business": "Avec ça, je sais qui appeler dans l'équipe.",
         "team": "Voici l'équipe que je monterais. Vous pourrez tout changer ensuite.",
-        "teamMade": "L'équipe est déjà en place. On continue quand vous voulez.",
-        "teamMadePersonal": "Vos agents sont déjà là. On continue quand vous voulez.",
         "plan": "Après l'abonnement, il ne reste qu'à connecter une IA. Je vous montre où.",
-        "planThen": "Une fois l'abonnement activé, l'écran suivant sert à connecter votre IA.",
-        "you": "Avant l'équipe, un peu sur vous.",
-        "youPersonal": "Avant vos agents, un peu sur vous.",
-        "ask": "Vous avez déjà une équipe ailleurs ? Je l'apporte ici en entier.",
-        "start": "J'ai une équipe prête pour ce que vous faites. Ou on commence à deux.",
-        "askPersonal": "Vous utilisez déjà des agents ailleurs ? Je les apporte tous ici.",
-        "bring": "Copiez la demande, collez-la dans {{app}} et rapportez la réponse. Je m'occupe du reste.",
-        "bringFiles": "Déposez ici ce que l'app a exporté. Je m'occupe du reste.",
-        "bringMcp": "Suivez les étapes dans l'app et elle crée elle-même les agents ici. Je guette leur arrivée.",
-        "found": "J'ai trouvé votre équipe. Vérifiez que tout le monde est là.",
-        "foundPersonal": "J'ai trouvé vos agents. Vérifiez qu'ils sont tous là.",
-        "ai": "Dernière étape. Choisissez l'IA que vous utilisez déjà et l'équipe se réveille.",
-        "aiPersonal": "Dernière étape. Choisissez l'IA que vous utilisez déjà et je me réveille.",
-        "aiThen": "Choisissez l'IA que vous utilisez déjà et l'équipe se réveille. Ensuite, il ne reste qu'à inviter les personnes.",
-        "aiThenAlone": "Choisissez l'IA que vous utilisez déjà et je me réveille. Ensuite, il ne reste qu'à inviter les personnes.",
-        "connected": "Voilà. Appelez-moi dans l'espace de travail et je vous montre le reste.",
-        "connectedThen": "Voilà. Il ne reste qu'à inviter les personnes avec qui vous travaillez.",
         "people": "Maintenant, les personnes. Donnez-moi leurs e-mails et j'envoie les invitations.",
         "peopleLink": "Maintenant, les personnes. Envoyez-leur le lien et je vous montre chaque demande."
-      },
-      "you": {
-        "title": "Maintenant, parlons de vous",
-        "lead": "Votre nom et votre photo sont visibles par l'équipe et par les agents.",
-        "leadPersonal": "Votre nom et votre photo sont visibles par vos agents.",
-        "photo": "Votre photo",
-        "build": "Créer un avatar",
-        "edit": "Modifier l'avatar",
-        "upload": "Envoyer une photo",
-        "area": "Vous travaillez sur quoi ?",
-        "areaHint": "Facultatif. Juste pour savoir qui utilise agentes.chat."
       },
       "area": {
         "options": {
@@ -1031,124 +987,31 @@
           "other": "Autre chose"
         }
       },
-      "preview": {
-        "label": "Votre espace de travail, pendant que vous répondez",
-        "name": "Votre espace de travail",
-        "ghost": "Votre équipe apparaît ici",
-        "ghostPersonal": "Vos agents apparaissent ici"
-      },
       "team": {
-        "title": "Votre équipe",
-        "madeLead": "Ils sont déjà dans l'espace de travail. Vous pourrez ajuster chacun ensuite.",
-        "start": {
-          "title": "Comment voulez-vous démarrer l'équipe ?",
-          "lead": "Vous pourrez tout changer plus tard, rien n'est perdu.",
-          "template": "Démarrer avec une équipe toute prête",
-          "templateText_one": "{{count}} agent du modèle {{template}}, dans son propre canal, avec sa routine prête.",
-          "templateText_many": "{{count}} agents du modèle {{template}}, chacun dans son canal, avec ses routines prêtes.",
-          "templateText_other": "{{count}} agents du modèle {{template}}, chacun dans son canal, avec ses routines prêtes.",
-          "scratch": "Partir de zéro",
-          "scratchText": "Seulement {{name}}, votre bras droit. Vous créerez chaque agent plus tard, à votre façon.",
-          "scratchWho": "{{name}} et ceux que vous créerez",
-          "see": "Voir l'équipe toute prête",
-          "scratchGo": "Continuer seulement avec {{name}}"
-        },
-        "ask": {
-          "title": "Vous avez déjà des agents dans une autre app ?",
-          "lead": "Si oui, j'apporte toute l'équipe : instructions, compétences et routines.",
-          "leadPersonal": "Si oui, je les apporte tous : instructions, compétences et routines.",
-          "none": "Je n'en utilise pas encore",
-          "noneText": "Je monte une équipe pour {{org}} à partir de ce que vous faites.",
-          "noneTextPersonal": "On commence à deux. Les agents viendront plus tard, quand vous voudrez.",
-          "from": "Importer depuis {{app}}",
-          "fresh": "Monter une nouvelle équipe",
-          "freshPersonal": "Continuer sans agents",
-          "skip": "Passer cette étape",
-          "skipText": "Vous pourrez créer les agents plus tard, un par un."
-        },
-        "bring": {
-          "title": "Importez votre équipe depuis {{app}}",
-          "titlePersonal": "Importez vos agents depuis {{app}}",
-          "titleOther": "Importez votre équipe depuis une autre app",
-          "titleOtherPersonal": "Importez vos agents depuis une autre app",
-          "lead": "Ça prend une minute. Rien ne change là-bas.",
-          "ask": "Demandez à {{app}} d'exporter",
-          "paste": "Collez-la dans votre conversation avec {{app}}.",
-          "reply": "Il répond avec un JSON : copiez toute la réponse et collez-la dans le champ ci-dessous.",
-          "field": "Collez ici la réponse de {{app}}",
-          "placeholder": "Le JSON de la réponse",
-          "read": "Lire la réponse",
-          "fresh": "Je préfère monter une nouvelle équipe"
-        },
-        "found": {
-          "title_one": "J'ai trouvé {{count}} agent dans {{app}}",
-          "title_many": "J'ai trouvé {{count}} agents dans {{app}}",
-          "title_other": "J'ai trouvé {{count}} agents dans {{app}}",
-          "lead": "Ils arrivent avec les instructions, les compétences et les routines qu'ils ont déjà. Vous pourrez tout changer ensuite.",
-          "bring": "Importer l'équipe",
-          "bringPersonal": "Importer les agents"
-        }
+        "title": "Votre équipe"
       },
       "plan": {
         "title": "Activez votre équipe",
-        "lead": "Votre équipe est prête. Avec l'abonnement et une IA, elle commence aujourd'hui.",
-        "leadAlone": "Avec l'abonnement et une IA, votre bras droit commence aujourd'hui. Vous pourrez créer les autres agents plus tard.",
-        "asleep": "Endormie jusqu'à l'abonnement",
-        "price": "<b>Abonnement {{name}}</b> · {{price}} par mois",
-        "name": "<b>Abonnement {{name}}</b>",
         "generic": "Un abonnement agentes.chat",
-        "cancel": "Résiliable à tout moment",
-        "cta": "Activer l'équipe",
         "all": "Voir tous les abonnements",
-        "skip": "L'activer plus tard et juste découvrir l'espace de travail",
-        "next": "Ensuite : connecter votre IA.",
-        "titlePersonal": "Activez vos agents",
-        "leadPersonal": "Avec l'abonnement et une IA, ils commencent aujourd'hui.",
-        "asleepPersonal": "Endormis jusqu'à l'abonnement",
-        "ctaPersonal": "Activer les agents"
+        "skipTitle": "Continuer sans abonnement ?",
+        "skipText": "Sans abonnement, {{agent}} ne commence pas à travailler et la première livraison attend. Vous pourrez souscrire plus tard, dans le workspace.",
+        "skipGo": "Continuer sans abonnement"
       },
       "ai": {
-        "titlePersonal": "Connectez une IA pour que vos agents réfléchissent",
-        "titleAlone": "Connectez une IA pour que {{name}} réfléchisse",
+        "title": "Maintenant, l'IA que vous payez déjà",
+        "lead": "{{name}} réfléchit avec elle, sans frais en plus ici. Dès que vous la connectez, le premier livrable démarre.",
         "later": "Connecter plus tard",
-        "doneTitle": "C'est fait. L'équipe de {{org}} réfléchit déjà.",
-        "doneTitlePersonal": "C'est fait. {{name}} réfléchit déjà.",
-        "doneLead": "Votre {{label}} répond pour tous les agents. Vous pourrez le changer plus tard, un par un.",
-        "doneLeadAny": "L'IA que vous avez connectée répond pour tous les agents. Vous pourrez la changer plus tard, un par un.",
-        "connected": "Connecté",
-        "enter": "Entrer dans l'espace de travail",
-        "awake": "Votre équipe s'est réveillée",
-        "answer_one": "{{names}} répond déjà.",
-        "answer_many": "{{names}} répondent déjà.",
-        "answer_other": "{{names}} répondent déjà.",
-        "readyPersonal": "Vos agents sont prêts",
-        "readyAlone": "{{name}} est prêt",
-        "readyAlone_female": "{{name}} est prête",
-        "wakePersonal": "Plus qu'une IA avant le réveil.",
-        "awakePersonal": "Vos agents se sont réveillés",
-        "awakeAlone": "{{name}} s'est réveillé",
-        "awakeAlone_female": "{{name}} s'est réveillée"
+        "skipTitle": "Continuer sans IA ?",
+        "skipText": "Sans IA, {{name}} ne fait pas le premier livrable et ne répond pas. Il attend que vous en connectiez une.",
+        "skipText_female": "Sans IA, {{name}} ne fait pas le premier livrable et ne répond pas. Elle attend que vous en connectiez une.",
+        "skipGo": "Continuer sans IA",
+        "connectNow": "Connecter maintenant"
       },
-      "people": {
-        "title": "Qui travaille avec vous ?",
-        "lead": "Invitez les personnes de votre équipe. Chacune reçoit un e-mail pour rejoindre.",
-        "send": "Envoyer les invitations",
-        "later": "Inviter plus tard"
-      },
-      "account": "Votre compte"
-    },
-    "railValue": {
-      "context": "Rédigé",
-      "skipped": "Passé",
-      "later": "Plus tard",
-      "on": "Activé",
-      "ai": "Connectée",
-      "invites_one": "{{count}} invitation",
-      "invites_many": "{{count}} invitations",
-      "invites_other": "{{count}} invitations"
+      "account": "Votre compte",
+      "switchNote": "Vous pourrez changer plus tard sans rien perdre."
     },
     "back": "Retour",
-    "leave": "Retour à {{name}}",
     "leaveLater": "Retour à {{name}}, terminer plus tard",
     "actions": {
       "continue": "Continuer",
@@ -1652,7 +1515,6 @@
       "go_other": "Importer {{count}} éléments",
       "nothingNew": "Tout cela est déjà ici.",
       "nothingToBring": "Rien ici ne peut venir. Chaque élément indique pourquoi.",
-      "withTeam": "Ça arrive quand vous importez l'équipe.",
       "applying": "Import en cours… {{done}} sur {{total}}",
       "files": {
         "copy": "Copier les fichiers dans le Drive",
@@ -1904,6 +1766,303 @@
     "confirmation": {
       "sent": "Nous avons envoyé un lien de confirmation à {{email}}.",
       "first": "Déjà invité ? Confirmez d'abord votre e-mail."
+    },
+    "ask": {
+      "title": "Demandez votre premier agent",
+      "titleMember": "Demandez votre agent",
+      "lead": "Votre IA connaît déjà votre travail. Avec agentes.chat connecté, elle trouve les tâches que vous répétez le plus et propose un agent pour chacune. Vous choisissez par où commencer.",
+      "leadPersonal": "Votre IA connaît déjà votre quotidien. Avec agentes.chat connecté, elle trouve les tâches que vous répétez le plus, au travail ou en dehors, et propose un agent pour chacune. Vous choisissez par où commencer.",
+      "apps": "Votre assistant",
+      "connect": "Connectez agentes.chat",
+      "connected": "Connecté",
+      "paste": "Collez cette demande dans une nouvelle conversation",
+      "pasteJson": "Collez cette demande dans une nouvelle conversation avec {{app}}",
+      "copy": "Copier la demande",
+      "waiting": "En attente de la proposition de {{app}}…",
+      "noConnector": "Pas de connecteur ? Collez la réponse",
+      "useConnector": "Utiliser le connecteur",
+      "answer": "Collez ici la réponse complète de {{app}}",
+      "answerPlaceholder": "Le JSON de sa réponse",
+      "read": "Lire la réponse",
+      "notJson": "Il n'y a pas de JSON dans cette réponse. Copiez la réponse complète et collez-la à nouveau.",
+      "later": "Pas maintenant",
+      "say": "Je vous écoute. La proposition s'affiche ici.",
+      "stuck": "Rien après quelques minutes ? Vérifiez que le connecteur est activé dans cette conversation et renvoyez la demande.",
+      "prompt": {
+        "team": {
+          "open": "Je veux commencer à utiliser agentes.chat, que je viens de connecter ici, avec un agent IA qui me décharge d'un travail répétitif.",
+          "know": "1. Avant de me poser la moindre question, utilise ce que tu sais déjà de moi : nos conversations passées, ta mémoire et les fichiers et applis auxquels tu as accès. Comprends ce que fait {{org}}, pour qui, quelles applis nous utilisons et quelles tâches je répète chaque semaine.",
+          "send": "4. Envoie les 3 options avec l'outil propose_first_agents d'agentes.chat, avec un résumé en deux ou trois phrases de ce que fait {{org}}. Ne crée rien : c'est moi qui choisis par où commencer."
+        },
+        "member": {
+          "open": "Je viens de rejoindre l'espace de travail de {{org}} sur agentes.chat, que j'ai connecté ici, et je veux commencer avec un agent IA qui me décharge d'un travail répétitif de mon rôle dans l'équipe.",
+          "know": "1. Avant de me poser la moindre question, utilise ce que tu sais déjà de moi : nos conversations passées, ta mémoire et les fichiers et applis auxquels tu as accès. Comprends mon rôle chez {{org}}, avec qui je travaille, quelles applis j'utilise et quelles tâches je répète chaque semaine.",
+          "send": "4. Envoie les 3 options avec l'outil propose_first_agents d'agentes.chat, avec un résumé en deux ou trois phrases de ce que je fais chez {{org}}. Ne crée rien : c'est moi qui choisis par où commencer."
+        },
+        "personal": {
+          "open": "Je veux commencer à utiliser agentes.chat, que je viens de connecter ici, avec un agent IA qui me décharge d'un travail répétitif, au travail ou en dehors.",
+          "know": "1. Avant de me poser la moindre question, utilise ce que tu sais déjà de moi : nos conversations passées, ta mémoire et les fichiers et applis auxquels tu as accès. Comprends ce que je fais, à quoi ressemble ma semaine, quelles applis j'utilise et quelles tâches je répète.",
+          "send": "4. Envoie les 3 options avec l'outil propose_first_agents d'agentes.chat, avec un résumé en deux ou trois phrases sur moi. Ne crée rien : c'est moi qui choisis par où commencer."
+        },
+        "interview": "2. S'il manque quelque chose d'important, interroge-moi : une question à la fois, 3 au maximum, en commençant par celle qui change le plus la recommandation. Si je ne connais pas une réponse, continue avec ta meilleure hypothèse et dis laquelle.",
+        "design": "3. Choisis les 3 tâches répétitives qui me prennent le plus de temps. Pour chacune, conçois un agent comme une offre d'emploi : un nom court, le rôle, 3 responsabilités (ce qu'il fait seul, quand il tourne et quand il m'appelle), les applis dont il a besoin, sa routine avec jour et heure et ce qu'il peut déjà livrer dès le premier jour. Classe-les de la tâche qui me prend le plus de temps à celle qui en prend le moins, et dis en une phrase, d'après ce que tu as vu, pourquoi tu as choisi chacune.",
+        "json": {
+          "team": "Je veux commencer à utiliser agentes.chat avec un agent IA qui me décharge d'un travail répétitif.",
+          "member": "Je viens de rejoindre l'espace de travail de {{org}} sur agentes.chat et je veux commencer avec un agent IA qui me décharge d'un travail répétitif de mon rôle dans l'équipe.",
+          "personal": "Je veux commencer à utiliser agentes.chat avec un agent IA qui me décharge d'un travail répétitif, au travail ou en dehors.",
+          "cron": "Donne aussi le jour et l'heure de chaque routine sous forme de cron à 5 champs, dans mon fuseau horaire.",
+          "send": "4. Réponds uniquement avec un JSON dans ce format, sans texte avant ni après :",
+          "example": "{\"about\":\"…\",\"options\":[{\"name\":\"…\",\"role\":\"…\",\"why\":\"…\",\"tasks\":[\"…\",\"…\",\"…\"],\"apps\":[\"…\"],\"routine\":{\"title\":\"…\",\"schedule\":\"chaque lundi à 8:00\",\"cron\":\"0 8 * * 1\",\"prompt\":\"…\"},\"today\":[\"…\",\"…\"],\"instructions\":\"…\"}]}"
+        }
+      }
+    },
+    "areas": {
+      "title": "Que fera votre premier agent ?",
+      "lead": "Choisissez un rôle. Vous créerez d'autres agents plus tard.",
+      "other": "Autre",
+      "otherLine": "Créez votre agent et choisissez ses applis",
+      "ask": "Demandez à votre IA",
+      "askLine": "Votre IA suggère le premier agent. Ou importez des agents d'une autre appli.",
+      "askLineAlone": "Votre IA suggère le premier agent d'après ce que vous faites déjà.",
+      "startTitle": "Partez de ce que vous utilisez déjà",
+      "startAi": "Votre IA",
+      "startAiLine": "Suggère le premier agent d'après ce que vous faites déjà",
+      "startApps": "Agents d'une autre appli",
+      "startAppsLine": "Importe les agents avec leurs instructions et leurs routines",
+      "startMoreAi": "Une autre IA",
+      "startMoreApp": "Une autre appli",
+      "startMore": "{{names}} et plus",
+      "askTitle": "Demandez votre premier agent à votre IA",
+      "place": "{{name}} · {{zone}}",
+      "change": "Modifier",
+      "changeTitle": "Nom et fuseau horaire",
+      "list": {
+        "support": {
+          "title": "Service client",
+          "line": "Répond aux e-mails et tickets des clients",
+          "role": "Service client",
+          "heading": "{{name}}, pour le service client",
+          "does": "Répond aux e-mails et tickets des clients, avec un brouillon prêt pour chacun. Rien ne part sans votre accord.",
+          "connect": "Connectez là où vos clients vous écrivent",
+          "today": "les e-mails qui attendent une réponse",
+          "working": "{{name}} lit vos e-mails",
+          "instructions": "Vous vous occupez du service client : vous lisez les e-mails et tickets des clients, vous repérez ce qui demande une réponse et vous laissez un brouillon prêt pour chacun. Rien n'est envoyé sans l'accord de la personne qui vous l'a demandé.",
+          "task": "Lisez les e-mails des 7 derniers jours, dites combien attendent une réponse et laissez un brouillon prêt pour ceux d'aujourd'hui."
+        },
+        "sales": {
+          "title": "Ventes",
+          "line": "Relance les nouveaux contacts et les affaires au point mort",
+          "role": "Ventes",
+          "heading": "{{name}}, pour les ventes",
+          "does": "Relance les nouveaux contacts et les affaires au point mort, avec le prochain message prêt pour chacun. Rien ne part sans votre accord.",
+          "connect": "Connectez là où sont vos clients",
+          "today": "les affaires qui demandent de l'attention",
+          "working": "{{name}} regarde vos affaires",
+          "instructions": "Vous vous occupez des ventes : vous relancez les nouveaux contacts et les affaires au point mort et vous laissez prêt le prochain message pour chacun. Rien n'est envoyé sans l'accord de la personne qui vous l'a demandé.",
+          "task": "Regardez les nouveaux contacts et les affaires au point mort depuis plus de 7 jours, dites combien demandent de l'attention et laissez prêt le prochain message pour les plus importants."
+        },
+        "finance": {
+          "title": "Finances",
+          "line": "Signale les paiements qui posent problème",
+          "role": "Finances",
+          "heading": "{{name}}, pour les finances",
+          "does": "Trouve les paiements qui posent problème et laisse prête la relance pour le client. Rien ne part sans votre accord.",
+          "connect": "Connectez là où vous recevez vos paiements",
+          "today": "les paiements qui posent problème",
+          "working": "{{name}} regarde vos paiements",
+          "instructions": "Vous vous occupez des finances : vous trouvez les paiements qui ont échoué ou sont en retard et vous laissez prête la relance pour chaque client. Rien n'est envoyé sans l'accord de la personne qui vous l'a demandé.",
+          "task": "Regardez les paiements des 7 derniers jours, dites combien ont échoué ou sont en retard et laissez prête la relance pour chaque client."
+        },
+        "marketing": {
+          "title": "Marketing",
+          "line": "Trouve ce qu'on dit de l'entreprise, et des idées de contenu",
+          "role": "Marketing",
+          "heading": "{{name}}, pour le marketing",
+          "does": "Trouve ce qu'on dit de {{org}} en ligne et vous signale ce qui demande une réponse.",
+          "connect": "Il commence déjà par le web. Connectez des applis pour aller plus loin",
+          "connect_female": "Elle commence déjà par le web. Connectez des applis pour aller plus loin",
+          "today": "ce qu'on dit de {{org}} en ligne",
+          "working": "{{name}} cherche ce qu'on dit de {{org}}",
+          "instructions": "Vous vous occupez du marketing : vous trouvez ce qu'on dit de {{org}} en ligne et sur les réseaux sociaux, vous signalez ce qui demande une réponse et vous proposez des idées de contenu. Rien n'est publié sans l'accord de la personne qui vous l'a demandé.",
+          "task": "Cherchez ce qu'on a dit de {{org}} en ligne ces 7 derniers jours, dites ce qui demande une réponse et proposez 3 idées de contenu."
+        },
+        "day": {
+          "title": "Ma journée",
+          "line": "E-mails, réunions et tâches du jour",
+          "role": "Votre journée",
+          "heading": "{{name}}, pour votre journée",
+          "does": "Réunit chaque matin les e-mails, les réunions et les tâches du jour en un seul résumé.",
+          "connect": "Connectez là où s'organisent vos journées",
+          "today": "le résumé de votre journée",
+          "working": "{{name}} prépare votre journée",
+          "instructions": "Vous vous occupez de la journée de la personne qui vous l'a demandé : chaque matin, vous réunissez en un court résumé les e-mails qui attendent une réponse, les réunions et les tâches du jour.",
+          "task": "Préparez le résumé du jour : les réunions, les tâches à échéance et les e-mails qui attendent une réponse."
+        },
+        "tech": {
+          "title": "Développement",
+          "line": "Trouve les PR en attente de relecture et les nouvelles erreurs",
+          "role": "Développement",
+          "heading": "{{name}}, pour le développement",
+          "does": "Trouve les PR en attente de relecture et les nouvelles erreurs, et dit quoi regarder en premier.",
+          "connect": "Connectez là où l'équipe travaille",
+          "today": "les PR et les erreurs qui demandent de l'attention",
+          "working": "{{name}} regarde les PR et les erreurs",
+          "instructions": "Vous vous occupez du développement : vous trouvez les PR en attente de relecture et les nouvelles erreurs, et vous dites ce que l'équipe doit regarder en premier. Rien n'est modifié sans l'accord de la personne qui vous l'a demandé.",
+          "task": "Listez les PR en attente de relecture et les nouvelles erreurs des 7 derniers jours, et dites quoi regarder en premier."
+        },
+        "life": {
+          "title": "Vie organisée",
+          "line": "Agenda, rappels et factures",
+          "role": "Vie organisée",
+          "heading": "{{name}}, pour une vie organisée",
+          "does": "Réunit les réunions, les tâches et les e-mails du jour en un seul résumé.",
+          "connect": "Connectez là où s'organisent vos journées",
+          "today": "le résumé de votre journée",
+          "working": "{{name}} prépare votre journée",
+          "instructions": "Vous gardez en ordre la vie de la personne qui vous l'a demandé : agenda, rappels et factures. Chaque matin, vous réunissez en un seul résumé les réunions, les tâches et les e-mails du jour.",
+          "task": "Préparez le résumé du jour : les réunions, les tâches, les e-mails qui attendent une réponse et les factures à payer cette semaine."
+        },
+        "freelance": {
+          "title": "Je travaille à mon compte",
+          "line": "Clients, factures et agenda",
+          "role": "Travail",
+          "heading": "{{name}}, pour votre travail",
+          "does": "Suit vos clients, vos factures et votre agenda, et vous dit ce qui a besoin de vous aujourd'hui.",
+          "connect": "Connectez là où vous travaillez",
+          "today": "ce qui demande votre attention",
+          "working": "{{name}} regarde vos clients",
+          "instructions": "Vous vous occupez du travail de la personne qui vous l'a demandé, qui travaille à son compte : clients, factures et agenda. Vous signalez ce qui demande de l'attention et vous préparez ce qui peut l'être. Rien n'est envoyé sans l'accord de la personne qui vous l'a demandé.",
+          "task": "Regardez les e-mails des clients, les factures impayées et l'agenda de cette semaine, et dites ce qui demande de l'attention aujourd'hui."
+        },
+        "study": {
+          "title": "Études et idées",
+          "line": "Programme d'étude, révisions et écriture",
+          "role": "Études",
+          "heading": "{{name}}, pour vos études",
+          "does": "Prépare votre programme d'étude, vous rappelle les révisions et vous aide à organiser vos idées.",
+          "connect": "Connectez là où sont vos notes",
+          "today": "le programme d'étude de la semaine",
+          "working": "{{name}} prépare votre programme",
+          "instructions": "Vous vous occupez des études et des idées de la personne qui vous l'a demandé : vous préparez le programme d'étude, vous rappelez les révisions et vous aidez à organiser ce qu'elle écrit.",
+          "task": "Lisez les notes récentes, préparez le programme d'étude de cette semaine et dites quoi réviser en premier."
+        },
+        "travel": {
+          "title": "Voyages",
+          "line": "Des voyages préparés dans les moindres détails",
+          "role": "Voyages",
+          "heading": "{{name}}, pour vos voyages",
+          "does": "Réunit au même endroit les réservations, les horaires et ce qui manque pour chaque voyage.",
+          "connect": "Connectez là où arrivent vos réservations",
+          "today": "ce qui manque pour vos prochains voyages",
+          "working": "{{name}} regarde vos voyages",
+          "instructions": "Vous vous occupez des voyages de la personne qui vous l'a demandé : vous réunissez réservations, vols et horaires, et vous signalez ce qui manque pour chaque voyage.",
+          "task": "Cherchez les réservations et les voyages des 60 prochains jours et dites ce qui manque pour chacun."
+        },
+        "home": {
+          "title": "Maison",
+          "line": "Courses, tâches ménagères et factures",
+          "role": "Maison",
+          "heading": "{{name}}, pour votre maison",
+          "does": "S'occupe de la liste de courses, des tâches ménagères et des factures du mois.",
+          "connect": "Connectez là où sont vos listes",
+          "today": "ce dont la maison a besoin cette semaine",
+          "working": "{{name}} fait le point sur votre maison",
+          "instructions": "Vous vous occupez de la maison de la personne qui vous l'a demandé : liste de courses, tâches ménagères et factures du mois. Vous rappelez ce qui arrive à échéance et ce qui manque.",
+          "task": "Regardez les listes et l'agenda et dites ce dont la maison a besoin cette semaine : courses, tâches ménagères et factures à payer."
+        },
+        "health": {
+          "title": "Santé",
+          "line": "Sport et alimentation",
+          "role": "Santé",
+          "heading": "{{name}}, pour votre santé",
+          "does": "Prépare dans votre agenda votre semaine de sport et de repas, et vous les rappelle au bon moment.",
+          "connect": "Connectez là où est votre agenda",
+          "today": "votre semaine de sport",
+          "working": "{{name}} prépare votre semaine",
+          "instructions": "Vous vous occupez de la santé de la personne qui vous l'a demandé : sport et alimentation. Vous préparez la semaine dans son agenda et vous envoyez les rappels au bon moment.",
+          "task": "Regardez l'agenda de cette semaine et proposez des horaires pour le sport et les repas."
+        }
+      }
+    },
+    "meet": {
+      "eyebrow": "{{step}} · Votre premier agent",
+      "eyebrowAlone": "Votre premier agent",
+      "apps": "Connectez les applis dans lesquelles il travaille",
+      "apps_female": "Connectez les applis dans lesquelles elle travaille",
+      "connect": "Connecter",
+      "connected": "Connectée",
+      "account": "{{account}} · {{when}}",
+      "customTitle": "Créez votre agent",
+      "name": "Nom",
+      "does": "Que fait cet agent ?",
+      "appsUsed": "Applis utilisées",
+      "search": "Rechercher des applis"
+    },
+    "hire": {
+      "the": "{{name}}",
+      "title": "L'équipe de {{org}} commence avec {{agent}}",
+      "titlePersonal": "Vos agents commencent avec {{agent}}",
+      "lead": "Aujourd'hui, il vous livre {{today}}. Ensuite, créez autant d'agents que vous voulez, et ils se passent le travail entre eux.",
+      "lead_female": "Aujourd'hui, elle vous livre {{today}}. Ensuite, créez autant d'agents que vous voulez, et ils se passent le travail entre eux.",
+      "leadAny": "Il commence son premier livrable aujourd'hui. Ensuite, créez autant d'agents que vous voulez, et ils se passent le travail entre eux.",
+      "leadAny_female": "Elle commence son premier livrable aujourd'hui. Ensuite, créez autant d'agents que vous voulez, et ils se passent le travail entre eux.",
+      "next": "Plus tard :",
+      "plan": "Abonnement {{name}}",
+      "perMonth": "par mois",
+      "fine_one": "Agents illimités et jusqu'à {{count}} personne. Résiliable en un clic.",
+      "fine_many": "Agents illimités et jusqu'à {{count}} personnes. Résiliable en un clic.",
+      "fine_other": "Agents illimités et jusqu'à {{count}} personnes. Résiliable en un clic.",
+      "finePersonal": "Agents illimités, rien que pour vous. Résiliable en un clic.",
+      "fineAny": "Agents illimités. Résiliable en un clic.",
+      "later": "Pas maintenant",
+      "subscribe": "Souscrire l'abonnement {{name}}",
+      "subscribeAny": "Souscrire l'abonnement"
+    },
+    "celebrate": {
+      "say": "Bonjour {{first}}. On commence aujourd'hui.",
+      "sayAny": "Bonjour, on commence aujourd'hui.",
+      "eyebrow": "L'équipe de {{org}} · depuis le {{date}}",
+      "eyebrowPersonal": "Vos agents · depuis le {{date}}",
+      "title": "Bienvenue dans l'équipe de {{org}}",
+      "titlePersonal": "Bienvenue dans votre équipe",
+      "you": "Vous",
+      "lead": "{{you}} et {{agent}}, le premier de l'équipe. Dès aujourd'hui, ensemble au travail, jour et nuit.",
+      "lead_female": "{{you}} et {{agent}}, la première de l'équipe. Dès aujourd'hui, ensemble au travail, jour et nuit.",
+      "leadNoPlan": "{{you}} et {{agent}}, le premier de l'équipe. Dès aujourd'hui, ensemble au travail.",
+      "leadNoPlan_female": "{{you}} et {{agent}}, la première de l'équipe. Dès aujourd'hui, ensemble au travail.",
+      "leadPersonal": "{{you}} et {{agent}}, le premier de vos agents. Dès aujourd'hui, ensemble pour prendre soin de vos journées.",
+      "leadPersonal_female": "{{you}} et {{agent}}, la première de vos agents. Dès aujourd'hui, ensemble pour prendre soin de vos journées.",
+      "plan": "Abonnement {{name}} actif",
+      "planAny": "Abonnement actif",
+      "planLater": "Souscrire l'abonnement {{name}}",
+      "planLaterAny": "Souscrire un abonnement",
+      "aiDone": "{{label}} connecté",
+      "aiDoneAny": "IA connectée",
+      "connect": "Connecter l'IA",
+      "working": "{{name}} prépare le premier livrable",
+      "workingLine": "Le premier livrable arrive dans quelques minutes.",
+      "waiting": "Le premier livrable de {{name}}",
+      "enter": "Découvrir l'espace de travail",
+      "download": "Télécharger la photo de l'équipe",
+      "downloadPersonal": "Télécharger la photo de votre équipe",
+      "yourPhoto": "Changer votre photo",
+      "photoFile": "equipe-{{slug}}.png",
+      "photoFileAny": "photo-equipe.png",
+      "photoFilePersonal": "mon-equipe.png",
+      "photoFailed": "Impossible de créer la photo. Réessayez."
+    },
+    "member": {
+      "title": "Bienvenue chez {{org}}, {{first}}",
+      "titleNoName": "Bienvenue chez {{org}}",
+      "titlePersonal": "Bienvenue, {{first}}",
+      "titleNoNamePersonal": "Bienvenue",
+      "intro": "Ici, chaque personne apporte l'agent qui résout un de ses problèmes.",
+      "noPermission": "Pour créer votre agent, demandez à un admin l'autorisation de créer des agents.",
+      "enter": "Ouvrir {{org}}",
+      "enterPersonal": "Ouvrir l'espace de travail",
+      "later": "Pas maintenant, ouvrir {{org}}",
+      "laterPersonal": "Pas maintenant, ouvrir l'espace de travail",
+      "laterShort": "Pas maintenant"
     }
   },
   "desktopNotice": {
@@ -8045,7 +8204,8 @@
       "memberHint": "Ce que tout le monde peut faire",
       "member": "déjà dans {{org}}",
       "memberPersonal": "déjà ici",
-      "invited": "déjà invité"
+      "invited": "déjà invité",
+      "sent": "invité"
     },
     "dialog": {
       "title": "Inviter dans {{org}}",
@@ -16937,6 +17097,14 @@
     "teamProposal": {
       "undoExpired": "Plus d'un jour s'est écoulé depuis la création de cette équipe, elle ne peut donc plus être annulée ici. Archive ses agents sur leurs pages."
     },
+    "firstAgents": {
+      "needsAdmin": "Créer des agents dans cet espace de travail demande un admin. Demandez à un admin de le créer pour vous.",
+      "invalid": "Cette réponse n'est pas au format demandé. Copiez à nouveau la demande et collez la réponse complète de votre IA.",
+      "picking": "Cet agent est déjà en cours de création. Patientez un instant.",
+      "rateLimited": "Trop de tentatives pour l'instant. Réessayez dans un moment.",
+      "kept": "Votre premier agent est déjà créé, celui-ci ne l'a donc pas été.",
+      "failed": "L'agent n'a pas été créé. Réessayez."
+    },
     "proposal": {
       "changed": "Ceci a changé après avoir été appliqué : ajustez-le à la main.",
       "notApplied": "Ce changement n'a pas été appliqué, il n'y a donc rien à annuler.",
@@ -20398,6 +20566,7 @@
       "action_update_skills": "Mettre à jour des compétences",
       "action_approvals": "Approbations qui vous attendent",
       "welcome_member": "Vous venez de rejoindre {{org}}. **De quoi vous occupez-vous ici ?** Dites-le-moi et je crée votre premier agent avec vous.",
+      "welcome_member_agent": "Vous venez de rejoindre {{org}}, et votre premier agent est déjà dans l'équipe. Si vous avez besoin de moi, appelez-moi.",
       "action_open_page": "Ouvrir un écran",
       "action_voice_setup": "Activer les messages vocaux",
       "calendar_proposal": "Proposition d'événement : {{title}}",
@@ -23105,23 +23274,175 @@
     }
   },
   "arrival": {
-    "beta": {
-      "word": "BETA",
-      "title": "Vous arrivez tôt. Tant mieux.",
-      "text": "agentes.chat est en bêta : vous pouvez déjà vraiment travailler avec, et nous le peaufinons encore.",
-      "weekly": {
-        "title": "Il s'améliore chaque semaine",
-        "text": "Les nouveautés et les corrections sortent en continu."
+    "welcome": {
+      "stepOf": "Étape {{n}} sur {{total}}",
+      "next": "Suivant",
+      "start": "C'est parti",
+      "hello": {
+        "title": "Bienvenue chez {{org}}, {{first}}",
+        "titleNoName": "Bienvenue chez {{org}}",
+        "titlePersonal": "Bienvenue, {{first}}",
+        "titleNoNamePersonal": "Bienvenue",
+        "text": "Ici, vous et les agents travaillez ensemble, de jour comme de nuit. En une minute, l'essentiel.",
+        "textPersonal": "Ici, vous et vos agents travaillez ensemble, de jour comme de nuit. En une minute, l'essentiel.",
+        "say": "Bonjour {{first}}. Je suis {{name}}, les RH des agents.",
+        "sayNoName": "Bonjour, je suis {{name}}, les RH des agents."
       },
-      "fails": {
-        "title": "Parfois, quelque chose échoue",
-        "text": "Si ça se bloque ou paraît étrange, le problème vient de nous, pas de vous."
+      "computer": {
+        "title": "Chaque agent a son propre ordinateur",
+        "text": "Dessus, ils ouvrent des sites, utilisent des applis et exécutent du code, tout seuls. Quand vous voulez, vous regardez en direct ou prenez la main.",
+        "tab": "Tâches",
+        "rows": {
+          "a": {
+            "name": "Répondre à un client",
+            "when": "Hier",
+            "state": "En retard"
+          },
+          "b": {
+            "name": "Rapport de la semaine",
+            "when": "Aujourd'hui",
+            "state": "À faire"
+          },
+          "c": {
+            "name": "Mettre à jour les tarifs",
+            "when": "9 h",
+            "state": "Fait"
+          }
+        },
+        "say": "Une réponse est en retard. Le brouillon attend votre accord.",
+        "tabPersonal": "Factures du mois",
+        "rowsPersonal": {
+          "a": {
+            "name": "Électricité",
+            "amount": "89 €",
+            "state": "À payer aujourd'hui"
+          },
+          "b": {
+            "name": "Téléphone",
+            "amount": "45 €",
+            "state": "Dans 5 jours"
+          },
+          "c": {
+            "name": "Loyer",
+            "amount": "1 400 €",
+            "state": "Payé"
+          }
+        },
+        "sayPersonal": "La facture d'électricité est à payer aujourd'hui. Le paiement attend votre accord."
       },
-      "feedback": {
-        "title": "Vos retours décident de la suite",
-        "text": "Dites-nous ce qui a manqué ou gêné. Nous lisons tout."
+      "channels": {
+        "title": "Chaque sujet dans son canal",
+        "titlePersonal": "Chaque sujet dans sa conversation",
+        "text": "Écrivez comme vous écririez à quelqu'un de l'équipe. Celui qui connaît le sujet répond, personne ou agent. Pour parler à un agent, appelez-le simplement par son nom.",
+        "textPersonal": "Écrivez comme vous écririez à quelqu'un de confiance. Chaque agent s'occupe de son sujet, et pour parler à l'un d'eux, appelez-le simplement par son nom.",
+        "list": {
+          "a": "ventes",
+          "b": "service-client",
+          "c": "finances",
+          "d": "projets"
+        },
+        "listPersonal": {
+          "a": "Maison",
+          "b": "Factures",
+          "c": "Voyages",
+          "d": "Santé"
+        },
+        "ask": "Quelqu'un a répondu au client d'hier ?",
+        "answer": "J'ai répondu ce matin à 9 h 10 et noté la demande dans le wiki.",
+        "askPersonal": "La facture d'électricité est-elle payée ?",
+        "answerPersonal": "Hier à 14 h 20. J'ai gardé le reçu."
       },
-      "where": "Pour nous écrire, utilisez Envoyer un retour, en bas de la barre latérale."
+      "wiki": {
+        "title": "Le wiki est la documentation de {{org}}",
+        "titlePersonal": "Le wiki garde ce qui compte",
+        "text": "La documentation partagée de l'entreprise : processus, prix, façon de parler aux clients. Les agents la lisent avant de répondre et y écrivent quand ils apprennent quelque chose.",
+        "textPersonal": "Vos notes au même endroit : factures, documents, la façon dont vous aimez que les choses soient faites. Vos agents les lisent avant de répondre et écrivent quand ils apprennent quelque chose.",
+        "pages": {
+          "left": "Tarifs",
+          "right": "Ce que fait {{org}}",
+          "front": "Service client"
+        },
+        "pagesPersonal": {
+          "left": "Documents personnels",
+          "right": "À propos de moi",
+          "front": "Factures de la maison"
+        }
+      },
+      "memory": {
+        "title": "Ils retiennent ce qui compte",
+        "text": "À chaque conversation, ils gardent les préférences, les décisions et qui s'occupe de quoi. Vous relisez ce qui devient mémoire.",
+        "notes": {
+          "a": "{{org}} ferme à 18 h",
+          "b": "{{first}} préfère les résumés courts",
+          "c": "Relances en semaine uniquement",
+          "d": "Réunion d'équipe le lundi"
+        },
+        "notesPersonal": {
+          "a": "Sport à 18 h, trois fois par semaine",
+          "b": "{{first}} préfère les résumés courts",
+          "c": "Rappels en semaine uniquement",
+          "d": "Le loyer est dû le 10"
+        },
+        "likes": "Préfère les résumés courts"
+      },
+      "routines": {
+        "title": "Du travail qui se fait tout seul",
+        "text": "Les routines tournent à l'heure que vous choisissez, comme « tous les jours à 9 h ». Et tout ce qui est sérieux, comme envoyer, payer ou supprimer, attend votre accord.",
+        "routine": "Résumé du jour",
+        "routineText": "5 nouveaux messages, 1 réponse en retard",
+        "ask": "Envoyer la réponse au client ?",
+        "routinePersonal": "Votre journée",
+        "routineTextPersonal": "3 e-mails attendent une réponse, 1 facture est à payer aujourd'hui",
+        "askPersonal": "Payer la facture d'électricité de 89 € ?",
+        "asks": "{{name}} demande votre accord",
+        "refuse": "Refuser",
+        "approve": "Approuver"
+      },
+      "ready": {
+        "title": "Tout est prêt pour commencer",
+        "word": "BETA",
+        "left_one": "Plus qu'une chose.",
+        "left_other": "Encore {{count}} choses.",
+        "later": "Si vous remettez à plus tard, cette liste reste dans votre conversation avec {{name}}, pour la finir quand vous voulez.",
+        "none": "Tout est en place. Il ne reste qu'à parler à l'équipe.",
+        "nonePersonal": "Tout est en place. Il ne reste qu'à parler à vos agents.",
+        "noAi": "{{name}} n'a pas encore d'IA pour réfléchir. Connectez-en une pour que le premier livrable commence.",
+        "beta": "Nous sommes en bêta.",
+        "betaText": "Ça s'améliore chaque semaine, et si quelque chose échoue, le problème vient de nous.",
+        "feedback": "Dites-nous ce qui manque dans {{where}}, en bas de la barre latérale.",
+        "delivery": {
+          "done": "Le premier livrable de {{name}} est prêt",
+          "working": "{{name}} travaille encore",
+          "workingLine": "Il vous prévient dans cette conversation quand il a fini.",
+          "workingLine_female": "Elle vous prévient dans cette conversation quand elle a fini.",
+          "see": "Voir le livrable",
+          "open": "Aller à la conversation"
+        },
+        "rows": {
+          "plan": "Abonnement {{plan}} actif",
+          "planAny": "Abonnement actif",
+          "planTodo": "Activez l'équipe",
+          "planTodoPersonal": "Activez vos agents",
+          "planAction": "Voir les abonnements",
+          "ai": "{{label}} connecté",
+          "aiAny": "Une IA est connectée",
+          "aiTodo": "Connectez une IA",
+          "aiAction": "Connecter",
+          "people_one": "{{count}} personne dans l'équipe",
+          "people_other": "{{count}} personnes dans l'équipe",
+          "invited_one": "{{count}} personne invitée",
+          "invited_other": "{{count}} personnes invitées",
+          "peopleNone": "Juste vous pour l'instant",
+          "peopleTodo": "Invitez les personnes avec qui vous travaillez",
+          "peopleAction": "Inviter",
+          "apps_one": "{{apps}} connectée",
+          "apps_other": "{{apps}} connectées",
+          "appsNone": "Aucune appli pour l'instant",
+          "appsTodo": "Connectez vos applis de travail",
+          "appsTodoPersonal": "Connectez vos applis",
+          "appsAction": "Choisir"
+        }
+      }
     },
     "stage": {
       "ready": "Votre équipe est prête",
@@ -23134,8 +23455,7 @@
       "text": "Utilisez un abonnement que vous avez déjà. Rien ne change dans votre abonnement.",
       "others": "Autre abonnement",
       "free": "Commencer gratuitement",
-      "freeText": "Avec les modèles gratuits d'OpenCode",
-      "noPlan": "Sans abonnement",
+      "freeText": "Sans abonnement, avec les modèles gratuits d'OpenCode",
       "without": "Sans IA, les agents ne répondent pas.",
       "later": "Pas maintenant"
     }

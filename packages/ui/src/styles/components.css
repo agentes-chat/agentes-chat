@@ -4933,6 +4933,50 @@ html:not([data-pointer]) .ac-token__remove:focus-visible {
   border-color: var(--line2);
   color: var(--muted);
 }
+/* It went (an invitation just sent): its word in the ok tone, after its check. */
+.ac-token[data-state="done"] .ac-token__note {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--ok);
+}
+/*
+ * A choice of its own (an address's role): the select's words and chevron on the token's line, with no box of its own,
+ * since a bordered control inside a token reads as a card in a card. The ✕'s plate shows under the pointer and while
+ * its list is open, the focus ring from the keys. Its chevron and the ✕ keep the kit's smallest gap (`--space-1`) from
+ * what is beside them, the ✕ pulled in by its spare.
+ */
+.ac-token__choice {
+  flex: none;
+  display: inline-flex;
+  margin-inline-end: 2px;
+}
+.ac-token__choice .ac-select__trigger {
+  width: auto;
+  height: 22px;
+  gap: var(--space-1);
+  padding: 0 4px 0 7px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink2);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.ac-token__choice .ac-select__trigger:hover,
+.ac-token__choice .ac-select__trigger[aria-expanded="true"] {
+  background: var(--surface-raised);
+  box-shadow: none;
+  color: var(--ink);
+}
+html:not([data-pointer]) .ac-token__choice .ac-select__trigger:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.ac-token__choice .ac-select__chev {
+  width: 14px;
+  height: 14px;
+}
 /* A token that stays (no ✕) keeps its tip's anchor as small as itself, so a long one still ends in "…". */
 .ac-token__tip {
   display: inline-flex;
@@ -12115,6 +12159,109 @@ html:not([data-pointer]) .ac-optrow--link:has(.ac-optrow__hit:focus-visible) {
     max-width: none;
     text-align: start;
   }
+}
+/*
+ * Flat rows (`OptionLinks flat`): a box's list of ways on, no card per row and no tint, a hairline between rows, flush
+ * with the text column. The leading picture bare in its own column, centred on the title's line; what ends the row
+ * (`side`, the chevron) on that line too; the description under the title only, never under what ends the row.
+ * The pointer's plate and the focus ring reach a little past the column, behind the row.
+ */
+.ac-optlinks--flat {
+  --optlinks-lead: 20px;
+  gap: 0;
+}
+.ac-optlinks--flat > .ac-optrow--link {
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "title side go"
+    "desc . .";
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 1px;
+  min-height: 0;
+  padding: 12px 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  transform: none;
+}
+.ac-optlinks--flat > .ac-optrow--link.ac-optrow--lead {
+  grid-template-columns: var(--optlinks-lead) minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "lead title side go"
+    ". desc . .";
+  padding-left: 0;
+}
+.ac-optlinks--flat > .ac-optrow--link + .ac-optrow--link {
+  border-top: 1px solid var(--line);
+}
+.ac-optlinks--flat > .ac-optrow--link::before {
+  content: "";
+  position: absolute;
+  inset: 2px -10px;
+  z-index: var(--z-under);
+  border-radius: var(--radius-md);
+  background: var(--plate);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.ac-optlinks--flat > .ac-optrow--link:hover,
+.ac-optlinks--flat > .ac-optrow--link[data-disabled]:hover {
+  box-shadow: none;
+}
+.ac-optlinks--flat > .ac-optrow--link:not([data-disabled]):hover::before {
+  opacity: 1;
+}
+html:not([data-pointer]) .ac-optlinks--flat > .ac-optrow--link:has(.ac-optrow__hit:focus-visible) {
+  box-shadow: none;
+}
+html:not([data-pointer]) .ac-optlinks--flat > .ac-optrow--link:has(.ac-optrow__hit:focus-visible)::before {
+  opacity: 1;
+  box-shadow: var(--field-ring);
+}
+/* What leads and ends a row keeps to the title's first line, however many lines the title wraps to: each in a box as
+   tall as that line, a mark or a glyph centred on it. */
+.ac-optlinks--flat > .ac-optrow--link > :is(.ac-optrow__lead, .ac-optrow__side, .ac-optrow__go) {
+  align-self: start;
+}
+.ac-optlinks--flat > .ac-optrow--link > .ac-optrow__lead {
+  grid-area: lead;
+  justify-self: center;
+  align-items: center;
+  min-height: 22px;
+  color: var(--muted);
+}
+.ac-optlinks--flat > .ac-optrow--link > .ac-optrow__text {
+  display: contents;
+}
+.ac-optlinks--flat > .ac-optrow--link .ac-optrow__title {
+  grid-area: title;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+  letter-spacing: 0;
+}
+.ac-optlinks--flat > .ac-optrow--link > .ac-optrow__text > .ac-optrow__desc {
+  grid-area: desc;
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 19px;
+}
+/* Its words take the room they need before the title wraps (a share of a grid's own track has no size to take). */
+.ac-optlinks--flat > .ac-optrow--link > .ac-optrow__side {
+  grid-area: side;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 22px;
+  max-width: none;
+}
+.ac-optlinks--flat > .ac-optrow--link > .ac-optrow__go {
+  grid-area: go;
+  margin-top: 3px;
 }
 .ac-optrow__more--cards {
   padding: 6px 0 0;

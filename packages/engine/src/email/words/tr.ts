@@ -54,6 +54,8 @@ export const words: EmailWords = {
       ),
     more: (n) => `${n} tane daha`,
     what: "agentes.chat, kişilerin ve yapay zeka ajanlarının birlikte çalıştığı yer.",
+    arrive:
+      "Katıldığınızda kendi ajanınızı oluşturursunuz: Yapay zekanız en çok vaktinizi alan işi bulur ve onun için bir ajan önerir.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "Davet notu: " }, `“${note}”`],
     button: "Daveti kabul et",
     small: "Davet 7 gün geçerli. Bu e-posta adresiyle kabul edin.",
@@ -602,6 +604,50 @@ export const words: EmailWords = {
       },
       why: () =>
         "Bu e-postayı, agentes.chat'teki bu çalışma alanı sana ait olduğu için aldın. Bu bildirimden yalnızca iki tane gönderiyoruz.",
+    },
+    picked: {
+      first: {
+        subject: "İlk ajanın hazır ve seni bekliyor",
+        preheader: "Yapay zekan nereden başlayacağını buldu. Geriye sadece işe almak kaldı.",
+        headline: "İlk ajanın hazır",
+        body: (ai, agent, _feminine, role, today) => [
+          ai ? `${ai} nereden başlayacağını buldu: ` : "Yapay zekan nereden başlayacağını buldu: ",
+          { b: agent },
+          ...(role ? [` (${role})`] : []),
+          ...(today > 0 ? [`, bugün için ${today} teslimat hazır`] : []),
+          ". Geriye sadece işe almak kaldı.",
+        ],
+        button: "Ekibi işe al",
+        personal: { subject: "İlk ajanın hazır ve seni bekliyor", button: "Ajanlarını işe al" },
+      },
+      later: {
+        subject: (today) =>
+          today > 1
+            ? `İlk ${today} teslimat henüz başlamadı`
+            : today === 1
+              ? "İlk teslimat henüz başlamadı"
+              : "İlk ajanın henüz başlamadı",
+        preheader: "Bugün işe alırsan iş bugün başlar.",
+        headline: (today) =>
+          today > 1
+            ? `İlk ${today} teslimat henüz başlamadı`
+            : today === 1
+              ? "İlk teslimat henüz başlamadı"
+              : "İlk ajanın henüz başlamadı",
+        body: (agent, _feminine, today, org) =>
+          today > 0
+            ? [{ b: agent }, ", ", { b: org }, " için ilk gün şunları teslim edecek:"]
+            : [{ b: agent }, " başlamak için hâlâ ", { b: org }, " planını bekliyor."],
+        start: (agent) => ["Bugün işe alırsan ", { b: agent }, " bugün başlar."],
+        button: "Ekibi işe al",
+        personal: {
+          body: (agent, _feminine, today) =>
+            today > 0
+              ? [{ b: agent }, " ilk gün şunları teslim edecek:"]
+              : [{ b: agent }, " başlamak için hâlâ senin planını bekliyor."],
+          button: "Ajanlarını işe al",
+        },
+      },
     },
   },
   surface: {

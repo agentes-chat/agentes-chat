@@ -1,4 +1,4 @@
-import { and, type Database, type Executor, eq, gt, ne, schema, sql } from "@agenteschat/db";
+import { and, type Database, type Executor, eq, gt, inArray, isNotNull, ne, schema, sql } from "@agenteschat/db";
 import { serverText } from "@agenteschat/i18n";
 import { en } from "@agenteschat/i18n/en";
 import { ownsAgentSql } from "./audience";
@@ -28,12 +28,86 @@ import type { ReplyChips } from "./team-proposals";
  *   `update_workspace`. False keeps it off both.
  */
 
-const { agents, channels, messages, organizationMembers, organizationSettings, organizations, users } = schema;
+const {
+  agents,
+  channels,
+  firstAgentProposals,
+  firstDeliveries,
+  messages,
+  organizationMembers,
+  organizationSettings,
+  organizations,
+  users,
+} = schema;
 
 export const WELCOME_JOB = "right_hand.welcome";
 
 /** The greeting's `meta.bodyCode`: the apps word it with `chat.body.welcome_member`. */
 export const WELCOME_BODY = "welcome_member";
+
+/**
+ * The greeting of someone who already picked their first agent on their own onboarding (ADR 0264): hello and the agent
+ * on the team, with nothing to build (`chat.body.welcome_member_agent`).
+ */
+export const WELCOME_AGENT_BODY = "welcome_member_agent";
+
+/**
+ * Whether this person made their first agent on their own onboarding here (ADR 0264): one picked from what their own
+ * AI proposed (`first_agent_proposals`), or any first agent the onboarding keeps for them (`first_deliveries`: an
+ * area's, "Other", one brought from another app).
+ */
+async function pickedFirstAgent(db: Database, orgId: string, userId: string) {
+  const [[proposed], [kept]] = await Promise.all([
+    db
+      .select({ id: firstAgentProposals.id })
+      .from(firstAgentProposals)
+      .where(
+        and(
+          eq(firstAgentProposals.orgId, orgId),
+          eq(firstAgentProposals.userId, userId),
+          isNotNull(firstAgentProposals.agentId),
+        ),
+      )
+      .limit(1),
+    db
+      .select({ id: firstDeliveries.id })
+      .from(firstDeliveries)
+      .where(and(eq(firstDeliveries.orgId, orgId), eq(firstDeliveries.userId, userId)))
+      .limit(1),
+  ]);
+  return proposed !== undefined || kept !== undefined;
+}
+
+/**
+ * Their first agent was picked after the greeting went out (it is posted as they join, while they are still on their
+ * own onboarding): the greeting stops asking for an agent and its area chips go (ADR 0264). Nothing when there is no
+ * such greeting.
+ */
+export async function settleWelcome(db: Database, orgId: string, userId: string): Promise<void> {
+  const lodi = await lodiFor(db, orgId, userId);
+  if (!lodi) return;
+  const [org] = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, orgId));
+  if (!org) return;
+  const locale = await personLocale(db, userId);
+  const body = serverText(locale, `chat.body.${WELCOME_AGENT_BODY}`, { org: org.name });
+  const dm = db
+    .select({ id: channels.id })
+    .from(channels)
+    .where(and(eq(channels.orgId, orgId), eq(channels.dmKey, personAgentDmKey(userId, lodi.id))));
+  await db
+    .update(messages)
+    .set({
+      body,
+      meta: sql`(${messages.meta} - 'replyChips') || jsonb_build_object('bodyCode', ${WELCOME_AGENT_BODY}::text)`,
+    })
+    .where(
+      and(
+        eq(messages.orgId, orgId),
+        inArray(messages.channelId, dm),
+        sql`${messages.meta}->>'bodyCode' = ${WELCOME_BODY}`,
+      ),
+    );
+}
 
 /** How long after joining a person with no agent of their own is still new to the right hand. */
 export const NEWCOMER_DAYS = 30;
@@ -71,6 +145,8 @@ export async function postWelcome(deps: JobDeps, orgId: string, payload: Record<
   if (person.role === "owner") return;
   const lodi = await lodiFor(db, orgId, userId);
   if (!lodi) return;
+  // Their first agent came from their own onboarding: the greeting says hello and asks nothing they already answered.
+  const picked = await pickedFirstAgent(db, orgId, userId);
   const locale = await personLocale(db, userId);
   const chips: ReplyChips = {
     choices: AREAS.map((id) => serverText(locale, `onboarding.flow.area.options.${id}`)),
@@ -79,19 +155,27 @@ export async function postWelcome(deps: JobDeps, orgId: string, payload: Record<
     of: 1,
   };
   await postFromLodi(deps, orgId, userId, {
-    bodyCode: WELCOME_BODY,
+    bodyCode: picked ? WELCOME_AGENT_BODY : WELCOME_BODY,
     bodyParams: { org: person.org },
-    // Someone whose area the onboarding already knows is not asked to tap it again.
-    ...(areaOf(person.workArea) ? {} : { meta: { replyChips: chips } }),
+    // Someone whose area the onboarding already knows, or who picked their agent there, is not asked to tap it.
+    ...(picked || areaOf(person.workArea) ? {} : { meta: { replyChips: chips } }),
     push: true,
-    // Anything already in their conversation with it: they wrote first, or it was restored on a rejoin.
+    // Anything already in their conversation with it: they wrote first, or it was restored on a rejoin. Not the team
+    // card their pick made there (ADR 0264): the hello still goes out after it. The card's kind is `TEAM_PROPOSAL_CARD`,
+    // written out here since importing team-proposals from this module makes an import cycle.
     posted: async (tx, lodiId) =>
       (
         await tx
           .select({ id: messages.id })
           .from(messages)
           .innerJoin(channels, and(eq(channels.orgId, messages.orgId), eq(channels.id, messages.channelId)))
-          .where(and(eq(messages.orgId, orgId), eq(channels.dmKey, personAgentDmKey(userId, lodiId))))
+          .where(
+            and(
+              eq(messages.orgId, orgId),
+              eq(channels.dmKey, personAgentDmKey(userId, lodiId)),
+              picked ? sql`coalesce(${messages.meta}->'actionCard'->>'kind', '') <> 'team_proposal'` : undefined,
+            ),
+          )
           .limit(1)
       ).length > 0,
     lodi,
@@ -100,8 +184,9 @@ export async function postWelcome(deps: JobDeps, orgId: string, payload: Record<
 
 /**
  * What the right hand keeps in mind with someone new: a member who is not an owner (an owner has the first-run
- * checklist), joined in the last `NEWCOMER_DAYS` days and has no agent of their own. Only this person's own data.
- * "" with the workspace's switch off.
+ * checklist), joined in the last `NEWCOMER_DAYS` days, has no agent of their own and made none on their onboarding
+ * (ADR 0264: a pick from their own AI's proposal, or any first agent it kept for them). Only this person's own data. ""
+ * with the workspace's switch off.
  */
 export async function newcomerBlock(db: Database, ctx: LodiPromptContext): Promise<string> {
   const [person] = await db
@@ -119,6 +204,13 @@ export async function newcomerBlock(db: Database, ctx: LodiPromptContext): Promi
         // Their own: theirs by name or by a role they hold (ADR 0085, addendum of 2026-11-21).
         sql`not exists (select 1 from ${agents}
           where ${agents.orgId} = ${ctx.orgId} and ${ownsAgentSql("agents", sql`${ctx.personId}::text`)})`,
+        // Their first agent picked on their onboarding, even one since given to someone else: it isn't offered again.
+        sql`not exists (select 1 from ${firstAgentProposals}
+          where ${firstAgentProposals.orgId} = ${ctx.orgId} and ${firstAgentProposals.userId} = ${ctx.personId}
+          and ${firstAgentProposals.agentId} is not null)`,
+        // Nor once the onboarding kept any first agent for them (an area's, "Other", one brought from another app).
+        sql`not exists (select 1 from ${firstDeliveries}
+          where ${firstDeliveries.orgId} = ${ctx.orgId} and ${firstDeliveries.userId} = ${ctx.personId})`,
       ),
     );
   if (!person) return "";

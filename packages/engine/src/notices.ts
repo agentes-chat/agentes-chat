@@ -15,7 +15,8 @@ import { neutralizeUntrusted, quotedUntrusted, untrustedBlock } from "./untruste
  * work ending after people's messages were passed on to it (`work_follow_up`, `works.ts`), another agent asking or handing it
  * something for the person of the DM it lands in (`hand_off`: the trace of that exchange there, `consultations.ts`), people or
  * agents joining or leaving a channel (`joined`, `left`: the conversation's line, written as the first of them,
- * `channel-joins.ts`) and the one welcome an agent there may give a newcomer (`member_joined`). Stored on the notice
+ * `channel-joins.ts`), the one welcome an agent there may give a newcomer (`member_joined`) and the first delivery a
+ * person waits for from the agent they set up on the onboarding (`first_delivery`, `first-delivery.ts`). Stored on the notice
  * message as `meta.notice`; the agent's context reads it as an event, never
  * as a person's words.
  *
@@ -43,7 +44,8 @@ export type NoticeKind =
   | "hand_off"
   | "joined"
   | "left"
-  | "member_joined";
+  | "member_joined"
+  | "first_delivery";
 
 /**
  * Notices only for the agent they are for: another agent's note, the late result of a wait it stopped waiting on, what
@@ -60,6 +62,8 @@ export const AGENT_ONLY_NOTICES: readonly NoticeKind[] = [
   "work_check_in",
   "work_follow_up",
   "member_joined",
+  // The brief of a person's first delivery (ADR 0264 addendum): the agent's reply is what they wait for.
+  "first_delivery",
 ];
 
 /** Whether a message is a notice only its agent reads (`AGENT_ONLY_NOTICES`). */
@@ -329,6 +333,12 @@ export function noticeText(
       return githubEventText(n, from, current);
     case "github_check":
       return githubCheckText(n, from, current);
+    // The person set it up on the onboarding and waits here for its first delivery (ADR 0264 addendum): the brief is
+    // the server's, with their own words of what it does first. Once answered, only a line of what it was.
+    case "first_delivery":
+      return current
+        ? `[${from ?? "Your first delivery"}]:\n${n.text}`
+        : "[When this person set you up, they asked here for your first delivery; your reply after this was it]";
     default:
       return `[${from ?? "Notice"}]: ${n.text}`;
   }

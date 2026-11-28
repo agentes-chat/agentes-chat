@@ -36,6 +36,7 @@ import { getMembership } from "../organizations";
 import { outageParkedOf } from "../runs";
 import type { Talker } from "../talker";
 import { listWorkingRuns } from "../working";
+import { type APP_FIRST_AGENT_TOOL_NAMES, registerFirstAgentTools } from "./first-agents-tool";
 import type { AppPrincipal } from "./grants";
 import { type APP_MANAGE_TOOL_NAMES, registerManageTools } from "./manage-tools";
 import { type AppScope, appsUrls } from "./urls";
@@ -470,7 +471,16 @@ export function appsInstructions(p: AppPrincipal) {
     `Messages sent here are posted as ${p.personName} and marked as sent through ${p.app.name}.`,
     "Agents may stop to ask for approval of sensitive actions. Approvals are decided by people inside agentes.chat, and no tool here can approve, deny or change permissions.",
     "Ids come from list_agents, list_channels and earlier results.",
+    // The onboarding asks the person's AI for their first agents (ADR 0264): before its first plan, only that works.
+    p.stillOpen?.length
+      ? "This workspace waits for its first plan: until then propose_first_agents is the one tool that works."
+      : "",
+    // Named only while the person may still pick one (`firstAgentsOpen`): after that, nothing would read it.
+    p.firstAgentsOpen
+      ? "Asked for the person's first agents in agentes.chat, propose_first_agents sends up to 3 options: nothing is created until they pick one there."
+      : "",
   ]
+    .filter(Boolean)
     .join(" ")
     .slice(0, 900);
 }
@@ -509,7 +519,8 @@ export type ToolConfig<S extends z.ZodObject> = {
 type AppToolName =
   | (typeof APP_TOOL_NAMES)[number]
   | (typeof APP_MANAGE_TOOL_NAMES)[number]
-  | (typeof APP_WIKI_TOOL_NAMES)[number];
+  | (typeof APP_WIKI_TOOL_NAMES)[number]
+  | (typeof APP_FIRST_AGENT_TOOL_NAMES)[number];
 
 /** Registers a tool on this request's server when the connection holds its scope. */
 export type RegisterTool = <S extends z.ZodObject>(
@@ -636,7 +647,7 @@ export function buildAppsMcpServer(deps: AppsToolDeps, p: AppPrincipal, version:
         },
       },
       (async (args: z.output<S>, ctx: { mcpReq?: { signal?: AbortSignal } }) => {
-        if (p.refusal) return toolError(p.refusal);
+        if (p.refusal && !p.stillOpen?.includes(name)) return toolError(p.refusal);
         try {
           return toolResult(await run(args, ctx?.mcpReq?.signal));
         } catch (error) {
@@ -980,6 +991,7 @@ export function buildAppsMcpServer(deps: AppsToolDeps, p: AppPrincipal, version:
 
   registerManageTools(deps, p, tool);
   registerWikiTools(deps, p, tool);
+  registerFirstAgentTools(deps, p, tool);
   return server;
 }
 

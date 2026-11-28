@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { and, eq, schema } from "@agenteschat/db";
 import {
+  APP_FIRST_AGENT_TOOL_NAMES,
   APP_MANAGE_TOOL_NAMES,
   APP_TOOL_NAMES,
   APP_WIKI_TOOL_NAMES,
@@ -64,8 +65,8 @@ describe("scopes", () => {
   test("the manage tools only for a connection given manage", async () => {
     const { b, orgId } = await setup();
     const write = await connectApp(t, b, orgId, { name: "Writer", scope: "read write manage", access: "write" });
-    // The wiki's reads come with read access; its writes are managing.
-    const reads = ["list_wiki_pages", "read_wiki_page"];
+    // The wiki's reads come with read access; its writes are managing. Proposing first agents comes with any access.
+    const reads = ["list_wiki_pages", "read_wiki_page", "propose_first_agents"];
     expect(await toolNames(write.access)).toEqual([...APP_TOOL_NAMES, ...reads]);
     const refused = (await (
       await mcp(t, write.access, {
@@ -83,6 +84,7 @@ describe("scopes", () => {
       ...APP_TOOL_NAMES,
       ...APP_MANAGE_TOOL_NAMES,
       ...APP_WIKI_TOOL_NAMES,
+      ...APP_FIRST_AGENT_TOOL_NAMES,
     ]);
     const [grant] = await t.db.select().from(schema.appGrants).where(eq(schema.appGrants.displayName, "Claude"));
     expect(grant?.scopes).toEqual(["read", "write", "manage"]);

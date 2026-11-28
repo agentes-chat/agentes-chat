@@ -690,6 +690,7 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
               "`list_recent_tasks`: tugas yang kamu kirim dari aplikasi dan apa yang sedang dikerjakan agen.",
             ],
           },
+          "`propose_first_agents`: mengirim hingga 3 agen yang diusulkan AI-mu untuk memulai. Tidak membuat apa pun: kamu memilih satu di agentes.chat.",
           "Aplikasi bertindak atas namamu dan hanya melihat apa yang kamu lihat. Aplikasi tidak pernah menyetujui tindakan agen: saat agen berhenti untuk meminta persetujuan, balasannya memberi tahu hal itu dengan tautan, dan orang yang memutuskan di agentes.chat. Aplikasi juga tidak mengubah pengaturan, anggota, atau izin.",
         ],
       },

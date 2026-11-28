@@ -104,9 +104,17 @@ export const composioUserId = (orgId: string, personId?: string | null) =>
 const COMPOSIO_USER = /^org_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:_u_[A-Za-z0-9_-]+)?$/;
 /** The organization of one of our Composio user ids (`composioUserId`), or null for anything else. */
 export const orgOfComposioUser = (userId: string) => COMPOSIO_USER.exec(userId)?.[1] ?? null;
-/** `from=desktop`: started in the desktop app's window, so the callback hands the return back to the app. */
-export const composioCallbackUrl = (publicUrl: string, accountId: string, desktop = false) =>
-  `${publicUrl.replace(/\/$/, "")}/api/app/mail/composio/callback?account=${encodeURIComponent(accountId)}${desktop ? "&from=desktop" : ""}`;
+/** Where a mailbox connected on the way in goes back to (ADR 0264 addendum): the onboarding, or a member's welcome. */
+export type MailConnectBack = "onboarding" | "welcome";
+
+/**
+ * `from=desktop`: started in the desktop app's window, so the callback hands the return back to the app. Otherwise
+ * `from=onboarding|welcome` (`back`): started on the onboarding's or a member's welcome page, which it returns to.
+ */
+export const composioCallbackUrl = (publicUrl: string, accountId: string, desktop = false, back?: MailConnectBack) =>
+  `${publicUrl.replace(/\/$/, "")}/api/app/mail/composio/callback?account=${encodeURIComponent(accountId)}${
+    desktop ? "&from=desktop" : back ? `&from=${back}` : ""
+  }`;
 
 /** The mail scopes an agent can hold on one mailbox (`agent_scopes.connection_id` = the account). */
 export const MAIL_SCOPES = {
@@ -468,7 +476,8 @@ const composioOf = (deps: MailDeps) => deps.mail?.composio ?? null;
  * Starts connecting Gmail or Outlook through Composio (admins): a pending
  * row and Composio's link; the person signs in there and comes back to
  * `/api/app/mail/composio/callback?account=<id>`. `desktop`: started in the
- * desktop app's window, whose links open in the person's browser. With
+ * desktop app's window, whose links open in the person's browser. `back`: started
+ * on the onboarding or a member's welcome page, which the callback returns to. With
  * `accountId`, a mailbox that needs reconnecting signs in again: the new
  * Composio account takes the refused one's place, and the mailbox keeps its
  * agents, rules and routines.
@@ -477,7 +486,13 @@ export async function startComposioConnect(
   deps: MailDeps,
   actorId: string,
   orgId: string,
-  input: { provider: "gmail" | "outlook"; label?: string; accountId?: string; desktop?: boolean },
+  input: {
+    provider: "gmail" | "outlook";
+    label?: string;
+    accountId?: string;
+    desktop?: boolean;
+    back?: MailConnectBack;
+  },
 ): Promise<{ accountId: string; redirectUrl: string }> {
   // A mailbox is its person's (ADR 0038): any member connects their own.
   await requirePermission(deps.db, actorId, orgId, "read");
@@ -503,7 +518,7 @@ export async function startComposioConnect(
     const link = await composio.client.createConnectLink({
       toolkit: input.provider,
       userId: composioUserId(orgId),
-      callbackUrl: composioCallbackUrl(deps.publicUrl, id, input.desktop === true),
+      callbackUrl: composioCallbackUrl(deps.publicUrl, id, input.desktop === true, input.back),
     });
     await deps.db
       .update(mailAccounts)

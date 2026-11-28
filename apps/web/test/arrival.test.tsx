@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { FeedbackInput } from "@agenteschat/client";
 import { setupDom } from "@agenteschat/ui/testing/dom";
 
@@ -6,12 +8,17 @@ setupDom();
 
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { describeElement, openFeedback } from "@/lib/feedback";
-import { createFakeApi, ORG_ID, seedState } from "./fake-api";
+import { createFakeApi, ORG_ID, seedState, withRightHand } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  localStorage.clear();
+});
 
-const BETA = "Você chegou cedo. Que bom.";
+/** The welcome wizard's first step, named after the workspace and the person (ADR 0160, addendum of 2026-11-26). */
+const WELCOME = "Boas-vindas à Acme, Walter";
+const READY = "Tudo pronto para começar";
 const CONNECT = "Conecte uma IA para o seu time pensar";
 
 const click = (el: Element) => act(async () => fireEvent.click(el));
@@ -22,29 +29,70 @@ const open = async (state = seedState(), search = "") => {
   return { ...r, state };
 };
 /** Every agent without an AI, as a workspace is right after its onboarding. */
-const withoutAi = () => {
-  const state = seedState();
+const withoutAi = (state = seedState()) => {
   state.aiStatus = {
     any: false,
     agents: state.agents.map((a) => ({ agentId: a.id, state: "no_ai", reason: "no_key" })),
   };
   return state;
 };
+/** Its right hand with the first-run list it starts with, nothing done (ADR 0162). */
+const withList = (state = seedState()) => withRightHand(state, { setup: { role: null, done: [] } });
+const wizard = () => screen().getByRole("dialog") as HTMLElement;
+const title = () => wizard().querySelector(".wiz__title")?.textContent;
+const press = async (name: string | RegExp, rounds = 2) => {
+  await click(within(wizard()).getByRole("button", { name }));
+  await settle(rounds);
+};
+/** Next through to the last step: the wizard has no Skip. */
+const toLast = async () => {
+  for (let n = 1; n < 7; n++) await press(/^Próximo/);
+};
 
-describe("the arrival, right after the onboarding", () => {
-  test("the beta notice opens from the address once, then Connect an AI with its choices as cards", async () => {
+describe("the welcome wizard, right after the onboarding", () => {
+  test("from the address once: its seven steps with Back and Next, then Connect an AI with its choices as cards", async () => {
     const { router } = await open(withoutAi(), "?arrival=1");
-    const beta = screen().getByRole("dialog", { name: BETA });
-    expect(within(beta).getByText("Às vezes algo falha")).toBeTruthy();
-    // The mark is dropped as it opens: a reload shows nothing again.
+    expect(screen().getByRole("dialog", { name: WELCOME })).toBe(wizard());
+    // The mark is dropped as it opens, and this browser keeps that it was shown here.
     expect(router.state.location.search).not.toHaveProperty("arrival");
-    // This server takes no feedback: nothing says where to send it.
-    expect(within(beta).queryByText("O seu feedback decide o que vem")).toBeNull();
-    await click(within(beta).getByRole("button", { name: /Continuar/ }));
-    await settle(6);
-    expect(screen().queryByRole("dialog", { name: BETA })).toBeNull();
+    expect(localStorage.getItem(`agentes.welcome.seen.u-walter.${ORG_ID}`)).toBe("1");
+    expect(within(wizard()).getByRole("img", { name: "Passo 1 de 7" })).toBeTruthy();
+    // Its own backdrop behind it, the sky over the blurred page; the only scrim on the page.
+    expect([...document.querySelectorAll(".ac-dialog__scrim")].map((s) => s.classList.contains("wiz-scrim"))).toEqual([
+      true,
+    ]);
+    // The first step has no Back.
+    expect(within(wizard()).queryByRole("button", { name: "Voltar" })).toBeNull();
+    const titles = [title()];
+    for (let n = 2; n <= 7; n++) {
+      await press(/^Próximo/);
+      titles.push(title());
+      expect(within(wizard()).getByRole("img", { name: `Passo ${n} de 7` })).toBeTruthy();
+    }
+    expect(titles).toEqual([
+      WELCOME,
+      "Cada agente tem o seu computador",
+      "Cada assunto no seu canal",
+      "A wiki é a documentação da Acme",
+      "Eles lembram do que importa",
+      "Trabalho que acontece sozinho",
+      READY,
+    ]);
+    // No Skip on any step; the last has the beta line, and nothing about feedback where the server takes none.
+    expect(within(wizard()).queryByRole("button", { name: "Pular" })).toBeNull();
+    expect(wizard().querySelector(".wiz-betaline")?.textContent).toBe(
+      "Estamos em beta. Melhora toda semana, e se algo falhar, o problema é nosso.",
+    );
+    // Back, one step at a time.
+    await press("Voltar");
+    expect(title()).toBe("Trabalho que acontece sozinho");
+    await press(/^Próximo/);
+    await press(/^Começar/, 6);
     const connect = screen().getByRole("dialog", { name: CONNECT });
     expect(within(connect).getByText("O seu time está pronto")).toBeTruthy();
+    // Every other dialog keeps the kit's plain scrim.
+    expect(document.querySelector(".ac-dialog__scrim.wiz-scrim")).toBeNull();
+    expect(document.querySelector(".ac-dialog__scrim")).not.toBeNull();
     for (const name of ["Claude", "ChatGPT", "Outro plano", "Começar grátis"])
       expect(within(connect).getByRole("button", { name: new RegExp(`^${name}`) })).toBeTruthy();
     // Not now: the dialog closes and nothing was connected.
@@ -53,28 +101,211 @@ describe("the arrival, right after the onboarding", () => {
     expect(screen().queryByRole("dialog", { name: CONNECT })).toBeNull();
   });
 
-  test("with every agent already thinking, the beta notice is all there is", async () => {
+  test("the tour's backdrop: the page blurred under the sky's tone and a still pixel dither, a deeper tone with no blur", () => {
+    const css = readFileSync(join(import.meta.dir, "../src/components/arrival/welcome-wizard.css"), "utf8");
+    const rule = (selector: string, from = css) => from.slice(from.indexOf(`${selector} {`)).split("}")[0] ?? "";
+    const scrim = rule("\n.ac-dialog__scrim.wiz-scrim");
+    expect(scrim).toContain("backdrop-filter: blur(24px)");
+    expect(scrim).toContain("background: var(--wiz-sky)");
+    // Both themes, and a browser that blurs nothing behind.
+    expect(css).toContain('[data-theme="dark"] .ac-dialog__scrim.wiz-scrim {');
+    expect(css).toContain("@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px)))");
+    // The dither is CSS pixels, never a picture or a loop: it comes in once.
+    expect(rule("\n.ac-dialog__scrim.wiz-scrim::before")).toContain(
+      "conic-gradient(var(--wiz-pixel) 0 25%, transparent 0)",
+    );
+    expect(css).not.toMatch(/wiz-scrim[^{]*\{[^}]*infinite/);
+    expect(css).not.toMatch(/wiz-scrim[^{]*\{[^}]*url\(/);
+  });
+
+  test("shown once per person and workspace: the same address again, or a reload, opens nothing", async () => {
+    await open(withoutAi(), "?arrival=1");
+    await toLast();
+    expect(title()).toBe(READY);
+    await press(/^Começar/, 6);
+    cleanup();
+    await open(withoutAi(), "?arrival=1");
+    expect(screen().queryByRole("dialog")).toBeNull();
+  });
+
+  test("Skip goes to the last step; with every agent already thinking, the wizard is all there is", async () => {
     await open(seedState(), "?arrival=1");
-    await click(within(screen().getByRole("dialog", { name: BETA })).getByRole("button", { name: /Continuar/ }));
-    await settle(6);
-    expect(screen().queryByRole("dialog", { name: BETA })).toBeNull();
-    expect(screen().queryByRole("dialog", { name: CONNECT })).toBeNull();
+    await toLast();
+    expect(title()).toBe(READY);
+    await press(/^Começar/, 6);
+    expect(screen().queryByRole("dialog")).toBeNull();
   });
 
-  test("after the onboarding's own AI step (beta): the notice alone, even with agents that don't think", async () => {
+  test("after the onboarding's own AI step (beta): the wizard alone, even with agents that don't think", async () => {
     const { router } = await open(withoutAi(), "?arrival=beta");
-    const beta = screen().getByRole("dialog", { name: BETA });
+    expect(screen().getByRole("dialog", { name: WELCOME })).toBeTruthy();
     expect(router.state.location.search).not.toHaveProperty("arrival");
-    await click(within(beta).getByRole("button", { name: /Continuar/ }));
-    await settle(6);
-    expect(screen().queryByRole("dialog", { name: BETA })).toBeNull();
+    await toLast();
+    await press(/^Começar/, 6);
+    expect(screen().queryByRole("dialog")).toBeNull();
+  });
+
+  test("no mark in the address, no wizard", async () => {
+    await open(withoutAi());
+    expect(screen().queryByRole("dialog", { name: WELCOME })).toBeNull();
     expect(screen().queryByRole("dialog", { name: CONNECT })).toBeNull();
   });
 
-  test("no mark in the address, no notice", async () => {
-    await open(withoutAi());
-    expect(screen().queryByRole("dialog", { name: BETA })).toBeNull();
-    expect(screen().queryByRole("dialog", { name: CONNECT })).toBeNull();
+  test("the last step, an owner's: the right hand's first-run rows as the data has them, each with its way there", async () => {
+    await open(withoutAi(withList(seedState({ authConfig: { feedback: true } }))), "?arrival=beta");
+    await toLast();
+    const rows = [...wizard().querySelectorAll(".wiz-board > li")].map((li) => ({
+      text: li.querySelector(".wiz-board__text")?.textContent,
+      done: li.hasAttribute("data-done"),
+      action: li.querySelector("button")?.textContent ?? null,
+    }));
+    // The seed's workspace has its people and GitHub already: the AI is what's left.
+    expect(rows).toEqual([
+      { text: "Conecte uma IA", done: false, action: "Conectar" },
+      { text: "2 pessoas no time", done: true, action: null },
+      { text: "GitHub conectado", done: true, action: null },
+    ]);
+    // What's left, and where the list waits: the right hand's conversation.
+    expect(wizard().querySelector(".wiz__text")?.textContent).toBe(
+      "Falta só uma coisa. Se deixar para depois, esta lista continua na sua conversa com o Lodi, para você terminar quando quiser.",
+    );
+    // Feedback on: where to send it.
+    expect(wizard().querySelector(".wiz-betaline")?.textContent).toBe(
+      "Estamos em beta. Melhora toda semana, e se algo falhar, o problema é nosso. Conte o que faltar em Enviar feedback, no fim da barra lateral.",
+    );
+    // A row's way there closes the wizard and opens its own place, never Connect after it.
+    await press("Conectar", 8);
+    expect(screen().queryByRole("dialog", { name: READY })).toBeNull();
+    expect(screen().getAllByRole("dialog")).toHaveLength(1);
+  });
+
+  test("someone who doesn't own the workspace: the same steps, no rows on the last", async () => {
+    const state = withList();
+    const org = state.me?.organizations[0];
+    if (org) org.role = "member";
+    await open(state, "?arrival=beta");
+    await toLast();
+    expect(title()).toBe(READY);
+    expect(wizard().querySelector(".wiz-board")).toBeNull();
+  });
+
+  test("someone who doesn't own the workspace, their own agent with no AI: the last step says so, with Connect for it", async () => {
+    const state = withList();
+    const org = state.me?.organizations[0];
+    if (org) org.role = "member";
+    const ada = state.agents.find((a) => a.name === "Ada");
+    state.agents.push({ ...(ada as (typeof state.agents)[number]), id: "agent-iara", name: "Iara", handle: "iara" });
+    const iara = state.agents.find((a) => a.id === "agent-iara");
+    if (iara) iara.ownerUserId = "u-walter";
+    state.aiStatus = {
+      any: true,
+      agents: state.agents.map((a) => ({ agentId: a.id, state: a.id === "agent-iara" ? "no_ai" : "ready" })),
+    };
+    await open(state, "?arrival=beta");
+    await toLast();
+    expect(wizard().querySelector(".wiz__text")?.textContent).toBe(
+      "A Iara ainda não tem uma IA para pensar. Conecte uma para a primeira entrega começar.",
+    );
+    const rows = [...wizard().querySelectorAll(".wiz-board > li")].map((li) => ({
+      text: li.querySelector(".wiz-board__text")?.textContent,
+      done: li.hasAttribute("data-done"),
+      action: li.querySelector("button")?.textContent ?? null,
+    }));
+    expect(rows).toEqual([{ text: "Conecte uma IA", done: false, action: "Conectar" }]);
+    // Its Connect closes the wizard and opens the Connect dialog, never anything after it.
+    await press("Conectar", 8);
+    expect(screen().queryByRole("dialog", { name: READY })).toBeNull();
+    expect(screen().getAllByRole("dialog")).toHaveLength(1);
+    cleanup();
+    localStorage.clear();
+    // Once it thinks: the last step as before, everything in place.
+    state.aiStatus = { any: true, agents: state.agents.map((a) => ({ agentId: a.id, state: "ready" })) };
+    await open(state, "?arrival=beta");
+    await toLast();
+    expect(wizard().querySelector(".wiz-board")).toBeNull();
+    expect(wizard().querySelector(".wiz__text")?.textContent).toBe(
+      "Está tudo no lugar. Agora é só conversar com o time.",
+    );
+  });
+
+  test("its pictures: work any business has, done by the person's own agent under its role, never one trade's", async () => {
+    const state = withList();
+    state.agents.push({
+      id: "agent-caio",
+      name: "Caio",
+      handle: "caio",
+      role: "Cobrança",
+      instructions: "",
+      model: "auto",
+      ownerUserId: "u-walter",
+      hasCredential: true,
+      createdAt: new Date().toISOString(),
+    });
+    await open(state, "?arrival=beta");
+    const art = () => wizard().querySelector(".wiz__art") as HTMLElement;
+    const seen = [art().textContent ?? ""];
+    await press(/^Próximo/);
+    // The agent's screen: its tasks under its own role, the late one said in its voice.
+    expect(art().querySelector(".wiz-win__bar span")?.textContent).toBe("Cobrança");
+    expect([...art().querySelectorAll(".wiz-win__rows li")].map((li) => li.textContent)).toEqual([
+      "Responder um clienteontematrasada",
+      "Relatório da semanahojea fazer",
+      "Atualizar os preços9hfeita",
+    ]);
+    expect(art().querySelector(".wiz-pc__say")?.textContent).toBe(
+      "Uma resposta está atrasada. O rascunho está pronto para o seu ok.",
+    );
+    seen.push(art().textContent ?? "");
+    for (let n = 3; n <= 7; n++) {
+      await press(/^Próximo/);
+      seen.push(art().textContent ?? "");
+    }
+    const words = seen.join(" ");
+    expect(words).toContain("Caio");
+    expect(words).toContain("Alguém respondeu o cliente de ontem?");
+    expect(words).toContain("Enviar a resposta para o cliente?");
+    // No trade's sample: the pictures fit any business.
+    expect(words).not.toMatch(/cl[ií]nic|odonto|dental|pacient/i);
+  });
+
+  test("no box between an agent in a picture and the picture's edge clips it: its cap reaches past its face", async () => {
+    // The pictures' rules that clip what overflows them, by the classes their selectors' last compound names.
+    const css = await Bun.file(new URL("../src/components/arrival/welcome-art.css", import.meta.url).pathname).text();
+    const last = (selector: string) => selector.match(/[^\s>+~]+\s*$/)?.[0] ?? "";
+    const clipping = new Set(
+      [...css.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+        .filter((m) => /overflow(-[xy])?\s*:\s*(hidden|clip)|clip-path\s*:/.test(m[2] ?? ""))
+        .flatMap((m) => (m[1] ?? "").split(",").map(last))
+        .flatMap((compound) => [...compound.matchAll(/\.([\w-]+)/g)].map((m) => m[1])),
+    );
+    await open(withList(), "?arrival=beta");
+    for (let step = 1; step <= 7; step++) {
+      const art = wizard().querySelector(".wiz__art") as HTMLElement;
+      const faces = [...art.querySelectorAll(".ac-avatar--agent")];
+      expect(faces.length).toBeGreaterThan(0);
+      for (const face of faces)
+        for (let box = face.parentElement; box && box !== art; box = box.parentElement)
+          expect({ step, clips: [...box.classList].filter((c) => clipping.has(c)) }).toEqual({ step, clips: [] });
+      if (step < 7) await press(/^Próximo/);
+    }
+  });
+
+  test("its pictures, with no agent of the person's own: the right hand's screen says Tarefas", async () => {
+    await open(withList(), "?arrival=beta");
+    await press(/^Próximo/);
+    expect(wizard().querySelector(".wiz-win__bar span")?.textContent).toBe("Tarefas");
+  });
+
+  test("a personal workspace's own words: the person's hello, a conversation per subject", async () => {
+    const state = withList();
+    for (const o of state.me?.organizations ?? []) o.mode = "personal";
+    await open(state, "?arrival=beta");
+    expect(title()).toBe("Boas-vindas, Walter");
+    await press(/^Próximo/);
+    await press(/^Próximo/);
+    expect(title()).toBe("Cada assunto na sua conversa");
+    await press(/^Próximo/);
+    expect(title()).toBe("A wiki guarda o que importa");
   });
 });
 

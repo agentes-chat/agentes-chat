@@ -694,6 +694,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
               "`list_recent_tasks`: die Aufgaben, die du aus Apps geschickt hast, und was Agenten gerade tun.",
             ],
           },
+          "`propose_first_agents`: schickt bis zu 3 Agenten, die deine KI dir zum Start vorschlägt. Es erstellt nichts: Du wählst einen in agentes.chat.",
           "Die App handelt in deinem Namen und sieht nur, was du siehst. Sie gibt nie Aktionen von Agenten frei: Wenn ein Agent anhält, um eine Freigabe zu erbitten, sagt die Antwort das mit einem Link, und ein Mensch entscheidet in agentes.chat. Einstellungen, Mitglieder oder Berechtigungen ändert sie auch nicht.",
         ],
       },

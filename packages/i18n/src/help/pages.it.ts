@@ -692,6 +692,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
               "`list_recent_tasks`: le attività che hai mandato dalle app e quello che gli agenti stanno facendo ora.",
             ],
           },
+          "`propose_first_agents`: invia fino a 3 agenti che la tua IA ti propone per iniziare. Non crea nulla: ne scegli uno in agentes.chat.",
           "L’app agisce a nome tuo e vede solo quello che vedi tu. Non approva mai le azioni degli agenti: quando un agente si ferma per chiedere un’approvazione, la risposta lo dice con un link, e una persona decide in agentes.chat. Non cambia nemmeno impostazioni, membri o permessi.",
         ],
       },

@@ -1,4 +1,3 @@
-import type { Agent } from "@agenteschat/client";
 import {
   ApiError,
   keys,
@@ -7,32 +6,45 @@ import {
   type OrgSummary,
   useAiStatus,
   useAuthConfig,
+  useFirstAgents,
+  useFirstDeliveryRow,
+  usePickFirstAgent,
+  useStartFirstAgent,
   type WorkspaceMode,
 } from "@agenteschat/client";
 import { billingHoldOf } from "@agenteschat/client/lib/billing";
 import { accountOutOfReach } from "@agenteschat/client/lib/deletion";
 import { errorCode, errorText } from "@agenteschat/client/lib/errors";
-import { firstName, joinNames } from "@agenteschat/client/lib/format";
+import {
+  areaAgentInput,
+  CUSTOM_AREA,
+  CUSTOM_LOOK,
+  type FirstArea,
+  isFirstArea,
+  openAreaRoutine,
+  workspaceNameOf,
+} from "@agenteschat/client/lib/first-areas";
+import { firstName, toYmd } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { settingUp } from "@agenteschat/client/lib/guards";
+import type { ImportCard } from "@agenteschat/client/lib/import/flow";
 import { sendsEmail } from "@agenteschat/client/lib/join-requests";
 import { type AiChoice, planLabel, teamThinks } from "@agenteschat/client/lib/no-ai";
 import {
-  landingOf,
   type OnboardingStepId,
   type RailStep,
   railState,
+  stepCount,
   stepIndex,
 } from "@agenteschat/client/lib/onboarding";
 import { finishOnboarding, isRightHand, RIGHT_HAND_DEFAULT } from "@agenteschat/client/lib/right-hand";
 import { browserTimezone, timezoneName } from "@agenteschat/client/lib/routines";
-import { aboutOf, type BusinessType } from "@agenteschat/client/lib/team-plan";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import {
-  AgentSticker,
   Avatar,
   Button,
-  Chip,
+  Dialog,
+  DialogFooter,
   Field,
   Icon,
   Input,
@@ -40,70 +52,63 @@ import {
   Logo,
   Menu,
   MenuItem,
-  SettingNote,
-  setGaze,
+  normalizeAppearance,
 } from "@agenteschat/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, lazy, type ReactNode, Suspense, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { useAuth } from "@/auth/context";
-import { AgentAvatar } from "@/components/AgentAvatar";
-import { usePaidFacts } from "@/components/arrival/PaidMoment";
 import { BillingLinkButton } from "@/components/BillingLinkButton";
 import { DeleteAccountDialog } from "@/components/DeleteAccount";
 import { DeleteWorkspaceDialog } from "@/components/DeleteWorkspace";
 import { useDesktopOrgs } from "@/components/DesktopMenus";
 import { ErrorState } from "@/components/Loading";
-import { COMPACT_QUERY, DESKTOP_QUERY, useMediaQuery } from "@/components/NavDrawer";
 import { OrgProvider } from "@/components/org-context";
 import { ImageCropDialog, OrgMark } from "@/components/ProfilePhoto";
-import { BootSplash, OnboardingHorizon, OnboardingProgress } from "@/components/Sky";
-import { StepRail } from "@/components/StepRail";
+import { BootSplash } from "@/components/Sky";
 import { ZonePicker } from "@/components/ZoneSelect";
 import { useSignOut } from "@/hooks/useSignOut";
 import { ARRIVAL_BETA_ONLY, ARRIVAL_PARAM } from "@/lib/arrival";
+import type { ConnectReturn } from "@/lib/connect-return";
 import { sendNewLink } from "@/lib/email-confirmation";
 import { lookOf } from "@/lib/look";
 import { useOpenParam } from "@/lib/open-param";
-import { usePaidMoment, usePaidReturn } from "@/lib/paid-return";
+import { usePaidPlan, usePaidReturn } from "@/lib/paid-return";
 import { usePlanOffer } from "@/lib/plan-offer";
 import { returnPlace } from "@/lib/return-to";
 import { STORAGE_KEYS, sessionStore, storage } from "@/lib/storage";
 import { useToast } from "@/lib/toast";
-import { AiHost, AiStage, AiStep } from "./onboarding/AiStep";
-import { OnboardingPreview, type PreviewAgent } from "./onboarding/OnboardingPreview";
-import { PeopleStep } from "./onboarding/PeopleStep";
-import { PurposeCards } from "./onboarding/PurposeCards";
-import { BusinessStep, PlanStep, TeamStep, useTemplate } from "./onboarding/steps";
-import { TeamSource, useTeamSource } from "./onboarding/TeamSource";
-import { TeamStart } from "./onboarding/TeamStart";
-import { YouStep } from "./onboarding/YouStep";
+import { AgentStep, type AgentStepAgent } from "./onboarding/AgentStep";
+import { AiHost, AiStep } from "./onboarding/AiStep";
+import { AreaStep } from "./onboarding/AreaStep";
+import { TeamWelcome } from "./onboarding/CelebrateStep";
+import { HireTeam } from "./onboarding/HireStep";
+import { Box, BoxNote, Pass, PickRows, type ShellFace, World } from "./onboarding/Shell";
 import "./onboarding.css";
 
 /** Back from paying, `/me` is asked again this often until the hold lifts (as the hold's banner does). */
 const PAID_POLL_MS = 5000;
 /** On the step that connects an AI, its status is read this often: a connection made in another tab moves it on. */
 const AI_POLL_MS = 10_000;
-/**
- * Once a team is here, the agents are read this often: an AI app creating them through MCP may still be at it after
- * the first one moves the rail on, and this page has no socket to say so.
- */
-const TEAM_POLL_MS = 5000;
+
+/** The other agent apps' import, over the work step: loaded only when asked for. */
+const ImportAgentsDialog = lazy(() =>
+  import("@/components/new-agent/ImportAgentsDialog").then((m) => ({ default: m.ImportAgentsDialog })),
+);
 
 /**
- * The onboarding (ADR 0162): the blue rail with Lodi on its horizon, one step at a time, read from the workspace's own
- * data so a workspace left at any step resumes there. First what the workspace is for (ADR 0159). A company or team
- * goes on with its name (which creates it), what it does, its team (agents brought from another app, a template made
- * in one click, or none for now: its right hand alone), the plan where the workspace waits for its first one, an AI
- * for the team to think with, and the people who work there, invited last (ADR 0162, amended 2026-11-11). A
- * personal workspace has no name to ask nor a business: its agents (brought, or none for now), the plan, the AI. On
- * wide screens its sidebar fills in beside the question, and the team on its stage beside the AI step. A team's opens
- * in #general, a personal one or one whose plan was left for later in its right hand's DM, on its arrival (ADR 0160):
- * the beta notice alone once the rail offered an AI, or when the plan was left (the card there leads with the plan).
+ * The onboarding (ADR 0162, amended by ADR 0264's addendum of 2026-11-27): one box on the page's sky, one step at a
+ * time, read from the workspace's own data so a workspace left at any step resumes there. What the workspace is for
+ * (ADR 0159) comes first and makes it, named from the work e-mail; then the work its first agent does, meeting that
+ * agent and connecting the apps it works in (each bringing its routine, ADR 0242), the plan where the workspace waits
+ * for its first one (ADR 0079), the AI the person already pays for, and the team's photo with the first delivery on
+ * its way. Its button opens the person's DM with the agent, where the delivery lands, with the welcome wizard over it
+ * (ADR 0160). The server keeps the first delivery from the moment the agent is made, and fires it once the workspace
+ * has a plan and the agent an AI.
  */
-export function OnboardingPage() {
+export function OnboardingPage({ returned = null }: { returned?: ConnectReturn | null }) {
   const { t, i18n } = useTranslation();
   const api = useApi();
   const auth = useAuth();
@@ -111,40 +116,37 @@ export function OnboardingPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const toast = useToast();
-  const phone = useMediaQuery(COMPACT_QUERY);
-  const wide = useMediaQuery(DESKTOP_QUERY);
 
-  // What it is for (ADR 0159), asked before the workspace exists; a company or team then goes on to its name.
-  const [purpose, setPurpose] = useState<WorkspaceMode | null>(null);
-  const [forTeam, setForTeam] = useState(false);
+  // What it is for (ADR 0159), asked before the workspace exists; the mode changes later in Settings.
+  const [purpose, setPurpose] = useState<WorkspaceMode>("team");
   const personal = purpose === "personal";
-  const [org, setOrg] = useState("");
-  // The zone the person picked here, if they did.
-  const [zone, setZone] = useState<string | null>(null);
-  const [zoneOpen, setZoneOpen] = useState(false);
-  const [logo, setLogo] = useState<{ imageBase64: string; contentType: string } | null>(null);
-  const [logoDirty, setLogoDirty] = useState(false);
-  const [logoOpen, setLogoOpen] = useState(false);
   // Made here; else the one this person is setting up (another tab, a visit cut short), which resumes.
   const [created, setCreated] = useState<{ orgId: string; generalChannelId: string } | null>(null);
   // A done step the person went back to, else the step the data says.
   const [picked, setPicked] = useState<RailStep | null>(null);
-  // What step 2 picked in this visit: step 3 starts on its template.
-  const [business, setBusiness] = useState<BusinessType | null>(null);
-  // The AI step was on screen in this visit: once the team thinks, its done screen stays until "Go to the workspace"
-  // (a team's: until Continuar, the people step next).
-  const [aiSeen, setAiSeen] = useState(false);
-  // A team went on from the AI step to inviting people (Continuar on its done screen, or "Connect later").
-  const [aiLeft, setAiLeft] = useState(false);
-  // What the AI step's dialog connected last in this visit, said on the done screen and the rail ("Claude"), with
-  // whether the workspace had a key then.
-  const [aiPick, setAiPick] = useState<{ choice: AiChoice; key: boolean } | null>(null);
-  const [polling, setPolling] = useState(false);
+  // "Other" on the work step: the agent step's form, before its agent exists.
+  const [custom, setCustom] = useState(false);
+  // The other agent apps' import, open over the work step on the app picked (`card` null: its own list of apps), with
+  // the agents there as it opened: the one it brings becomes the first agent as it closes.
+  const [importing, setImporting] = useState<{ card: ImportCard | null; before: string[] } | null>(null);
+  // What the AI step's dialog connected last in this visit, said on the photo ("Claude").
+  const [aiPick, setAiPick] = useState<AiChoice | null>(null);
+  // "Connect later" asks first: without an AI there is no first delivery.
+  const [skipAsk, setSkipAsk] = useState(false);
+  // "Not now" on the plan step (after its question), in this visit: the photo comes next, the plan still waiting, then
+  // the workspace. No AI step without a plan: on agentes.chat Cloud its sign-ins need the computer a plan brings.
+  const [planLater, setPlanLater] = useState(false);
+  // A team's workspace is named before it exists (its name from the work e-mail to start with), with its logo and
+  // time zone; "For me" makes a personal one at once, named after the person.
+  const [naming, setNaming] = useState(false);
+  const [orgName, setOrgName] = useState<string | null>(null);
+  const [logo, setLogo] = useState<{ imageBase64: string; contentType: string } | null>(null);
+  const [logoOpen, setLogoOpen] = useState(false);
+  const [zone, setZone] = useState<string | null>(null);
+  const [zoneOpen, setZoneOpen] = useState(false);
   // "Apagar este workspace" (`?delete=1`, which the phone's onboarding opens) and "Apagar conta", kept in the address.
   const [deleting, setDeleting] = useOpenParam("delete");
   const [account, setAccount] = useOpenParam("account");
-  const lodiRef = useRef<HTMLDivElement>(null);
-  const titleRef = useRef<HTMLHeadingElement>(null);
   const mainRef = useRef<HTMLElement>(null);
 
   const me = useQuery({ ...meQuery(api), refetchOnWindowFocus: "always" });
@@ -168,7 +170,7 @@ export function OnboardingPage() {
   const orgId = target?.orgId ?? null;
   const mine = me.data?.organizations.find((o) => o.id === orgId);
   // Asked again whenever the tab comes back, as `me` is: a step answered meanwhile in another tab or on the phone moves
-  // this one on, so its button never makes a second team.
+  // this one on, so its button never makes a second agent.
   const settings = useQuery({
     queryKey: keys.settings(orgId ?? ""),
     queryFn: () => api.orgs.settings(orgId ?? ""),
@@ -180,48 +182,50 @@ export function OnboardingPage() {
     queryFn: () => api.agents.list(orgId ?? ""),
     enabled: orgId !== null,
     refetchOnWindowFocus: "always",
-    refetchInterval: (q) => (q.state.data?.some((a) => !isRightHand(a)) ? TEAM_POLL_MS : false),
   });
+  // The first delivery the server keeps for this person (ADR 0264): which agent the onboarding made, from which work.
+  const delivery = useFirstDeliveryRow(orgId ?? "", orgId !== null);
+  // The person's newest first-agent proposal: an agent made from it says its first task.
+  const firstAgents = useFirstAgents(orgId ?? "");
   const lodi = agents.data?.find(isRightHand);
-  // In the order they were made (the server's), a template's team in its template's order: as every screen lists it.
   const team = (agents.data ?? []).filter((a) => !isRightHand(a));
-  const context = settings.data?.context?.trim() ?? "";
-  // The furthest step the server keeps for it: "import" once a team's "I don't use any yet" was answered, "agents" once
-  // the team step was left with no agents, "computer" once its plan step showed, "ai" once a team left its AI step for
-  // later, "team" once its people were invited (ADR 0162).
+  const row = delivery.data ?? null;
+  const firstAgent = (row ? team.find((a) => a.id === row.agentId) : undefined) ?? team[0];
+  const area: FirstArea | "custom" | null =
+    row && row.agentId === firstAgent?.id
+      ? isFirstArea(row.area)
+        ? row.area
+        : row.area === CUSTOM_AREA
+          ? "custom"
+          : null
+      : null;
+  // The furthest step the server keeps for it: "agents" once the agent step's Continue, "computer" once its plan step
+  // showed, "ai" once the AI step was left for later (ADR 0162).
   const passed = mine?.onboarding?.step;
-  // The AI step was shown, in this visit or an earlier one that left it for later: the workspace opens without asking
-  // for an AI again.
-  const aiLaterSaved = passed !== undefined && stepIndex(passed) >= stepIndex("ai");
   const held = billingHoldOf(mine?.standing) === "payment";
   // Back from paying, until the billing service lifts the hold: `/me` again meanwhile, as the hold's banner does.
   const paid = usePaidReturn(orgId ?? "", held);
   useQuery({ ...meQuery(api), enabled: paid, refetchInterval: PAID_POLL_MS });
-  // Once the plan is on, the moment it turned on (ADR 0079): the page between the plan and the step that comes next,
-  // the team awake on it. Once per payment, never on a plain visit. A workspace `/me` doesn't list yet (one made in this
-  // visit, before it is read again) counts as held: its standing is unknown, not in force.
-  const paidMoment = usePaidMoment(orgId ?? "", mine ? mine.standing : { state: "hold", reason: null });
-  const moment = paidMoment.moment;
-  // Made here as "For me", one being set up that is, or "For me" picked and not made yet: the rail shows the personal
-  // path from the first question on (ADR 0159).
-  const personalNow = isPersonal(mine) || (personal && (created !== null || orgId === null));
+  // The workspace's own mode once `/me` lists it; before, "For me" picked.
+  const personalNow = mine ? isPersonal(mine) : personal;
 
-  // Whether the right hand and its team think, the last step's answer: read on a hold too, so the step after the plan
-  // opens as soon as it lifts.
+  // Whether the right hand and its team think, the AI step's answer: read on a hold too, so the AI step opens as soon as
+  // it lifts.
   const ids = lodi ? [lodi.id, ...team.map((a) => a.id)] : [];
+  const [polling, setPolling] = useState(false);
   const status = useAiStatus(orgId ?? "", orgId !== null && lodi !== undefined, polling ? AI_POLL_MS : false);
-  // Read again when the agents change (a team made or brought, here or in another tab): a read from before them says
-  // nothing of them.
+  // Read again when the agents change (an agent made or brought, here or in another tab): a read from before them says
+  // nothing of them, nor of which work an agent made in another tab was made for.
   const idsKey = ids.join(",");
   const readFor = useRef(idsKey);
   useEffect(() => {
     if (readFor.current === idsKey) return;
     const before = readFor.current;
     readFor.current = idsKey;
-    if (before !== "" && orgId) void qc.invalidateQueries({ queryKey: keys.aiStatus(orgId) });
+    if (before === "" || !orgId) return;
+    void qc.invalidateQueries({ queryKey: keys.aiStatus(orgId) });
+    void qc.invalidateQueries({ queryKey: keys.firstDelivery(orgId) });
   }, [idsKey, orgId, qc]);
-  // An old read being asked again is waited for, as one that doesn't list every agent yet is (`teamThinks`). One read
-  // after the list that still leaves an agent out (archived meanwhile) answers for those it lists: nothing waits on it.
   const listed =
     status.data && status.dataUpdatedAt >= agents.dataUpdatedAt
       ? ids.filter((id) => status.data?.agents.some((a) => a.agentId === id))
@@ -230,118 +234,54 @@ export function OnboardingPage() {
     status.isStale && status.isFetching
       ? undefined
       : (teamThinks(ids, status.data) ?? (listed ? teamThinks(listed, status.data) : undefined));
-  const railAt = (pick: RailStep | null) =>
-    railState({
-      orgId,
-      standing: mine?.standing,
-      billingUrl: authConfig?.billingUrl,
-      context,
-      team: team.length,
-      picked: pick,
-      personal: personalNow,
-      // The person's own step is answered once per account: their area said, or skipped (amended 2026-11-12).
-      funnel: { thinks, passed, about: (me.data?.user.workArea ?? null) !== null },
-    });
-  const reachedRail = railAt(picked);
-  // Connected on its step in this visit, a team's AI step stays on screen (what was connected, the Connect dialog still
-  // over it) until its Continuar: the people step never takes its place under the person (ADR 0162, amended 2026-11-11).
-  const keepAi =
-    picked === null &&
-    aiSeen &&
-    !aiLeft &&
-    reachedRail.thinks &&
-    reachedRail.at !== "ai" &&
-    reachedRail.steps.includes("people");
-  const rail = keepAi ? railAt("ai") : reachedRail;
-  // The server's billing too: a plan step passed on the way to the people step is listed only where there is billing.
+  // Its first delivery armed (or gone): past the agent step for good, the work never offered again (ADR 0264 addendum).
+  const armed = Boolean(row?.armedAt || row?.firedAt);
+  const rail = railState({
+    orgId,
+    standing: mine?.standing,
+    billingUrl: authConfig?.billingUrl,
+    agent: firstAgent !== undefined,
+    armed,
+    picked,
+    funnel: { thinks, passed },
+    planLater,
+  });
   const loaded =
     orgId === null ||
     (settings.data !== undefined &&
       agents.data !== undefined &&
+      delivery.data !== undefined &&
       mine !== undefined &&
       (authConfig !== undefined || config.isError));
-  // Everything else answered, the AI decides between its step and opening: while that read is on its way, the step on
-  // screen stays (a template's button pending), never a splash between it and the next one.
-  const deciding =
-    lodi !== undefined && thinks === undefined && !status.isError && (rail.at === "ai" || rail.at === "open");
+  // Everything else answered, the AI decides between its step and the photo: while that read is on its way, the step on
+  // screen stays, never a splash between it and the next one.
+  const deciding = lodi !== undefined && thinks === undefined && !status.isError && rail.at !== "area";
   const lastRail = useRef<typeof rail | null>(null);
-  // How many agents the team had on that step: a team that arrives while the AI is read (made from a template, brought
-  // from another app) keeps the screen that made it, its button pending, rather than its list for a moment.
-  const lastTeam = useRef(0);
   const frozen = deciding || leaving.current ? lastRail.current : null;
-  const { steps, at, reached, step: railStep, index, hasPlanStep, thinks: thinksNow } = frozen ?? rail;
-  // The plan just turned on: the moment stands in the page, the plan step's, while the rail, its count and the moment's
-  // one button are at the step that comes next (`at`), the one the data reached. Never on a step the person went back to.
-  const awake = moment !== null && hasPlanStep && picked === null;
-  const step: RailStep = awake ? "plan" : railStep;
-  const paidFacts = usePaidFacts(orgId ?? "", awake ? moment : null, mine?.role === "owner");
-  // A team's rail ends on inviting people (ADR 0162, amended 2026-11-11).
-  const hasPeople = steps.includes("people");
+  const { steps, step, hasPlanStep } = frozen ?? rail;
   useEffect(() => {
     if (!loaded || deciding || leaving.current) return;
     lastRail.current = rail;
-    lastTeam.current = team.length;
   });
   useEffect(() => setPolling(step === "ai"), [step]);
-  // Before the workspace exists, what it is for comes first.
-  const asking = orgId === null && !forTeam;
-  // On that question the chosen answer's agents look at the pointer (`PurposeScene`, its `data-gaze`).
+  // Off the work step, "Other" starts over.
   useEffect(() => {
-    if (!asking) return;
-    const look = (e: PointerEvent) => setGaze({ x: e.clientX, y: e.clientY });
-    window.addEventListener("pointermove", look);
-    return () => {
-      window.removeEventListener("pointermove", look);
-      setGaze(null);
-    };
-  }, [asking]);
+    if (step !== "area") setCustom(false);
+  }, [step]);
+  const asking = orgId === null;
   // Read from the first step, so the plan step has it when it opens.
   const plans = usePlanOffer(i18n.language, { alone: personalNow });
   const offer = plans.offer;
-  // Read once is enough: a refetch that fails later keeps the step on screen with what it read. The plan step opens
-  // whole, back from the billing page too: with its price, or with none once the list is late, never a line that changes.
-  // A first visit that only the AI's answer can place (its step or opening) waits for it, as for the workspace's data.
-  // The moment waits for what it says (the plan's name, what it gives, the computer as it is).
+  // What this tab came back from buying, by its name: over the AI step and on the photo's first row.
+  const bought = usePaidPlan(orgId ?? "", mine?.standing);
+  const boughtPlan = usePlanOffer(i18n.language, { key: bought?.plan, enabled: Boolean(bought?.plan) });
   const known =
-    loaded && !(deciding && frozen === null) && !(step === "plan" && plans.loading) && !(awake && paidFacts.loading);
-  const name = (mine?.name ?? org).trim();
-  // Back on step 1, the workspace's own zone (saved on another visit, maybe another device), never this browser's.
+    loaded &&
+    !(deciding && frozen === null) &&
+    !(step === "plan" && plans.loading) &&
+    !(step === "agent" && firstAgents.isLoading);
+  const name = mine?.name ?? "";
   const zoneNow = zone ?? settings.data?.timezone ?? browserTimezone() ?? "UTC";
-  const kind = business ?? aboutOf(t, context).business;
-  // A personal workspace never gets a template in the rail (ADR 0159): its card makes its agents later.
-  // Read from what it does on, so the team step has it when it opens past the person's own step.
-  const template = useTemplate(
-    orgId,
-    kind,
-    step === "business" || ((step === "you" || step === "team") && !personalNow),
-  );
-
-  // The AI step shown from a read that lists every agent: from then on, the team thinking shows its done screen. The
-  // paid moment in its place is not it.
-  useEffect(() => {
-    if (known && at === "ai" && !deciding && !awake) setAiSeen(true);
-  }, [known, at, deciding, awake]);
-  // On the AI step with every agent thinking: its done screen (a team's, gone back to, too: Continuar leads on).
-  const aiDone = step === "ai" && thinksNow && (aiSeen || hasPeople);
-  // The rail ends on the AI step and it is done: every step answered, none current.
-  const allDone = aiDone && !hasPeople;
-  // What the dialog connected is named only where the status doesn't say otherwise (a key connected some other way
-  // after it): a key needs the workspace's key, a plan no key that came after it.
-  const keyNow = status.data?.apiKey === true;
-  const aiNamed = aiPick && (aiPick.choice === "key" ? keyNow : !keyNow || aiPick.key) ? aiPick.choice : null;
-  // The team step's question and the agents it brings from another app (ADR 0055): at the page, so they outlive the
-  // step's own views and the rail's moves; an import applying, or its report up, pins the team step.
-  const holdTeam = useCallback((hold: boolean) => setPicked(hold ? "team" : null), []);
-  const source = useTeamSource(orgId, { personal: personalNow, passed, onHold: holdTeam });
-  const holding = source.holding;
-  const view = source.view;
-  // A team just made or brought, on the team step it was made on, until the AI's read places the next step.
-  const arriving = frozen !== null && step === "team" && lastTeam.current === 0 && team.length > 0;
-  // The team made, and no import holding the step: who is in it.
-  const teamList = team.length > 0 && !holding && !arriving;
-  // Nothing opens by itself while the person is on a step they chose: the AI's done screen, an import's report or its
-  // files copying, a step they went back to.
-  const stay = aiSeen || holding || picked !== null || awake;
 
   /** A step the server saved, in `/me` as it answered, where the rail reads it. */
   const remember = (id: string, saved: { step: OnboardingStepId } | null) => {
@@ -359,13 +299,33 @@ export function OnboardingPage() {
     mutationFn: (id: string) => api.orgs.saveOnboarding(id, { step: "computer" }),
     onSuccess: (saved, id) => remember(id, saved),
   });
-  // A team's "Connect later" goes on to inviting people, kept as "ai" so a reload resumes there (ADR 0162, amended
-  // 2026-11-11).
-  const aiLater = useMutation({
+  // The agent step's Continue: its first delivery may go once the agent can work (its apps were connected on the step,
+  // ADR 0264; one brought from another app gets its own here), then kept as "agents", so a reload resumes past it.
+  const agentDone = useMutation({
+    mutationFn: async ({ id, agentId }: { id: string; agentId: string | null }) => {
+      if (agentId) await api.firstAgents.keepDelivery(id, agentId);
+      void qc.invalidateQueries({ queryKey: keys.firstDelivery(id) });
+      return api.orgs.saveOnboarding(id, { step: "agents" });
+    },
+    onSuccess: (saved, { id }) => {
+      remember(id, saved);
+      setPicked(null);
+    },
+  });
+  // "Not now" on the plan, confirmed: kept as "ai" (past the plan and the AI steps while the plan waits), so a reload
+  // stays on the photo.
+  const planSkipped = useMutation({
+    meta: { silent: true },
+    mutationFn: (id: string) => api.orgs.saveOnboarding(id, { step: "ai" }),
+    onSuccess: (saved, id) => remember(id, saved),
+  });
+  // The AI step answered (an AI connected, Continue, or "Continue without an AI"): kept as "ai", so a reload resumes on
+  // the photo.
+  const aiAnswered = useMutation({
     mutationFn: (id: string) => api.orgs.saveOnboarding(id, { step: "ai" }),
     onSuccess: (saved, id) => {
       remember(id, saved);
-      setAiLeft(true);
+      setSkipAsk(false);
       setPicked(null);
     },
   });
@@ -375,12 +335,15 @@ export function OnboardingPage() {
     markPlan.mutate(orgId);
   });
 
+  // The workspace's name: from the work e-mail's domain, the person's first name for a webmail address (ADR 0162).
+  const email = me.data?.user.email ?? "";
+  const personName = me.data?.user.name ?? "";
+  const nameFor = (mode: WorkspaceMode) =>
+    (mode === "personal" ? firstName(personName) : workspaceNameOf(email, personName)) || t("onboarding.personal.name");
+
   // On agentes.chat Cloud, while sign-up is by invitation, only accounts early access allowed make workspaces (ADR 0078).
   const inviteOnly = me.data?.user.canCreateWorkspace === false && orgId === null;
   const emails = sendsEmail(authConfig);
-  const email = me.data?.user.email ?? "";
-  // Their face in the first question's drawings: the account's photo (Google's), else their initials.
-  const you = { name: me.data?.user.name || email, image: me.data?.user.image ?? null };
   // The address this tab's sign-up was emailed a link to confirm: the step says where it went. Read once and
   // forgotten once confirmed or set up, so a later onboarding (another workspace) says nothing of it.
   const [sentTo] = useState(() => sessionStore.get(STORAGE_KEYS.confirmationSent));
@@ -398,27 +361,22 @@ export function OnboardingPage() {
   const leaveTo = others.find((o) => o.id === storage.get(STORAGE_KEYS.lastOrg)) ?? others[0];
 
   const open = useMutation({
-    // "done": opening by itself; "later": the last step's buttons ("Connect later", "Go to the workspace", "Invite
-    // later"), which land the same way; "invited": the people step's invitations sent; "skipped": the plan left for
-    // later.
-    mutationFn: async (how: "done" | "later" | "invited" | "skipped") => {
+    // "done": the photo's button, into the DM with the first agent; "skipped": the plan left for later, into the right
+    // hand's DM, whose card leads with the plan.
+    mutationFn: async (how: "done" | "skipped") => {
       if (!target) return;
       leaving.current = true;
-      // The invitations went: kept as "team" first, so a finish that fails resumes past the step, never asking again.
-      if (how === "invited") await api.orgs.saveOnboarding(target.orgId, { step: "team" });
       const done = await finishOnboarding(api, target.orgId);
       sessionStore.remove(STORAGE_KEYS.confirmationSent);
       // The answer that finished it says who the person is now: it opens without asking the server again.
       if (done.me) qc.setQueryData(keys.me, done.me);
       else await qc.invalidateQueries({ queryKey: keys.me });
       const params = { orgId: target.orgId };
-      // Wherever it opens, on its arrival (ADR 0160): the beta notice, then Connect an AI; the notice alone once the
-      // rail offered the AI (in this visit, or left for later in an earlier one), or when the plan was left for later
-      // (the right hand's card leads with the plan).
-      const offered = aiSeen || aiLaterSaved || how === "skipped";
-      const search = { [ARRIVAL_PARAM]: offered ? ARRIVAL_BETA_ONLY : 1 } as never;
-      if (landingOf(how === "skipped" ? "skipped" : "done", personalNow) === "rightHand" && done.agentId)
-        await navigate({ to: "/org/$orgId/dm/agent/$agentId", params: { ...params, agentId: done.agentId }, search });
+      // On its arrival (ADR 0160): the welcome wizard alone, its last step leading with the first delivery. The AI was
+      // offered here.
+      const search = { [ARRIVAL_PARAM]: ARRIVAL_BETA_ONLY } as never;
+      const to = how === "done" && firstAgent ? firstAgent.id : done.agentId;
+      if (to) await navigate({ to: "/org/$orgId/dm/agent/$agentId", params: { ...params, agentId: to }, search });
       else
         await navigate({
           to: "/org/$orgId/c/$channelId",
@@ -426,11 +384,23 @@ export function OnboardingPage() {
           search,
         });
     },
-    // Opening by itself, a failure is the page's own (below); from a button, the step stays and a toast says it.
-    onError: (e, how) => {
+    onError: (e) => {
       leaving.current = false;
-      if (how !== "done") toast.show(errorText(t, e), "error");
+      toast.show(errorText(t, e), "error");
     },
+  });
+
+  // The AI step answered: on to the photo.
+  const finishAi = () => {
+    if (!orgId || aiAnswered.isPending || open.isPending) return;
+    aiAnswered.mutate(orgId);
+  };
+  // An AI connected on the AI step answers it: at once where the agents already thought, else once they think.
+  const [aiConnected, setAiConnected] = useState(false);
+  useEffect(() => {
+    if (step !== "ai" || !aiConnected || thinks !== true) return;
+    if (aiAnswered.status !== "idle" || open.status !== "idle") return;
+    finishAi();
   });
 
   const save = useMutation({
@@ -440,64 +410,151 @@ export function OnboardingPage() {
       if (errorCode(e) !== "org.create_unpaid") toast.show(errorText(t, e), "error");
     },
     mutationFn: async () => {
-      let made: { orgId: string; generalChannelId: string } | null = null;
-      // `/me` as the create answered it, while nothing after it changed it.
-      let now: Me | undefined;
-      if (!orgId) {
-        const res = await api.orgs.create({
-          // "For me": no name to ask, the word for it in the person's language (renamed in Settings like any other).
-          name: personal ? t("onboarding.personal.name") : org.trim(),
-          ...(personal ? { mode: "personal" as const } : {}),
-          timezone: zoneNow,
-          // The person's own zone, detected here: agents read the local time from it (the language is `useServerLocale`'s).
-          memberTimezone: browserTimezone() ?? undefined,
-        });
-        made = { orgId: res.organization.id, generalChannelId: res.generalChannelId };
-        now = res.me;
-      } else {
-        await api.orgs.updateSettings(orgId, { name: org.trim(), ...(zone ? { timezone: zone } : {}) });
-      }
-      const id = made?.orgId ?? orgId ?? "";
-      // The logo needs the workspace: picked before it existed, sent now (a team's only: "For me" asks none).
-      if (logoDirty && !personal) {
-        if (logo) await api.orgs.setLogo(id, logo);
-        else await api.orgs.removeLogo(id);
-        setLogoDirty(false);
-        now = undefined;
-      }
+      const res = await api.orgs.create({
+        name: personal ? nameFor("personal") : orgName?.trim() || nameFor("team"),
+        ...(personal ? { mode: "personal" as const } : {}),
+        timezone: zoneNow,
+        // The person's own zone, detected here: agents read the local time from it (the language is `useServerLocale`'s).
+        memberTimezone: browserTimezone() ?? undefined,
+      });
+      const id = res.organization.id;
+      // The logo needs the workspace: picked on the name step before it existed, sent now. A logo that didn't go up
+      // leaves the workspace made, with its letter.
+      const logoSent =
+        !personal && logo
+          ? await api.orgs.setLogo(id, logo).then(
+              () => true,
+              () => false,
+            )
+          : false;
       // The next step's data first, then the workspace among mine: it shows at once, with no splash between.
       await Promise.all([
         qc.prefetchQuery({ queryKey: keys.settings(id), queryFn: () => api.orgs.settings(id) }),
         qc.prefetchQuery({ queryKey: keys.agents(id), queryFn: () => api.agents.list(id) }),
+        qc.prefetchQuery({ queryKey: keys.firstDelivery(id), queryFn: () => api.firstAgents.delivery(id) }),
       ]);
-      if (now) qc.setQueryData(keys.me, now);
-      else await qc.invalidateQueries({ queryKey: keys.me });
-      if (made) setCreated(made);
+      if (logoSent) await qc.invalidateQueries({ queryKey: keys.me });
+      else qc.setQueryData(keys.me, res.me);
+      setCreated({ orgId: id, generalChannelId: res.generalChannelId });
       setPicked(null);
     },
   });
 
-  // Everything answered, and no plan to wait for: it opens (back here from another tab, or paid meanwhile), unless the
-  // person stays on a step of their own.
-  const opening = useRef(false);
-  useEffect(() => {
-    if (!known || at !== "open" || stay || opening.current || deleting !== null) return;
-    opening.current = true;
-    open.mutate("done");
-  });
+  // The workspace's name and time zone, changed from the work step's footer.
+  const savePlace = async (next: { name: string; timezone: string }) => {
+    if (!orgId) return;
+    const saved = await api.orgs.updateSettings(orgId, { name: next.name, timezone: next.timezone });
+    qc.setQueryData(keys.settings(orgId), saved);
+    await qc.invalidateQueries({ queryKey: keys.me });
+  };
 
-  // A new step, or a step's own new view (the team step's question, bringing, what was found, its report or its list;
-  // the AI step's connected screen), replaces the pressed button under the focus: the focus goes to the new heading,
-  // which is read out, and where Enter still reaches the step's action.
-  const shownView = `${step}:${step === "team" ? (teamList ? "list" : view) : step === "ai" ? String(aiDone) : ""}`;
+  // The first agent: made from a work (replacing one made a moment ago from another), from "Other", or from the top
+  // option the person's AI proposed (the task it found repeated most).
+  const start = useStartFirstAgent(orgId ?? "");
+  const pick = usePickFirstAgent(orgId ?? "");
+  const replaced = row && !row.firedAt ? row.agentId : null;
+  // Its first agent already kept elsewhere (another tab won, 409 `first_agents.kept`): read again and move on to it,
+  // with no error. Anything else, or nothing to move on to, says why.
+  const firstAgentFailed = async (e: unknown) => {
+    if (orgId && errorCode(e) === "first_agents.kept") {
+      const [kept] = await Promise.all([
+        qc.fetchQuery({
+          queryKey: keys.firstDelivery(orgId),
+          queryFn: () => api.firstAgents.delivery(orgId),
+          staleTime: 0,
+        }),
+        qc.invalidateQueries({ queryKey: keys.agents(orgId) }),
+      ]);
+      if (kept) {
+        setCustom(false);
+        setPicked(null);
+        return;
+      }
+    }
+    toast.show(errorText(t, e), "error");
+  };
+  const startArea = (a: FirstArea) => {
+    if (!orgId) return;
+    // The same work again (back from its agent): the agent made for it stays.
+    if (row?.area === a && firstAgent?.id === row.agentId) return setPicked(null);
+    start.mutate(
+      { ...areaAgentInput(t, a, name), replace: replaced },
+      {
+        onSuccess: async (made) => {
+          // Work that starts with no app starts with its routine; its first run is the first delivery.
+          const routine = openAreaRoutine(t, a, {
+            agentId: made.agentId,
+            timezone: zoneNow,
+            today: toYmd(new Date()),
+          });
+          if (routine) await api.routines.create(orgId, routine).catch(() => undefined);
+          await qc.invalidateQueries({ queryKey: keys.firstDelivery(orgId) });
+          setPicked(null);
+        },
+        onError: (e) => void firstAgentFailed(e),
+      },
+    );
+  };
+  // An import from the work step brought agents: the oldest of the ones it made becomes the first agent, in the place
+  // of the one made a moment ago, so the onboarding leaves one (ADR 0264 addendum).
+  const adopt = useMutation({
+    mutationFn: (input: { agentId: string; replace: string | null }) => api.firstAgents.adopt(orgId ?? "", input),
+    meta: { silent: true },
+    onSuccess: async () => {
+      if (!orgId) return;
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: keys.firstDelivery(orgId) }),
+        qc.invalidateQueries({ queryKey: keys.agents(orgId) }),
+      ]);
+      setPicked(null);
+    },
+    onError: (e) => void firstAgentFailed(e),
+  });
+  // Nothing brought: the step it was opened from stays (the work step, after Back); the agent brought moves on to it.
+  const closeImport = async () => {
+    const before = new Set(importing?.before ?? []);
+    setImporting(null);
+    if (!orgId) return;
+    const fresh = (await agents.refetch()).data ?? [];
+    const you = me.data?.user.id;
+    const brought = fresh
+      .filter((a) => !isRightHand(a) && !before.has(a.id) && a.ownerUserId === you)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0];
+    if (brought) adopt.mutate({ agentId: brought.id, replace: replaced });
+  };
+  const startCustom = async (draft: { name: string; does: string }): Promise<AgentStepAgent | null> => {
+    if (!orgId) return null;
+    try {
+      const made = await start.mutateAsync({
+        area: CUSTOM_AREA,
+        name: draft.name,
+        // What it does is a sentence, not a role: it goes in its instructions and its first task.
+        instructions: draft.does,
+        appearance: CUSTOM_LOOK,
+        task: draft.does.slice(0, 500),
+        replace: replaced,
+      });
+      await qc.invalidateQueries({ queryKey: keys.firstDelivery(orgId) });
+      setPicked(null);
+      return { id: made.agentId, name: draft.name, role: "", look: normalizeAppearance(CUSTOM_LOOK) };
+    } catch (e) {
+      await firstAgentFailed(e);
+      return null;
+    }
+  };
+
+  // A new step, or a step's own new view, replaces the pressed button under the focus: the focus goes to the new
+  // heading, which is read out, and where Enter still reaches the step's action.
+  // "Other" and the agent it makes share one view: a Connect that makes the agent keeps its flow open.
+  const shownView = asking ? (naming ? "name" : "who") : step === "area" && custom ? "agent" : step;
   const shown = useRef<string | null>(null);
   useEffect(() => {
     if (!known || shown.current === shownView) return;
-    if (shown.current !== null) titleRef.current?.focus();
+    if (shown.current !== null) mainRef.current?.querySelector<HTMLElement>(".onbx__title")?.focus();
     shown.current = shownView;
   });
-  // A dialog that closes on a button gone meanwhile (Connect an AI, over the cards its pick replaced) leaves the focus
-  // on the page's body, out of the step's reach: Enter there still presses the step's action.
+  // A dialog that closes on a button gone meanwhile leaves the focus on the page's body, out of the step's reach:
+  // Enter there still presses the step's action.
   useEffect(() => {
     const press = (e: KeyboardEvent) => {
       if (e.key !== "Enter" || e.shiftKey || e.isComposing || e.defaultPrevented || e.target !== document.body) return;
@@ -517,227 +574,464 @@ export function OnboardingPage() {
     refused instanceof ApiError && refused.code === "org.create_unpaid" && typeof refused.params?.orgId === "string"
       ? refused.params.orgId
       : null;
-  const busy = save.isPending || open.isPending || aiLater.isPending;
-  const savedLogo = logoDirty ? null : mine?.logo;
-  const shownLogo = logo ? `data:${logo.contentType};base64,${logo.imageBase64}` : (savedLogo ?? null);
-  const lodiName = lodi?.name ?? RIGHT_HAND_DEFAULT.name;
+  const busy =
+    save.isPending ||
+    open.isPending ||
+    aiAnswered.isPending ||
+    agentDone.isPending ||
+    start.isPending ||
+    pick.isPending ||
+    adopt.isPending;
 
-  // A read that failed, or a workspace that wouldn't open by itself: said, with the way on, never a sky that waits for
-  // nothing (from a button, its toast says it and the step stays).
+  // A read that failed: said, with the way on, never a sky that waits for nothing.
   const failed =
     orgId === null
       ? null
-      : ([settings, agents].find((q) => q.data === undefined && q.isError && !q.isFetching)?.error ??
-        (at === "open" && open.isError && open.variables === "done" ? open.error : null));
-  // The paid moment on screen here, in the plan step's place, past the splash: only now shown and used up.
-  const momentOnScreen =
-    awake && !failed && Boolean(me.data) && known && !(at === "open" && !stay && deleting === null);
-  useEffect(() => {
-    if (momentOnScreen) paidMoment.onScreen();
-  }, [momentOnScreen, paidMoment.onScreen]);
+      : ([settings, agents, delivery].find((q) => q.data === undefined && q.isError && !q.isFetching)?.error ?? null);
   if (failed)
     return (
       <div className="page page--mid">
         <ErrorState
           error={failed}
           onRetry={() => {
-            opening.current = false;
-            open.reset();
             if (settings.isError) void settings.refetch();
             if (agents.isError) void agents.refetch();
+            if (delivery.isError) void delivery.refetch();
           }}
         />
       </div>
     );
-  if (!me.data || !known || (at === "open" && !stay && deleting === null)) return <BootSplash />;
+  if (!me.data || !known) return <BootSplash />;
 
-  const lodiWords = { first: firstName(me.data.user.name), ...agentGrammar(lodiName) };
-  // No agents besides the right hand (the team step left with none, ADR 0162 amended 2026-11-11, or a personal
-  // workspace's "no agents yet"): the plan and AI steps speak of it, never of a team that isn't there.
-  const alone = team.length === 0;
-  // The team step's heading and Lodi's line from its source, until the team is made; then words for a team that
-  // exists (back from a later step), never the template's.
-  const teamHead = step === "team" && !teamList ? source.head(t, name) : null;
-  const aiLabel = aiNamed && aiNamed !== "key" ? planLabel(t, aiNamed) : null;
-  const say =
-    step === "you"
-      ? t(personalNow ? "onboarding.flow.lodi.youPersonal" : "onboarding.flow.lodi.you")
-      : step === "name"
-        ? t("onboarding.flow.lodi.name", lodiWords)
-        : step === "business"
-          ? t("onboarding.flow.lodi.business", lodiWords)
-          : step === "team"
-            ? (teamHead?.say ??
-              t(personalNow ? "onboarding.flow.lodi.teamMadePersonal" : "onboarding.flow.lodi.teamMade", lodiWords))
-            : step === "plan"
-              ? awake
-                ? // Only what is true now: the computer is on, or getting ready (none of its own: not a word of it).
-                  t(
-                    paidFacts.computer === null
-                      ? "paidMoment.say"
-                      : paidFacts.computer.on
-                        ? "paidMoment.sayOn"
-                        : "paidMoment.sayStarting",
-                  )
-                : t("onboarding.flow.lodi.planThen", lodiWords)
-              : step === "people"
-                ? t(emails ? "onboarding.flow.lodi.people" : "onboarding.flow.lodi.peopleLink", lodiWords)
-                : aiDone
-                  ? t(hasPeople ? "onboarding.flow.lodi.connectedThen" : "onboarding.flow.lodi.connected", lodiWords)
-                  : hasPeople
-                    ? // Not the last step: the people come after it.
-                      t(alone ? "onboarding.flow.lodi.aiThenAlone" : "onboarding.flow.lodi.aiThen", lodiWords)
-                    : t(
-                        personalNow || alone ? "onboarding.flow.lodi.aiPersonal" : "onboarding.flow.lodi.ai",
-                        lodiWords,
-                      );
-  const title =
-    step === "you"
-      ? t("onboarding.flow.you.title")
-      : asking
-        ? t("onboarding.purpose.title")
-        : step === "name"
-          ? t("onboarding.workspace.title")
-          : step === "business"
-            ? t("agentSetup.firstRun.about.title", { org: name })
-            : step === "team"
-              ? (teamHead?.title ??
-                t(personalNow ? "onboarding.flow.steps.teamPersonal" : "onboarding.flow.team.title"))
-              : step === "plan"
-                ? awake
-                  ? paidFacts.title
-                  : t(personalNow ? "onboarding.flow.plan.titlePersonal" : "onboarding.flow.plan.title")
-                : step === "people"
-                  ? t("onboarding.flow.people.title")
-                  : aiDone
-                    ? personalNow || alone
-                      ? t("onboarding.flow.ai.doneTitlePersonal", agentGrammar(lodiName))
-                      : t("onboarding.flow.ai.doneTitle", { org: name })
-                    : personalNow
-                      ? t("onboarding.flow.ai.titlePersonal")
-                      : alone
-                        ? // The right hand alone (the team step left with no agents): by its name, as its stage says it.
-                          t("onboarding.flow.ai.titleAlone", agentGrammar(lodiName))
-                        : t("arrival.connect.title");
-  const lead =
-    step === "you"
-      ? t(personalNow ? "onboarding.flow.you.leadPersonal" : "onboarding.flow.you.lead")
-      : asking
-        ? t("onboarding.purpose.pick")
-        : step === "name"
-          ? t("onboarding.workspace.lead")
-          : step === "business"
-            ? t("agentSetup.firstRun.about.desc")
-            : step === "team"
-              ? (teamHead?.lead ?? t("onboarding.flow.team.madeLead"))
-              : step === "plan"
-                ? awake
-                  ? (paidFacts.room ?? "")
-                  : t(
-                      personalNow
-                        ? "onboarding.flow.plan.leadPersonal"
-                        : alone
-                          ? "onboarding.flow.plan.leadAlone"
-                          : "onboarding.flow.plan.lead",
-                    )
-                : step === "people"
-                  ? // A server that sends no email invites through its link only (ADR 0090).
-                    t(emails ? "onboarding.flow.people.lead" : "members.dialog.linkStep.lead")
-                  : aiDone
-                    ? aiLabel
-                      ? t("onboarding.flow.ai.doneLead", { label: aiLabel })
-                      : t("onboarding.flow.ai.doneLeadAny")
-                    : t("arrival.connect.text");
-  // Its own back: the first question from the name, the workspace the person came from, the team step's previous
-  // view, the team from the AI step (nothing to go back to once it thinks), the AI step from the people step.
-  let back: { label: string; go: () => void } | null = null;
-  if (step === "you") {
-    // A team's goes back to what it does, its answers kept; a personal workspace's purpose is never asked again.
-    if (!personalNow) back = { label: t("onboarding.back"), go: () => setPicked("business") };
-  } else if (step === "name" && orgId === null && forTeam) {
-    back = { label: t("onboarding.back"), go: () => setForTeam(false) };
-  } else if (step === "name" && leaveTo) {
-    const href = returnPlace(leaveTo.id);
-    back = { label: t("onboarding.leave", { name: leaveTo.name }), go: () => void navigate({ href }) };
-  } else if (step === "team" && !teamList && source.back) {
-    back = { label: t("onboarding.back"), go: source.back };
-  } else if (step === "ai" && !aiDone) {
-    back = { label: t("onboarding.back"), go: () => setPicked("team") };
-  } else if (step === "people") {
-    back = { label: t("onboarding.back"), go: () => setPicked("ai") };
-  }
-  const answered = Math.min(reached, steps.length);
-  // A personal workspace's own words for its steps (ADR 0159), from the first question on; it never invites here.
-  // Before that question is answered, the first step is the question itself, whichever way it goes: the rail never
-  // names a step the screen isn't asking.
-  const stepName = (s: RailStep) =>
-    (personalNow && s !== "business" && s !== "you" && s !== "people") || (asking && s === "name")
-      ? t(`onboarding.flow.steps.${s}Personal`)
-      : t(`onboarding.flow.steps.${s}`);
-  const values: Partial<Record<RailStep, string>> = {
-    // A personal workspace's first answer is what it is for, never its name ("Pessoal", ADR 0159).
-    name: personalNow ? t("onboarding.purpose.personal") : name || undefined,
-    business:
-      kind && kind !== "other"
-        ? t(`teamPlan.business.${kind}`)
-        : context
-          ? t("onboarding.railValue.context")
-          : undefined,
-    // The person's own step: the name they go by.
-    you: me.data.user.name || undefined,
-    // Answered with no agents (shown only once answered): they come later.
-    team: team.length
-      ? joinNames(
-          team.map((a) => a.name),
-          t,
-        )
-      : t("onboarding.railValue.later"),
-    plan: steps.includes("plan") && !held ? t("onboarding.railValue.on") : undefined,
-    // Connected, or (a team's) left for later on the way to its people.
-    ai: thinksNow
-      ? (aiLabel ?? t("onboarding.railValue.ai"))
-      : aiLaterSaved
-        ? t("onboarding.railValue.later")
-        : undefined,
+  const lodiName = lodi?.name ?? RIGHT_HAND_DEFAULT.name;
+  const lodiFace: ShellFace = {
+    id: lodi?.id ?? "right-hand",
+    name: lodiName,
+    look: lookOf(lodi) ?? RIGHT_HAND_DEFAULT.appearance,
   };
-  // The steps whose value is "Later": passed, not done, so the rail marks them with a dash, never the check.
-  const later: Partial<Record<RailStep, boolean>> = { team: team.length === 0, ai: !thinksNow && aiLaterSaved };
+  const agentFace: ShellFace | null = firstAgent
+    ? { id: firstAgent.id, name: firstAgent.name, look: lookOf(firstAgent) }
+    : null;
+  const who = agentGrammar(firstAgent?.name ?? "");
+  // The option the agent was made from, when the person's AI proposed it: its first task leads its step.
+  const latest = firstAgents.data ?? null;
+  const madeFrom = latest && firstAgent && latest.agentId === firstAgent.id ? latest : null;
+  const option = madeFrom && madeFrom.picked !== null ? (madeFrom.options[madeFrom.picked] ?? null) : null;
+  // "Step N of 5": what it is for, a team's name, the work, the agent and the plan (no plan on a self-hosted server, no
+  // name for a personal workspace).
+  // "Other" before its agent exists is the agent's step already.
+  const counted = stepCount(steps, asking ? (naming ? "name" : "who") : step === "area" && custom ? "agent" : step, {
+    named: !personalNow,
+  });
+  const stepLine = counted ? t("onboarding.flow.stepOf", counted) : undefined;
+  const aiLabel = aiPick && aiPick !== "key" ? planLabel(t, aiPick) : null;
 
-  // Beside the team step: what an import would bring, else the template's team while the templates show, or while
-  // "Start with a ready-made team" is picked on how to start (ADR 0162, amended 2026-11-11).
-  const brought = step === "team" ? source.preview : null;
-  const templateShown =
-    step === "team" &&
-    team.length === 0 &&
-    !personalNow &&
-    (view === "template" || (view === "start" && source.start === "template"));
-  const coming =
-    step === "team" && team.length === 0
-      ? (brought?.channels ?? (templateShown ? (template.chosen?.team.newChannels ?? []) : []))
-      : [];
-  const preview: PreviewAgent[] = [
-    { name: lodiName, role: t("rightHand.label"), look: lookOf(lodi) ?? RIGHT_HAND_DEFAULT.appearance },
-    ...(team.length > 0
-      ? team.map((a: Agent) => ({
-          name: a.name,
-          role: a.role,
-          look: lookOf(a),
-          asleep: (step === "plan" && !awake) || step === "ai",
-        }))
-      : brought
-        ? brought.agents
-        : templateShown && template.chosen
-          ? // In the template's order, the team's once made: making it moves no row.
-            template.chosen.team.agents.map((a) => ({ name: a.name, role: a.role, look: lookOf(a), fresh: true }))
-          : []),
-  ];
-  const crew = lodi ? [lodi, ...team] : team;
+  /** The step on screen: who stands on the box, and the box. */
+  const scene = (): { cast?: ShellFace[]; box: ReactNode } => {
+    const notes = (
+      <>
+        {unpaidElsewhere && (
+          <UnpaidNote
+            orgId={unpaidElsewhere}
+            name={me.data?.organizations.find((o) => o.id === unpaidElsewhere)?.name}
+            billing={Boolean(authConfig?.billingUrl)}
+          />
+        )}
+        {inviteOnly && (
+          <p className="onb__help onb__note ac-iconline" role="status">
+            <Icon name="lock" size={14} />
+            <span>
+              {authConfig?.supportEmail
+                ? t("onboarding.workspace.inviteOnlyAsk", { email: authConfig.supportEmail })
+                : t("onboarding.workspace.inviteOnly")}
+            </span>
+          </p>
+        )}
+        {(confirmationSent || confirmFirst) && (
+          <p className="onb__help onb__note ac-iconline" role="status">
+            <Icon name="mail" size={14} />
+            <span>
+              {confirmationSent ? t("onboarding.confirmation.sent", { email }) : t("onboarding.confirmation.first")}
+              {!resend.data && (
+                <>
+                  <br />
+                  <button
+                    type="button"
+                    className="ac-link onb__link"
+                    onClick={() => resend.mutate()}
+                    disabled={resend.isPending}
+                  >
+                    {t("auth.sendNewLink")}
+                  </button>
+                </>
+              )}
+            </span>
+          </p>
+        )}
+      </>
+    );
+
+    // A team's workspace: its name (the work e-mail's to start with), its logo and its time zone; Continue makes it.
+    if (asking && naming && !personal) {
+      const typed = orgName ?? "";
+      const shownLogo = logo ? `data:${logo.contentType};base64,${logo.imageBase64}` : null;
+      return {
+        cast: [lodiFace],
+        box: (
+          <Box
+            eyebrow={stepLine}
+            title={t("onboarding.workspace.title")}
+            lead={t("onboarding.workspace.lead")}
+            onBack={() => setNaming(false)}
+            busy={busy}
+            acts={
+              <Button
+                variant="primary"
+                kbd={["↵"]}
+                data-enter=""
+                onClick={() => save.mutate()}
+                disabled={!typed.trim() || inviteOnly || busy}
+                loading={save.isPending}
+              >
+                {t("onboarding.actions.continue")}
+              </Button>
+            }
+          >
+            <Locked when={busy}>
+              <div className="onb__answer">
+                <div className="onb__ws">
+                  <button
+                    type="button"
+                    className="onb__logo"
+                    aria-label={logo ? t("onboarding.workspace.logoChange") : t("onboarding.workspace.logoPick")}
+                    title={t("onboarding.workspace.logoHelp")}
+                    onClick={() => setLogoOpen(true)}
+                  >
+                    {shownLogo ? (
+                      <OrgMark logo={shownLogo} size={48} />
+                    ) : typed.trim() ? (
+                      <span className="onb__logo-letter">{typed.trim().charAt(0).toUpperCase()}</span>
+                    ) : (
+                      <Icon name="upload" />
+                    )}
+                  </button>
+                  <Input
+                    className="onb__big"
+                    aria-label={t("onboarding.workspace.name")}
+                    value={typed}
+                    onChange={(e) => setOrgName(e.target.value)}
+                    placeholder={t("onboarding.workspace.namePlaceholder")}
+                    maxLength={80}
+                    spellCheck={false}
+                    autoFocus
+                  />
+                </div>
+                {zoneOpen ? (
+                  <Field
+                    label={t("onboarding.workspace.timezone")}
+                    id="org-zone"
+                    hint={{
+                      name: t("common.about", { label: t("onboarding.workspace.timezone") }),
+                      text: t("onboarding.workspace.timezoneHelp"),
+                    }}
+                  >
+                    <ZonePicker
+                      id="org-zone"
+                      value={zoneNow}
+                      onChange={setZone}
+                      suggested={[browserTimezone() ?? "", "UTC"].filter(Boolean)}
+                    />
+                  </Field>
+                ) : (
+                  <p className="onb__help onb__zone">
+                    {t("onboarding.workspace.zone", { zone: timezoneName(zoneNow, i18n.language) })} ·{" "}
+                    <button type="button" className="ac-link onb__link" onClick={() => setZoneOpen(true)}>
+                      {t("onboarding.workspace.zoneChange")}
+                    </button>
+                  </p>
+                )}
+                <ImageCropDialog
+                  open={logoOpen}
+                  onClose={() => setLogoOpen(false)}
+                  title={t("orgLogo.title")}
+                  help={t("orgLogo.help")}
+                  placeholder={<OrgMark size={56} />}
+                  hasImage={shownLogo !== null}
+                  removeLabel={t("orgLogo.remove")}
+                  format="image/png"
+                  save={async (image) => setLogo(image)}
+                  remove={async () => setLogo(null)}
+                  onSaved={() => setLogoOpen(false)}
+                  onRemoved={() => setLogoOpen(false)}
+                />
+                {notes}
+              </div>
+            </Locked>
+          </Box>
+        ),
+      };
+    }
+
+    if (asking)
+      return {
+        // The right hand on the box, quiet: it speaks in its own conversation, later.
+        cast: [lodiFace],
+        box: (
+          <Box
+            eyebrow={stepLine}
+            title={t("onboarding.purpose.title")}
+            // Where the person hesitates, beside Continue: the choice isn't final.
+            note={<BoxNote icon="swap">{t("onboarding.flow.switchNote")}</BoxNote>}
+            acts={
+              <Button
+                variant="primary"
+                kbd={["↵"]}
+                data-enter=""
+                onClick={() => {
+                  if (personal) return save.mutate();
+                  // A team names its workspace first: the work e-mail's name to start with.
+                  setOrgName((n) => n ?? nameFor("team"));
+                  setNaming(true);
+                }}
+                disabled={inviteOnly || busy}
+                loading={save.isPending}
+              >
+                {t("onboarding.actions.continue")}
+              </Button>
+            }
+          >
+            <Locked when={busy}>
+              <div className="onb__answer">
+                <PickRows<WorkspaceMode>
+                  label={t("onboarding.purpose.title")}
+                  value={purpose}
+                  onChange={setPurpose}
+                  options={[
+                    {
+                      value: "personal",
+                      title: t("onboarding.purpose.personal"),
+                      text: t("onboarding.purpose.personalLine"),
+                    },
+                    { value: "team", title: t("onboarding.purpose.team"), text: t("onboarding.purpose.teamLine") },
+                  ]}
+                />
+                {notes}
+              </div>
+            </Locked>
+          </Box>
+        ),
+      };
+
+    if (!orgId) return { box: null };
+
+    if (step === "area" && !custom)
+      return {
+        box: (
+          <AreaStep
+            orgId={orgId}
+            org={name}
+            personal={personalNow}
+            variant={personalNow ? "personal" : "team"}
+            eyebrow={stepLine}
+            busy={busy}
+            place={{ name, zone: zoneNow, onSave: savePlace }}
+            onArea={startArea}
+            onCustom={() => setCustom(true)}
+            onProposal={(p) =>
+              pick.mutate(
+                // As an area's agent: the first agent made a moment ago (an area's, or one asked of the AI before)
+                // gives its place to this one, so there is one first agent.
+                { proposalId: p.id, index: 0, replace: replaced },
+                {
+                  onSuccess: async () => {
+                    await qc.invalidateQueries({ queryKey: keys.firstDelivery(orgId) });
+                    setPicked(null);
+                  },
+                  onError: (e) => void firstAgentFailed(e),
+                },
+              )
+            }
+            onImport={(card) => setImporting({ card, before: team.map((a) => a.id) })}
+          />
+        ),
+      };
+
+    if (step === "area" || step === "agent")
+      return {
+        box: (
+          <AgentStep
+            orgId={orgId}
+            org={name}
+            agent={
+              step === "agent" && firstAgent
+                ? {
+                    id: firstAgent.id,
+                    name: firstAgent.name,
+                    // One made on "Other" says what it does in the words typed (its first task).
+                    role: firstAgent.role || row?.task || "",
+                    look: lookOf(firstAgent),
+                  }
+                : null
+            }
+            area={step === "area" ? "custom" : area}
+            option={option}
+            eyebrow={stepLine ? t("onboarding.meet.eyebrow", { step: stepLine }) : t("onboarding.meet.eyebrowAlone")}
+            busy={agentDone.isPending}
+            mailBack="onboarding"
+            returned={returned}
+            // Its delivery armed (a Continue whose save didn't land): no way back to the work, one first agent.
+            onBack={
+              armed
+                ? null
+                : () => {
+                    setCustom(false);
+                    setPicked("area");
+                  }
+            }
+            onCreate={startCustom}
+            onContinue={(made) => agentDone.mutate({ id: orgId, agentId: made?.id ?? firstAgent?.id ?? null })}
+          />
+        ),
+      };
+
+    // The plan: the first agent asleep at night among the places the next ones can take.
+    if (step === "plan" && agentFace)
+      return {
+        box: (
+          <HireTeam
+            orgId={orgId}
+            org={name}
+            agent={agentFace}
+            area={area === "custom" ? null : area}
+            offer={offer}
+            personal={personalNow}
+            confirming={paid}
+            skipping={open.isPending}
+            // "Not now", once its question is answered: the photo, then the workspace, the plan waiting there.
+            onSkip={() => {
+              setPlanLater(true);
+              setPicked(null);
+              planSkipped.mutate(orgId);
+            }}
+            eyebrow={stepLine}
+          />
+        ),
+      };
+
+    // The photo, the onboarding's end: the plan, the AI and the first delivery on its way.
+    if (step === "celebrate" && agentFace)
+      return {
+        box: (
+          <TeamWelcome
+            org={name}
+            person={{ name: personName, image: me.data?.user.image ?? null }}
+            first={firstName(personName)}
+            agent={agentFace}
+            working={
+              area && area !== "custom"
+                ? t(`onboarding.areas.list.${area}.working`, { ...who, org: name })
+                : t("onboarding.celebrate.working", who)
+            }
+            plan={hasPlanStep ? (boughtPlan.offer?.name ?? offer?.name ?? "") : null}
+            // Left for later: the plan's row still to do, the first delivery waiting for it.
+            planWaiting={rail.planLater && held}
+            personal={personalNow}
+            ai={rail.thinks ? (aiLabel ?? "") : null}
+            leaving={open.isPending}
+            // Without a plan, the right hand's DM, whose card leads with the plan; else the first agent's.
+            onNext={() => open.mutate(rail.planLater && held ? "skipped" : "done")}
+          />
+        ),
+      };
+
+    // Connecting the AI they already pay for: the agent on its daylight sky over the choices, the way out in the footer.
+    const crew = lodi ? [lodi, ...team] : team;
+    const planName = boughtPlan.offer?.name ?? (hasPlanStep ? (offer?.name ?? null) : null);
+    return {
+      box: (
+        <Box
+          // No computer on it: whether it is on yet is not this step's to say.
+          cover={<Pass day={1} awake cast={agentFace ? [agentFace] : [lodiFace]} computer={false} />}
+          // The plan bought, by its name, over the question it leads to; nothing while it still waits ("Not now").
+          eyebrow={
+            hasPlanStep && !held ? (
+              <span className="onb-active ac-iconline">
+                <Icon name="check" size={14} />
+                <span>
+                  {planName ? t("onboarding.celebrate.plan", { name: planName }) : t("onboarding.celebrate.planAny")}
+                </span>
+              </span>
+            ) : undefined
+          }
+          title={t("onboarding.flow.ai.title")}
+          lead={t("onboarding.flow.ai.lead", agentGrammar(agentFace?.name ?? lodiName))}
+          // Agents that already think (a server's own key) go on with Continue; else connecting later asks first.
+          note={thinks === true ? undefined : <BoxNote>{t("arrival.connect.without")}</BoxNote>}
+          acts={
+            thinks === true ? (
+              <Button
+                variant="primary"
+                kbd={["↵"]}
+                data-enter=""
+                loading={aiAnswered.isPending || open.isPending}
+                disabled={aiAnswered.isPending || open.isPending}
+                onClick={finishAi}
+              >
+                {t("onboarding.actions.continue")}
+              </Button>
+            ) : (
+              <Button
+                loading={aiAnswered.isPending || open.isPending}
+                disabled={aiAnswered.isPending || open.isPending}
+                onClick={() => setSkipAsk(true)}
+              >
+                {t("onboarding.flow.ai.later")}
+              </Button>
+            )
+          }
+        >
+          <AiStep
+            orgId={orgId}
+            agents={crew}
+            onConnected={(choice) => {
+              setAiPick(choice);
+              setAiConnected(true);
+            }}
+          />
+          {/* "Connect later" asks first: without an AI the first delivery doesn't happen. */}
+          <Dialog
+            open={skipAsk}
+            onOpenChange={setSkipAsk}
+            title={t("onboarding.flow.ai.skipTitle")}
+            description={t("onboarding.flow.ai.skipText", agentGrammar(agentFace?.name ?? lodiName))}
+            closeLabel={t("common.close")}
+            width={460}
+          >
+            <DialogFooter>
+              <Button
+                loading={aiAnswered.isPending || open.isPending}
+                disabled={aiAnswered.isPending || open.isPending}
+                onClick={finishAi}
+              >
+                {t("onboarding.flow.ai.skipGo")}
+              </Button>
+              <Button variant="primary" onClick={() => setSkipAsk(false)}>
+                {t("onboarding.flow.ai.connectNow")}
+              </Button>
+            </DialogFooter>
+          </Dialog>
+        </Box>
+      ),
+    };
+  };
+  const shownStep = scene();
 
   return (
-    <div className="onb onb--rail">
-      <aside className="onb__rail">
-        <div className="onb__top">
-          <span className="onb__top-start">
+    <>
+      <World
+        cast={shownStep.cast}
+        start={
+          <>
             {/* Someone who has another workspace can leave at any step, back to where they were; this one stays as it
                 is, to finish later. */}
             {leaveTo && (
@@ -746,7 +1040,6 @@ export function OnboardingPage() {
                 variant="ghost"
                 size="sm"
                 iconOnly
-                className="onb__leave"
                 aria-label={t("onboarding.leaveLater", { name: leaveTo.name })}
               >
                 <a
@@ -762,15 +1055,15 @@ export function OnboardingPage() {
                 </a>
               </Button>
             )}
-            <span className="onb__brand">
-              <Logo size={22} />
-            </span>
-          </span>
+            <Logo size={22} />
+          </>
+        }
+        end={
           <Menu
-            align={phone ? "end" : "start"}
+            align="end"
             label={t("onboarding.flow.account")}
             trigger={
-              <button type="button" className="onb__me" aria-label={t("onboarding.flow.account")}>
+              <button type="button" className="onbw__me" aria-label={t("onboarding.flow.account")}>
                 <Avatar kind="person" name={me.data.user.name} imageUrl={me.data.user.image} size="sm" />
               </button>
             }
@@ -789,410 +1082,56 @@ export function OnboardingPage() {
               {t("auth.signOut")}
             </MenuItem>
           </Menu>
-        </div>
-        {!phone && (
-          <div className="onb__progress">
-            {/* What is left, in words: the step's own number is the page's ("Step 5 of 7"), never a second count. */}
-            <span className="onb__progress-text">
-              {answered === steps.length
-                ? t("onboarding.progress.done")
-                : t("onboarding.progress.left", { count: steps.length - answered })}
-            </span>
-            <OnboardingProgress progress={answered / steps.length} />
-          </div>
-        )}
-        <StepRail
-          label={t("onboarding.stepsLabel")}
-          // Once the team thinks on a rail that ends there, every step done with its answer under it, none current.
-          current={allDone ? steps.length : index}
-          onGo={(i) => {
-            // Back on the name, its field holds the saved one, to change or clear.
-            if (steps[i] === "name") setOrg(name);
-            // The paid moment holds the plan step only until the person goes elsewhere.
-            paidMoment.done();
-            setPicked(steps[i] ?? null);
-          }}
-          doneLabel={t("onboarding.stepDone")}
-          steps={steps.map((s, i) => ({
-            id: s,
-            name: stepName(s),
-            done: i < reached,
-            // Never back to what can't be answered again: a personal workspace's purpose once it exists, a plan
-            // already on; nor anywhere while an import holds the team step.
-            disabled:
-              i > reached ||
-              busy ||
-              holding ||
-              (s === "name" && personalNow && orgId !== null) ||
-              (s === "plan" && !held),
-            value: values[s],
-            later: later[s],
-          }))}
-        />
-        {!phone && (
-          <div className="onb__lodi" ref={lodiRef}>
-            <p className="onb__say" key={step}>
-              {say}
-            </p>
-            <span className="onb__lodi-who">
-              <AgentSticker
-                appearance={lookOf(lodi) ?? RIGHT_HAND_DEFAULT.appearance}
-                mood="wave"
-                size={64}
-                seed="lodi"
-              />
-              <Chip className="sky-chip">{lodiName}</Chip>
-            </span>
-          </div>
-        )}
-        {!phone && <OnboardingHorizon progress={answered / steps.length} clear={() => [lodiRef.current]} />}
-        {orgId && (
-          <DeleteWorkspaceDialog
-            org={{ id: orgId, name }}
-            open={deleting !== null}
-            onClose={() => setDeleting(null)}
-            onDeleted={() => void navigate({ to: "/org/$orgId", params: { orgId } })}
-          />
-        )}
-        <DeleteAccountDialog open={account === "delete"} onClose={() => setAccount(null)} />
-      </aside>
-
-      <main
-        className="onb__main"
-        ref={mainRef}
-        onKeyDown={(e) => {
-          // Enter presses the step's button that shows ↵ (the plan has none), except where Enter means something else
-          // (Shift+Enter: a new line in the business's sentence; any Enter in another box of text, such as a pasted
-          // reply from another app, which is a new line there).
-          const el = e.target as HTMLElement;
-          if (e.key !== "Enter" || e.shiftKey || e.nativeEvent.isComposing) return;
-          // On an answer of the first question too: a radio takes no Enter of its own (it stops it, though).
-          const answer = el.matches("[role='radio']");
-          if (!answer && e.defaultPrevented) return;
-          if (
-            !answer &&
-            el.closest("button, a, textarea:not(.onb__line), [role='dialog'], [role='listbox'], [role='combobox']")
-          )
-            return;
-          const go = e.currentTarget.querySelector<HTMLButtonElement>("button[data-enter]:not(:disabled)");
-          if (!go) return;
-          e.preventDefault();
-          go.click();
-        }}
+        }
       >
-        <div className="onb__cols">
-          {/* Outside the step, as the rail is on wide screens: the pixel agent walks on as a step is done. */}
-          {phone && (
-            <div className="onb__phone-top">
-              <OnboardingProgress progress={answered / steps.length} />
-              <div className="onb__lodi-row">
-                <AgentAvatar name={lodiName} appearance={lookOf(lodi) ?? RIGHT_HAND_DEFAULT.appearance} size="sm" />
-                <p className="onb__say" key={step}>
-                  {say}
-                </p>
-              </div>
-            </div>
-          )}
-          <StepHost step={step} org={mine} me={me.data}>
-            <div className="onb__body" key={asking ? "purpose" : step}>
-              {back && (
-                <button type="button" className="onb__back" onClick={back.go} disabled={busy}>
-                  <Icon name="chevronLeft" size={16} />
-                  {back.label}
-                </button>
-              )}
-              <header className="onb__head">
-                {/* Once the team thinks on a rail that ends there, it is done: no step to count. The paid moment is no
-                    step: the rail already marks the one that comes after it. */}
-                {!asking && !allDone && !awake && (
-                  <p className="onb__eyebrow">{t("onboarding.flow.stepOf", { n: index + 1, total: steps.length })}</p>
-                )}
-                <h1 className="onb__title" ref={titleRef} tabIndex={-1}>
-                  {title}
-                </h1>
-                {lead && <p className="onb__lead">{lead}</p>}
-              </header>
-
-              {step === "name" && (
-                <>
-                  <Locked when={busy}>
-                    {asking ? (
-                      <div className="onb__answer">
-                        <PurposeCards value={purpose} onValueChange={setPurpose} you={you} />
-                        {/* Where the person hesitates, between the answers and Continue: the choice isn't final. */}
-                        <SettingNote icon="swap" className="onb-purpose__note">
-                          <b>{t("onboarding.purpose.switchTitle")}</b> {t("onboarding.purpose.switchText")}
-                        </SettingNote>
-                        {unpaidElsewhere && (
-                          <UnpaidNote
-                            orgId={unpaidElsewhere}
-                            name={me.data.organizations.find((o) => o.id === unpaidElsewhere)?.name}
-                            billing={Boolean(authConfig?.billingUrl)}
-                          />
-                        )}
-                      </div>
-                    ) : (
-                      <div className="onb__answer">
-                        <div className="onb__ws">
-                          <button
-                            type="button"
-                            className="onb__logo"
-                            aria-label={
-                              logo ? t("onboarding.workspace.logoChange") : t("onboarding.workspace.logoPick")
-                            }
-                            title={t("onboarding.workspace.logoHelp")}
-                            onClick={() => setLogoOpen(true)}
-                          >
-                            {shownLogo ? (
-                              <OrgMark logo={shownLogo} size={48} />
-                            ) : org.trim() || name ? (
-                              <span className="onb__logo-letter">{(org.trim() || name).charAt(0).toUpperCase()}</span>
-                            ) : (
-                              <Icon name="upload" />
-                            )}
-                          </button>
-                          <Input
-                            className="onb__big"
-                            aria-label={t("onboarding.workspace.name")}
-                            value={org}
-                            onChange={(e) => setOrg(e.target.value)}
-                            placeholder={t("onboarding.workspace.namePlaceholder")}
-                            spellCheck={false}
-                            autoFocus
-                          />
-                        </div>
-                        {zoneOpen ? (
-                          <Field
-                            label={t("onboarding.workspace.timezone")}
-                            id="org-zone"
-                            hint={{
-                              name: t("common.about", { label: t("onboarding.workspace.timezone") }),
-                              text: t("onboarding.workspace.timezoneHelp"),
-                            }}
-                          >
-                            <ZonePicker
-                              id="org-zone"
-                              value={zoneNow}
-                              onChange={setZone}
-                              suggested={[browserTimezone() ?? "", "UTC"].filter(Boolean)}
-                            />
-                          </Field>
-                        ) : (
-                          <p className="onb__help">
-                            {t("onboarding.workspace.zone", { zone: timezoneName(zoneNow, i18n.language) })} ·{" "}
-                            <button type="button" className="ac-link onb__link" onClick={() => setZoneOpen(true)}>
-                              {t("onboarding.workspace.zoneChange")}
-                            </button>
-                          </p>
-                        )}
-                        <ImageCropDialog
-                          open={logoOpen}
-                          onClose={() => setLogoOpen(false)}
-                          title={t("orgLogo.title")}
-                          help={t("orgLogo.help")}
-                          placeholder={<OrgMark size={56} />}
-                          hasImage={shownLogo !== null}
-                          removeLabel={t("orgLogo.remove")}
-                          format="image/png"
-                          save={async (image) => {
-                            setLogo(image);
-                            setLogoDirty(true);
-                          }}
-                          remove={async () => {
-                            setLogo(null);
-                            setLogoDirty(true);
-                          }}
-                          onSaved={() => setLogoOpen(false)}
-                          onRemoved={() => setLogoOpen(false)}
-                        />
-                        {unpaidElsewhere && (
-                          <UnpaidNote
-                            orgId={unpaidElsewhere}
-                            name={me.data.organizations.find((o) => o.id === unpaidElsewhere)?.name}
-                            billing={Boolean(authConfig?.billingUrl)}
-                          />
-                        )}
-                      </div>
-                    )}
-                  </Locked>
-                  {inviteOnly && (
-                    <p className="onb__help onb__note ac-iconline" role="status">
-                      <Icon name="lock" size={14} />
-                      <span>
-                        {authConfig?.supportEmail
-                          ? t("onboarding.workspace.inviteOnlyAsk", { email: authConfig.supportEmail })
-                          : t("onboarding.workspace.inviteOnly")}
-                      </span>
-                    </p>
-                  )}
-                  {(confirmationSent || confirmFirst) && (
-                    <p className="onb__help onb__note ac-iconline" role="status">
-                      <Icon name="mail" size={14} />
-                      <span>
-                        {confirmationSent
-                          ? t("onboarding.confirmation.sent", { email })
-                          : t("onboarding.confirmation.first")}
-                        {!resend.data && (
-                          <>
-                            <br />
-                            <button
-                              type="button"
-                              className="ac-link onb__link"
-                              onClick={() => resend.mutate()}
-                              disabled={resend.isPending}
-                            >
-                              {t("auth.sendNewLink")}
-                            </button>
-                          </>
-                        )}
-                      </span>
-                    </p>
-                  )}
-                  <div className="onb__actions">
-                    <Button
-                      variant="primary"
-                      block
-                      kbd={["↵"]}
-                      data-enter=""
-                      onClick={() => (asking && !personal ? setForTeam(true) : save.mutate())}
-                      disabled={(asking ? !purpose : !org.trim()) || inviteOnly || busy}
-                      loading={save.isPending}
-                    >
-                      {t("onboarding.actions.continue")}
-                    </Button>
-                  </div>
-                </>
-              )}
-              {step === "business" && orgId && (
-                <BusinessStep
-                  orgId={orgId}
-                  context={context}
-                  business={kind}
-                  onDone={(picked) => {
-                    // Another business starts the team step on its own template again; the same keeps the one picked.
-                    if (picked !== kind) template.pick(null);
-                    setBusiness(picked);
-                    setPicked(null);
-                  }}
-                />
-              )}
-              {step === "you" && orgId && <YouStep me={me.data} onDone={() => setPicked(null)} />}
-              {step === "team" &&
-                orgId &&
-                (teamList || view === "template" ? (
-                  <TeamStep
-                    orgId={orgId}
-                    team={teamList ? team : []}
-                    waiting={arriving}
-                    template={template}
-                    reviewer={lodiName}
-                    onContinue={() => setPicked(null)}
-                  />
-                ) : view === "start" ? (
-                  <TeamStart
-                    state={source}
-                    template={template}
-                    lodi={{ name: lodiName, look: lookOf(lodi) ?? RIGHT_HAND_DEFAULT.appearance }}
-                  />
-                ) : (
-                  <TeamSource state={source} orgId={orgId} personal={personalNow} org={name} />
-                ))}
-              {step === "plan" && orgId && (
-                <PlanStep
-                  orgId={orgId}
-                  // No agents yet (a personal workspace's, or a team step left with none): its right hand, asleep until
-                  // the plan.
-                  team={team.length > 0 ? team : lodi ? [lodi] : []}
-                  offer={offer}
-                  skipping={open.isPending}
-                  onSkip={() => open.mutate("skipped")}
-                  next={steps.includes("ai")}
-                  confirming={paid}
-                  personal={personalNow}
-                  awake={
-                    awake
-                      ? {
-                          name: me.data.user.name,
-                          computer: paidFacts.computer,
-                          // The step the rail marks, where the data is: the one the button leads to.
-                          next: t(
-                            at === "ai"
-                              ? "paidMoment.next.ai"
-                              : at === "people"
-                                ? "paidMoment.next.people"
-                                : at === "open"
-                                  ? "paidMoment.next.open"
-                                  : "onboarding.actions.continue",
-                          ),
-                          onNext: paidMoment.done,
-                        }
-                      : null
-                  }
-                />
-              )}
-              {step === "ai" && orgId && (
-                <AiStep
-                  orgId={orgId}
-                  agents={crew}
-                  done={aiDone}
-                  leaving={open.isPending || aiLater.isPending}
-                  picked={aiNamed}
-                  next={hasPeople}
-                  onConnected={(choice) => setAiPick({ choice, key: keyNow })}
-                  // A team's goes on to inviting people; a personal workspace's finishes it.
-                  onLater={() => (hasPeople ? aiLater.mutate(orgId) : open.mutate("later"))}
-                  onEnter={() => {
-                    if (!hasPeople) return open.mutate("later");
-                    setAiLeft(true);
-                    setPicked(null);
-                  }}
-                />
-              )}
-              {step === "people" && orgId && (
-                <PeopleStep
-                  orgId={orgId}
-                  org={name}
-                  email={me.data.user.email}
-                  byLink={!emails}
-                  leaving={open.isPending}
-                  onSent={() => open.mutate("invited")}
-                  onLater={() => open.mutate("later")}
-                />
-              )}
-            </div>
-            {wide &&
-              (step === "ai" && mine ? (
-                // The team on its stage, asleep until it thinks, in place of the sidebar.
-                <AiStage agents={crew} lead={lodi} awake={aiDone} personal={personalNow} />
-              ) : (
-                <OnboardingPreview
-                  org={name || t("onboarding.flow.preview.name")}
-                  logo={shownLogo}
-                  // A personal workspace's #general is out of sight (ADR 0159).
-                  channels={[...(personalNow ? [] : ["general"]), ...coming]}
-                  fresh={coming}
-                  orgId={team.length > 0 && !personalNow ? orgId : null}
-                  agents={preview}
-                  person={me.data.user}
-                  personal={personalNow}
-                  teamAhead={reached <= steps.indexOf("team")}
-                />
-              ))}
+        <main
+          className="onbw__main"
+          ref={mainRef}
+          onKeyDown={(e) => {
+            // Enter presses the step's button that shows ↵, except where Enter means something else: a button or a
+            // link of its own, any box of text, a dialog, a list.
+            const el = e.target as HTMLElement;
+            if (e.key !== "Enter" || e.shiftKey || e.nativeEvent.isComposing) return;
+            // On an answer of a question too: a radio takes no Enter of its own (it stops it, though).
+            const answer = el.matches("[role='radio']");
+            if (!answer && e.defaultPrevented) return;
+            if (!answer && el.closest("button, a, textarea, [role='dialog'], [role='listbox'], [role='combobox']"))
+              return;
+            const go = e.currentTarget.querySelector<HTMLButtonElement>("button[data-enter]:not(:disabled)");
+            if (!go) return;
+            e.preventDefault();
+            go.click();
+          }}
+        >
+          <StepHost step={asking ? null : step} org={mine} me={me.data}>
+            <Fragment key={shownView}>{shownStep.box}</Fragment>
           </StepHost>
-        </div>
-      </main>
-    </div>
+        </main>
+      </World>
+      {orgId && (
+        <DeleteWorkspaceDialog
+          org={{ id: orgId, name }}
+          open={deleting !== null}
+          onClose={() => setDeleting(null)}
+          onDeleted={() => void navigate({ to: "/org/$orgId", params: { orgId } })}
+        />
+      )}
+      <DeleteAccountDialog open={account === "delete"} onClose={() => setAccount(null)} />
+      {importing && orgId && mine && (
+        <OrgProvider org={mine} me={me.data}>
+          <Suspense fallback={null}>
+            <ImportAgentsDialog orgId={orgId} card={importing.card} onClose={() => void closeImport()} />
+          </Suspense>
+        </OrgProvider>
+      )}
+    </>
   );
 }
 
-/** The two answers to "What will you use agentes.chat for?" (ADR 0159), in this order. */
-
 /**
- * The AI step and its stage inside the workspace's context and Connect an AI (ADR 0160), which the onboarding has
- * nowhere else; the people step inside the workspace's context, which the invite link's panel reads, the team
- * step, where a private repository to bring agents from offers to connect GitHub, and the person's own step, whose
- * avatar builder and photo save to the person's account through it, and the plan step, whose team wakes on its sky
- * once the plan is on; any other step as it is, so the earlier steps ask the server for nothing more.
+ * The steps that read the workspace through its context (the work step's import and connect flows, the agent's apps,
+ * the plan step's band) inside it; the AI step and the photo after it inside Connect an AI too (ADR 0160), so its
+ * dialog stays over the photo the connection leads to; the first question as it is.
  */
 function StepHost({
   step,
@@ -1200,18 +1139,18 @@ function StepHost({
   me,
   children,
 }: {
-  step: RailStep;
+  step: RailStep | null;
   org: OrgSummary | undefined;
   me: Me;
   children: ReactNode;
 }) {
-  if (org && step === "ai")
+  if (org && (step === "ai" || step === "celebrate"))
     return (
       <AiHost org={org} me={me}>
         {children}
       </AiHost>
     );
-  if (org && (step === "people" || step === "team" || step === "you" || step === "plan"))
+  if (org && step !== null)
     return (
       <OrgProvider org={org} me={me}>
         {children}

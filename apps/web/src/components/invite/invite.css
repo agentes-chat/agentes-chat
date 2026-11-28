@@ -1,86 +1,9 @@
 /*
- * Bringing a teammate in (ADR 0090, 0184): the addresses as chips (the onboarding's Team step), the invite dialog's one
- * screen (its fields' labels and ⓘ on top, each control at the form's width), and the workspace's link. Tokens only, so
- * light and dark follow the theme.
+ * Bringing a teammate in (ADR 0090, 0184): the invite dialog's one screen (its fields' labels and ⓘ on top, each control
+ * at the form's width), the line under the addresses (the kit's `ChipField` there and on the onboarding's people step),
+ * and the workspace's link. Tokens only, so light and dark follow the theme.
  */
 
-/* The addresses: chips in a sunken box, typed or pasted, the field after the last one. */
-.email-chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  min-height: 52px;
-  padding: 8px;
-  border-radius: 14px;
-  background: var(--sunken);
-  box-shadow: inset 0 0 0 1px var(--line);
-  cursor: text;
-}
-.email-chips:focus-within {
-  box-shadow:
-    inset 0 0 0 1px var(--line2),
-    var(--field-ring);
-}
-/* 16px: a phone doesn't zoom the page when the field takes the focus. */
-.email-chips__input {
-  flex: 1;
-  min-width: min(100%, 220px);
-  height: 34px;
-  padding: 0 8px;
-  border: 0;
-  background: transparent;
-  color: var(--ink);
-  font: inherit;
-  font-size: 16px;
-  outline: none;
-}
-.email-chips__input::placeholder {
-  color: var(--faint);
-}
-.email-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  max-width: 100%;
-  min-height: 34px;
-  padding: 0 3px 0 4px;
-  border-radius: 999px;
-  background: var(--raised);
-  box-shadow: var(--e1), var(--top);
-  font-size: 14px;
-}
-.email-chip[data-invalid] {
-  box-shadow: 0 0 0 1px var(--danger);
-}
-/* A good address that won't be sent (in already, invited already): quiet, its outline only. */
-.email-chip[data-soft] {
-  background: transparent;
-  box-shadow: inset 0 0 0 1px var(--line2);
-  color: var(--muted);
-}
-.email-chip__email {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-/* On a narrow screen the address gives way (its ellipsis), never the role's word. */
-.email-chip > .ac-select {
-  flex: none;
-}
-/* Why an address isn't sent: "confira" in danger, "já está na Acme" quiet. */
-.email-chip__bad,
-.email-chip__soft {
-  font-size: 12.5px;
-  font-weight: 600;
-}
-.email-chip__bad {
-  color: var(--danger);
-}
-.email-chip__soft {
-  color: var(--muted);
-}
 /* "(opcional)" after a field's label (a suggestion's "Quem é"). */
 .invite-optional {
   font-weight: 500;

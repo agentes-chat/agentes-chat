@@ -1,10 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import {
+  ACCESSORIES,
+  ACCESSORY_NAMES,
+  ACCESSORY_REACH,
   AGENT_GRADIENTS,
+  accessoryTop,
   bodyPath,
   bodyTones,
   contrastOf,
   customGradient,
+  drawAccessory,
   drawSleep,
   EYE_COLOR,
   EYE_STYLES,
@@ -158,6 +163,20 @@ describe("a sleeping agent (paused until its plan or budget is back)", () => {
       expect(x).toBeGreaterThanOrEqual(14);
     }
     expect(SLEEP_SPOTS).toHaveLength(2);
+  });
+});
+
+describe("what an accessory reaches above the body", () => {
+  test("each one's top, drawn with the head lifted a row, within it; the tallest is the room every avatar leaves", () => {
+    for (const name of ACCESSORY_NAMES) {
+      const ys: number[] = [0];
+      const ctx = { fillStyle: "", fillRect: (_x: number, y: number) => ys.push(y) };
+      for (const head of [0, -1 / 16]) drawAccessory(ctx as never, 16, name, { head: [0, head] } as never);
+      expect({ name, above: -Math.min(...ys) / 16 <= accessoryTop(name) }).toEqual({ name, above: true });
+    }
+    expect(accessoryTop("none")).toBe(0);
+    expect(accessoryTop("scarf")).toBe(0);
+    expect(Math.max(...Object.keys(ACCESSORIES).map(accessoryTop))).toBe(ACCESSORY_REACH.top);
   });
 });
 

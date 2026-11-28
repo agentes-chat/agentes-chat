@@ -46,6 +46,8 @@ export const words: EmailWords = {
       ),
     more: (n) => `${n} weiteren`,
     what: "Auf agentes.chat arbeiten Menschen und KI-Agenten zusammen.",
+    arrive:
+      "Beim Beitritt erstellst du deinen eigenen Agenten: Deine KI findet die Aufgabe, die dich am meisten Zeit kostet, und schlägt einen Agenten dafür vor.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "Nachricht: " }, `„${note}“`],
     button: "Einladung annehmen",
     small: "Die Einladung gilt 7 Tage lang. Nimm sie mit dieser E-Mail-Adresse an.",
@@ -608,6 +610,57 @@ export const words: EmailWords = {
       },
       why: () =>
         "Du bekommst diese E-Mail, weil dieser Workspace auf agentes.chat dir gehört. Wir senden nur zwei solche Hinweise.",
+    },
+    picked: {
+      first: {
+        subject: "Dein erster Agent ist bereit und wartet auf dich",
+        preheader: "Deine KI hat gefunden, wo du anfängst. Jetzt musst du nur noch einstellen.",
+        headline: "Dein erster Agent ist bereit",
+        body: (ai, agent, _feminine, role, today) => [
+          ai ? `Dein ${ai} hat gefunden, wo du anfängst: ` : "Deine KI hat gefunden, wo du anfängst: ",
+          { b: agent },
+          ...(role ? [`, für ${role}`] : []),
+          ...(today > 0
+            ? [
+                plural("de", today, {
+                  one: ", mit 1 Ergebnis für heute",
+                  other: `, mit ${today} Ergebnissen für heute`,
+                }),
+              ]
+            : []),
+          ". Jetzt musst du nur noch einstellen.",
+        ],
+        button: "Team einstellen",
+        personal: { subject: "Dein erster Agent ist bereit und wartet auf dich", button: "Agenten einstellen" },
+      },
+      later: {
+        subject: (today) =>
+          today > 1
+            ? `Die ersten ${today} Ergebnisse stehen noch aus`
+            : today === 1
+              ? "Das erste Ergebnis steht noch aus"
+              : "Dein erster Agent hat noch nicht angefangen",
+        preheader: "Heute eingestellt, heute an der Arbeit.",
+        headline: (today) =>
+          today > 1
+            ? `Die ersten ${today} Ergebnisse stehen noch aus`
+            : today === 1
+              ? "Das erste Ergebnis steht noch aus"
+              : "Dein erster Agent hat noch nicht angefangen",
+        body: (agent, _feminine, today, org) =>
+          today > 0
+            ? ["Was ", { b: agent }, " am ersten Tag bei ", { b: org }, " liefert:"]
+            : [{ b: agent }, " wartet noch auf den Tarif von ", { b: org }, ", um anzufangen."],
+        start: (agent) => ["Stell heute ein, und ", { b: agent }, " fängt heute an."],
+        button: "Team einstellen",
+        personal: {
+          body: (agent, _feminine, today) =>
+            today > 0
+              ? ["Was ", { b: agent }, " am ersten Tag liefert:"]
+              : [{ b: agent }, " wartet noch auf deinen Tarif, um anzufangen."],
+          button: "Agenten einstellen",
+        },
+      },
     },
   },
   surface: {

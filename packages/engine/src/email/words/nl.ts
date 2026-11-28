@@ -49,6 +49,8 @@ export const words: EmailWords = {
       sentences(channels && ["Je zit meteen in ", ...channels, "."], agents && ["Je werkt samen met ", ...agents, "."]),
     more: (n) => `nog ${n}`,
     what: "Op agentes.chat werken mensen en AI-agents samen.",
+    arrive:
+      "Als je lid wordt, maak je je eigen agent: je AI zoekt de taak die je de meeste tijd kost en stelt een agent voor die dat werk overneemt.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "Hun bericht: " }, `‘${note}’`],
     button: "Uitnodiging accepteren",
     small: "De uitnodiging werkt 7 dagen. Accepteer haar met dit e-mailadres.",
@@ -606,6 +608,57 @@ export const words: EmailWords = {
       },
       why: () =>
         "Je krijgt deze e-mail omdat deze werkruimte op agentes.chat van jou is. We sturen maar twee van deze berichten.",
+    },
+    picked: {
+      first: {
+        subject: "Je eerste agent staat klaar en wacht op je",
+        preheader: "Je AI heeft gevonden waar je begint. Je hoeft alleen nog aan te nemen.",
+        headline: "Je eerste agent staat klaar",
+        body: (ai, agent, _feminine, role, today) => [
+          ai ? `Je ${ai} heeft gevonden waar je begint: ` : "Je AI heeft gevonden waar je begint: ",
+          { b: agent },
+          ...(role ? [` (${role})`] : []),
+          ...(today > 0
+            ? [
+                plural("nl", today, {
+                  one: ", met 1 resultaat klaar voor vandaag",
+                  other: `, met ${today} resultaten klaar voor vandaag`,
+                }),
+              ]
+            : []),
+          ". Je hoeft alleen nog aan te nemen.",
+        ],
+        button: "Het team aannemen",
+        personal: { subject: "Je eerste agent staat klaar en wacht op je", button: "Je agents aannemen" },
+      },
+      later: {
+        subject: (today) =>
+          today > 1
+            ? `De eerste ${today} resultaten laten nog op zich wachten`
+            : today === 1
+              ? "Het eerste resultaat laat nog op zich wachten"
+              : "Je eerste agent is nog niet begonnen",
+        preheader: "Neem vandaag aan, dan begint het werk vandaag.",
+        headline: (today) =>
+          today > 1
+            ? `De eerste ${today} resultaten laten nog op zich wachten`
+            : today === 1
+              ? "Het eerste resultaat laat nog op zich wachten"
+              : "Je eerste agent is nog niet begonnen",
+        body: (agent, _feminine, today, org) =>
+          today > 0
+            ? ["Wat ", { b: agent }, " op dag één levert bij ", { b: org }, ":"]
+            : [{ b: agent }, " wacht nog op het abonnement van ", { b: org }, " om te beginnen."],
+        start: (agent) => ["Neem vandaag aan, dan begint ", { b: agent }, " vandaag."],
+        button: "Het team aannemen",
+        personal: {
+          body: (agent, _feminine, today) =>
+            today > 0
+              ? ["Wat ", { b: agent }, " op dag één levert:"]
+              : [{ b: agent }, " wacht nog op je abonnement om te beginnen."],
+          button: "Je agents aannemen",
+        },
+      },
     },
   },
   surface: {

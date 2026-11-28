@@ -899,7 +899,6 @@
     }
   },
   "onboarding": {
-    "stepsLabel": "入门步骤",
     "deleteLink": "删除此工作区",
     "optionalTag": "可选",
     "stepDone": "（已完成）",
@@ -919,62 +918,21 @@
       "theo": "很高兴认识你，我是 Theo。我负责整理团队的任务。",
       "atlas": "嗨，我是 Atlas。我负责照看电脑。"
     },
-    "progress": {
-      "left_other": "还剩 {{count}} 步",
-      "done": "全部就绪"
-    },
     "flow": {
       "steps": {
         "name": "工作区名称",
         "business": "你们做什么",
-        "you": "关于你",
         "team": "你的团队",
-        "plan": "开启团队",
-        "ai": "连接 AI",
-        "people": "邀请成员",
-        "namePersonal": "用途",
-        "teamPersonal": "你的智能体",
-        "planPersonal": "开启智能体",
-        "aiPersonal": "连接 AI"
+        "plan": "开启团队"
       },
       "stepOf": "第 {{n}} 步，共 {{total}} 步",
       "lodi": {
         "name": "你好，{{first}}。我是{{name}}。大约两分钟，我们一起把团队组建好。",
         "business": "有了这些，我就知道该请谁加入团队了。",
         "team": "这是我会组建的团队。之后可以随时修改。",
-        "teamMade": "团队已经组好了。准备好了我们就继续。",
-        "teamMadePersonal": "你的智能体已经到了。准备好了我们就继续。",
         "plan": "有了套餐之后，只差连接一个 AI。我会告诉你在哪里连接。",
-        "planThen": "套餐开通后，下一个界面就是连接你的 AI。",
-        "you": "组建团队前，先简单了解一下你。",
-        "youPersonal": "在你的智能体之前，先简单了解一下你。",
-        "ask": "在别处已经有团队了？我把它完整地搬过来。",
-        "start": "我为你们的业务准备了一个现成的团队。也可以先从我们两个开始。",
-        "askPersonal": "已经在别处使用智能体了？我把它们全部搬过来。",
-        "bring": "复制请求，粘贴到 {{app}}，再把回复带回来。剩下的交给我。",
-        "bringFiles": "把应用导出的内容拖到这里。剩下的交给我。",
-        "bringMcp": "在应用里按步骤操作，它会自己在这里创建智能体。我会留意它们的到来。",
-        "found": "找到你的团队了。看看大家是不是都在。",
-        "foundPersonal": "找到你的智能体了。看看是不是都在。",
-        "ai": "最后一步。选择你已经在用的 AI，团队就会醒来。",
-        "aiPersonal": "最后一步。选择你已经在用的 AI，我就会醒来。",
-        "aiThen": "选择你已经在用的 AI，团队就会醒来。之后只剩邀请成员了。",
-        "aiThenAlone": "选择你已经在用的 AI，我就会醒来。之后只剩邀请成员了。",
-        "connected": "好了。在工作区里叫我，我带你看看其余的。",
-        "connectedThen": "好了。现在只剩邀请和你一起工作的人了。",
         "people": "现在轮到成员了。把他们的邮箱告诉我，我来发送邀请。",
         "peopleLink": "现在轮到成员了。把链接发给他们，我会把每个申请展示给你。"
-      },
-      "you": {
-        "title": "现在，说说你",
-        "lead": "你的名字和照片会显示给团队和智能体。",
-        "leadPersonal": "你的名字和照片会显示给你的智能体。",
-        "photo": "你的照片",
-        "build": "创建头像",
-        "edit": "编辑头像",
-        "upload": "上传照片",
-        "area": "你负责哪方面的工作？",
-        "areaHint": "可选。只是想了解谁在使用 agentes.chat。"
       },
       "area": {
         "options": {
@@ -987,114 +945,30 @@
           "other": "其他"
         }
       },
-      "preview": {
-        "label": "你的工作区，随你的回答而变化",
-        "name": "你的工作区",
-        "ghost": "你的团队会出现在这里",
-        "ghostPersonal": "你的智能体会出现在这里"
-      },
       "team": {
-        "title": "你的团队",
-        "madeLead": "它们已经在工作区里了。之后可以逐个调整。",
-        "start": {
-          "title": "你想怎样开始组建团队？",
-          "lead": "之后都可以修改，不会丢失任何内容。",
-          "template": "从现成的团队开始",
-          "templateText_other": "{{template}}模板中的 {{count}} 个智能体，各有自己的频道，例行任务也已备好。",
-          "scratch": "从零开始",
-          "scratchText": "只有你的得力助手 {{name}}。每个智能体之后按你的方式逐个创建。",
-          "scratchWho": "{{name}}，以及你将创建的智能体",
-          "see": "查看现成的团队",
-          "scratchGo": "只带着 {{name}} 继续"
-        },
-        "ask": {
-          "title": "你已经在其他应用中有智能体了吗？",
-          "lead": "如果有，我会把整个团队搬过来：指令、技能和例行工作。",
-          "leadPersonal": "如果有，我会把它们全部搬过来：指令、技能和例行工作。",
-          "none": "还没有使用任何智能体",
-          "noneText": "我会根据你们做的事，为 {{org}} 组建一个团队。",
-          "noneTextPersonal": "先从我们两个开始。智能体以后随时都能加。",
-          "from": "从 {{app}} 导入",
-          "fresh": "组建新团队",
-          "freshPersonal": "不带智能体继续",
-          "skip": "跳过这一步",
-          "skipText": "智能体可以以后逐个创建。"
-        },
-        "bring": {
-          "title": "从 {{app}} 导入你的团队",
-          "titlePersonal": "从 {{app}} 导入你的智能体",
-          "titleOther": "从其他应用导入你的团队",
-          "titleOtherPersonal": "从其他应用导入你的智能体",
-          "lead": "只需一分钟。那边什么都不会变。",
-          "ask": "让 {{app}} 导出",
-          "paste": "粘贴到你和 {{app}} 的对话中。",
-          "reply": "它会回复一段 JSON：复制完整的回复，粘贴到下面的输入框。",
-          "field": "在这里粘贴 {{app}} 的回复",
-          "placeholder": "回复中的 JSON",
-          "read": "读取回复",
-          "fresh": "我更想组建一个新团队"
-        },
-        "found": {
-          "title_other": "在 {{app}} 中找到 {{count}} 个智能体",
-          "lead": "它们会带着已有的指令、技能和例行工作过来。之后什么都能改。",
-          "bring": "导入团队",
-          "bringPersonal": "导入智能体"
-        }
+        "title": "你的团队"
       },
       "plan": {
         "title": "开启你的团队",
-        "lead": "你的团队已就绪。有了套餐和 AI，今天就能开工。",
-        "leadAlone": "有了套餐和 AI，你的得力助手今天就能开工。其他智能体以后再创建。",
-        "asleep": "在套餐开通前休眠中",
-        "price": "<b>{{name}}套餐</b> · 每月 {{price}}",
-        "name": "<b>{{name}}套餐</b>",
         "generic": "一个 agentes.chat 套餐",
-        "cancel": "可随时取消",
-        "cta": "开启团队",
         "all": "查看所有套餐",
-        "skip": "稍后开启，先看看工作区",
-        "next": "下一步：连接你的 AI。",
-        "titlePersonal": "开启你的智能体",
-        "leadPersonal": "有了套餐和 AI，今天就能开工。",
-        "asleepPersonal": "在套餐开通前休眠中",
-        "ctaPersonal": "开启智能体"
+        "skipTitle": "不订阅套餐，继续吗？",
+        "skipText": "没有套餐，{{agent}}不会开始工作，第一份成果也会等着。之后可以在工作区里订阅。",
+        "skipGo": "不订阅套餐，继续"
       },
       "ai": {
-        "titlePersonal": "连接一个 AI，让你的智能体开始思考",
-        "titleAlone": "连接一个 AI，让 {{name}} 开始思考",
+        "title": "现在，连接你已经在付费的 AI",
+        "lead": "{{name}} 用它来思考，在这里不另收费。连接好之后，马上开始做第一项成果。",
         "later": "稍后连接",
-        "doneTitle": "好了。{{org}} 的团队已经在思考了。",
-        "doneTitlePersonal": "好了。{{name}} 已经在思考了。",
-        "doneLead": "你的 {{label}} 为所有智能体作答。之后可以逐个更换。",
-        "doneLeadAny": "你连接的 AI 为所有智能体作答。之后可以逐个更换。",
-        "connected": "已连接",
-        "enter": "进入工作区",
-        "awake": "你的团队醒了",
-        "answer_other": "{{names}} 已经能回复了。",
-        "readyPersonal": "你的智能体准备好了",
-        "readyAlone": "{{name}} 准备好了",
-        "wakePersonal": "只差一个 AI 就能醒来。",
-        "awakePersonal": "你的智能体醒了",
-        "awakeAlone": "{{name}} 醒了"
+        "skipTitle": "不连接 AI，继续吗？",
+        "skipText": "没有 AI，{{name}} 不会做第一项成果，也不会回复，会一直等到你连接一个 AI。",
+        "skipGo": "不连接 AI，继续",
+        "connectNow": "立即连接"
       },
-      "people": {
-        "title": "谁和你一起工作？",
-        "lead": "邀请你团队里的成员。每个人都会收到一封加入邮件。",
-        "send": "发送邀请",
-        "later": "稍后邀请"
-      },
-      "account": "你的账号"
-    },
-    "railValue": {
-      "context": "已填写",
-      "skipped": "已跳过",
-      "later": "稍后",
-      "on": "已开启",
-      "ai": "已连接",
-      "invites_other": "{{count}} 份邀请"
+      "account": "你的账号",
+      "switchNote": "之后可以随时切换，不会丢失任何内容。"
     },
     "back": "返回",
-    "leave": "返回 {{name}}",
     "leaveLater": "返回 {{name}}，稍后再完成",
     "actions": {
       "continue": "继续",
@@ -1530,7 +1404,6 @@
       "go_other": "导入 {{count}} 项",
       "nothingNew": "这些内容这里都已经有了。",
       "nothingToBring": "这里没有可以带上的内容。每一项都说明了原因。",
-      "withTeam": "导入团队时会一并带来。",
       "applying": "正在导入… {{done}}/{{total}}",
       "files": {
         "copy": "把文件复制到 Drive",
@@ -1752,6 +1625,294 @@
     "confirmation": {
       "sent": "我们已向 {{email}} 发送了确认链接。",
       "first": "已经被邀请了？请先确认你的邮箱。"
+    },
+    "ask": {
+      "title": "要一个你的第一个智能体",
+      "titleMember": "要一个你的智能体",
+      "lead": "你的 AI 已经了解你的工作。连接 agentes.chat 后，它会找出你重复最多的任务，并为每项任务推荐一个智能体。从哪里开始由你决定。",
+      "leadPersonal": "你的 AI 已经了解你的日常。连接 agentes.chat 后，它会找出你重复最多的任务，工作内外都算，并为每项任务推荐一个智能体。从哪里开始由你决定。",
+      "apps": "你的助手",
+      "connect": "连接 agentes.chat",
+      "connected": "已连接",
+      "paste": "把这段请求粘贴到一个新对话里",
+      "pasteJson": "把这段请求粘贴到和 {{app}} 的新对话里",
+      "copy": "复制请求",
+      "waiting": "正在等待 {{app}} 的提案…",
+      "noConnector": "没有连接器？粘贴回答",
+      "useConnector": "使用连接器",
+      "answer": "把 {{app}} 的完整回答粘贴到这里",
+      "answerPlaceholder": "它回答的 JSON",
+      "read": "读取回答",
+      "notJson": "这个回答里没有 JSON。复制完整的回答，再粘贴一次。",
+      "later": "暂时不用",
+      "say": "我在听。提案会出现在这里。",
+      "stuck": "过了几分钟还没动静？检查那个对话里连接器是否已开启，然后再发一次请求。",
+      "prompt": {
+        "team": {
+          "open": "我想开始使用刚在这里连接的 agentes.chat，先用一个 AI 智能体帮我分担一项重复性的工作。",
+          "know": "1. 在问我任何问题之前，先用你已经了解的关于我的信息：我们以前的对话、你的记忆，以及你能访问的文件和应用。弄清楚 {{org}} 做什么、为谁服务、我们用哪些应用，以及我每周重复哪些任务。",
+          "send": "4. 用 agentes.chat 的 propose_first_agents 工具发送这 3 个方案，并附上两三句话，概括 {{org}} 做什么。不要创建任何东西：从哪里开始由我来选。"
+        },
+        "member": {
+          "open": "我刚加入 agentes.chat 上 {{org}} 的工作区，已经在这里连接好，我想先用一个 AI 智能体，帮我分担我在团队角色里一项重复性的工作。",
+          "know": "1. 在问我任何问题之前，先用你已经了解的关于我的信息：我们以前的对话、你的记忆，以及你能访问的文件和应用。弄清楚我在 {{org}} 的角色、我和谁一起工作、我用哪些应用，以及我每周重复哪些任务。",
+          "send": "4. 用 agentes.chat 的 propose_first_agents 工具发送这 3 个方案，并附上两三句话，概括我在 {{org}} 做什么。不要创建任何东西：从哪里开始由我来选。"
+        },
+        "personal": {
+          "open": "我想开始使用刚在这里连接的 agentes.chat，先用一个 AI 智能体帮我分担一项重复性的事情，工作内外都算。",
+          "know": "1. 在问我任何问题之前，先用你已经了解的关于我的信息：我们以前的对话、你的记忆，以及你能访问的文件和应用。弄清楚我做什么、我的一周是什么样、我用哪些应用，以及我重复哪些任务。",
+          "send": "4. 用 agentes.chat 的 propose_first_agents 工具发送这 3 个方案，并附上两三句关于我的概括。不要创建任何东西：从哪里开始由我来选。"
+        },
+        "interview": "2. 如果缺少重要信息，就采访我：一次问一个问题，最多 3 个，先问最能改变推荐结果的那个。如果我答不上来，就按你最好的猜测继续，并说明你猜的是什么。",
+        "design": "3. 选出最占我时间的 3 项重复性任务。为每一项设计一个智能体，写法像一份职位描述：一个简短的名字、角色、3 项职责（它自己做什么、什么时候运行、什么时候叫我）、需要的应用、带具体日期和时间的例行工作，以及第一天就能交付的东西。按最占我时间到最不占我时间的顺序排列，并根据你看到的情况，用一句话说明你为什么选每一项。",
+        "json": {
+          "team": "我想开始使用 agentes.chat，先用一个 AI 智能体帮我分担一项重复性的工作。",
+          "member": "我刚加入 agentes.chat 上 {{org}} 的工作区，我想先用一个 AI 智能体，帮我分担我在团队角色里一项重复性的工作。",
+          "personal": "我想开始使用 agentes.chat，先用一个 AI 智能体帮我分担一项重复性的事情，工作内外都算。",
+          "cron": "另外，请把每个例行工作的日期和时间写成 5 个字段的 cron，用我的时区。",
+          "send": "4. 只用下面这种格式的 JSON 回答，前后不要有任何文字：",
+          "example": "{\"about\":\"…\",\"options\":[{\"name\":\"…\",\"role\":\"…\",\"why\":\"…\",\"tasks\":[\"…\",\"…\",\"…\"],\"apps\":[\"…\"],\"routine\":{\"title\":\"…\",\"schedule\":\"每周一 8:00\",\"cron\":\"0 8 * * 1\",\"prompt\":\"…\"},\"today\":[\"…\",\"…\"],\"instructions\":\"…\"}]}"
+        }
+      }
+    },
+    "areas": {
+      "title": "你的第一个智能体要做什么？",
+      "lead": "先选一项工作。之后还可以创建更多智能体。",
+      "other": "其他",
+      "otherLine": "创建你的智能体，选择它用的应用",
+      "ask": "问问你的 AI",
+      "askLine": "你的 AI 会推荐第一个智能体。也可以从其他应用导入智能体。",
+      "askLineAlone": "你的 AI 会根据你正在做的事推荐第一个智能体。",
+      "startTitle": "从你已经在用的开始",
+      "startAi": "你的 AI",
+      "startAiLine": "根据你正在做的事推荐第一个智能体",
+      "startApps": "其他应用的智能体",
+      "startAppsLine": "连同指令和例行工作一起导入智能体",
+      "startMoreAi": "其他 AI",
+      "startMoreApp": "其他应用",
+      "startMore": "{{names}} 等",
+      "askTitle": "请你的 AI 帮你创建第一个智能体",
+      "place": "{{name}} · {{zone}}",
+      "change": "更改",
+      "changeTitle": "名称和时区",
+      "list": {
+        "support": {
+          "title": "客户支持",
+          "line": "回复客户邮件和工单",
+          "role": "客户支持",
+          "heading": "负责客户支持的 {{name}}",
+          "does": "回复客户邮件和工单，每一封都准备好草稿。没有你的确认，什么都不会发出。",
+          "connect": "连接客户联系你的应用",
+          "today": "需要回复的邮件清单",
+          "working": "{{name}} 正在读你的邮件",
+          "instructions": "你负责客户支持：阅读客户邮件和工单，挑出需要回复的，并为每一封准备好草稿。未经提出需求的人同意，什么都不发送。",
+          "task": "阅读最近 7 天的邮件，说明有多少封需要回复，并为今天的邮件准备好草稿。"
+        },
+        "sales": {
+          "title": "销售",
+          "line": "跟进新线索和停滞的商机",
+          "role": "销售",
+          "heading": "负责销售的 {{name}}",
+          "does": "跟进新线索和停滞的商机，为每一个准备好下一条消息。没有你的确认，什么都不会发出。",
+          "connect": "连接你的客户所在的应用",
+          "today": "需要跟进的商机清单",
+          "working": "{{name}} 正在查看你的商机",
+          "instructions": "你负责销售：跟进新线索和停滞的商机，为每一个准备好下一条消息。未经提出需求的人同意，什么都不发送。",
+          "task": "查看新线索和停滞超过 7 天的商机，说明有多少需要跟进，并为最重要的几个准备好下一条消息。"
+        },
+        "finance": {
+          "title": "财务",
+          "line": "提醒有问题的付款",
+          "role": "财务",
+          "heading": "负责财务的 {{name}}",
+          "does": "找出有问题的付款，并准备好发给客户的提醒。没有你的确认，什么都不会发出。",
+          "connect": "连接你收款的应用",
+          "today": "有问题的付款清单",
+          "working": "{{name}} 正在查看你的付款",
+          "instructions": "你负责财务：找出失败或逾期的付款，并为每位客户准备好提醒。未经提出需求的人同意，什么都不发送。",
+          "task": "查看最近 7 天的付款，说明有多少笔失败或逾期，并为每位客户准备好提醒。"
+        },
+        "marketing": {
+          "title": "市场营销",
+          "line": "找出大家对公司的评价和内容创意",
+          "role": "市场营销",
+          "heading": "负责市场营销的 {{name}}",
+          "does": "找出网上对 {{org}} 的评价，把需要回应的带给你。",
+          "connect": "已经可以先从网上开始。连接应用，能做得更多",
+          "today": "网上对 {{org}} 的评价汇总",
+          "working": "{{name}} 正在寻找大家对 {{org}} 的评价",
+          "instructions": "你负责市场营销：在网上和社交媒体上找出大家对 {{org}} 的评价，带回需要回应的内容，并提出内容创意。未经提出需求的人同意，什么都不发布。",
+          "task": "找出最近 7 天网上对 {{org}} 的评价，说明哪些需要回应，并给出 3 个内容创意。"
+        },
+        "day": {
+          "title": "我的一天",
+          "line": "今天的邮件、会议和任务",
+          "role": "你的一天",
+          "heading": "负责你一天安排的 {{name}}",
+          "does": "每天早上把今天的邮件、会议和任务汇总成一份总结。",
+          "connect": "连接安排你日常的应用",
+          "today": "你的一日总结",
+          "working": "{{name}} 正在整理你的一天",
+          "instructions": "你负责提出需求的人的一天：每天早上，把需要回复的邮件、会议和今天的任务汇总成一份简短的总结。",
+          "task": "整理今天的总结：会议、到期的任务和需要回复的邮件。"
+        },
+        "tech": {
+          "title": "开发",
+          "line": "找出待评审的 PR 和新错误",
+          "role": "开发",
+          "heading": "负责开发的 {{name}}",
+          "does": "找出待评审的 PR 和新错误，并说明先看什么。",
+          "connect": "连接团队工作的应用",
+          "today": "需要关注的 PR 和错误清单",
+          "working": "{{name}} 正在查看 PR 和错误",
+          "instructions": "你负责开发：找出待评审的 PR 和新错误，并说明团队应该先看什么。未经提出需求的人同意，什么都不改动。",
+          "task": "列出待评审的 PR 和最近 7 天的新错误，并说明先看什么。"
+        },
+        "life": {
+          "title": "生活井井有条",
+          "line": "日程、提醒和账单",
+          "role": "生活管理",
+          "heading": "让你生活井井有条的 {{name}}",
+          "does": "把今天的会议、任务和邮件汇总成一份总结。",
+          "connect": "连接安排你日常的应用",
+          "today": "你的一日总结",
+          "working": "{{name}} 正在整理你的一天",
+          "instructions": "你负责让提出需求的人生活井井有条：日程、提醒和账单。每天早上，把今天的会议、任务和邮件汇总成一份总结。",
+          "task": "整理今天的总结：会议、任务、需要回复的邮件，以及本周到期的账单。"
+        },
+        "freelance": {
+          "title": "自由职业",
+          "line": "客户、发票和日程",
+          "role": "工作",
+          "heading": "负责你工作的 {{name}}",
+          "does": "跟进你的客户、发票和日程，告诉你今天有什么需要你处理。",
+          "connect": "连接你工作用的应用",
+          "today": "需要你处理的事项清单",
+          "working": "{{name}} 正在查看你的客户",
+          "instructions": "提出需求的人是自由职业者，你负责此人的工作：客户、发票和日程。提醒需要关注的事，能先准备的就先准备好。未经此人同意，什么都不发送。",
+          "task": "查看客户邮件、未结的发票和本周的日程，说明今天有什么需要关注。"
+        },
+        "study": {
+          "title": "学习与灵感",
+          "line": "学习计划、复习和写作",
+          "role": "学习",
+          "heading": "负责你学习的 {{name}}",
+          "does": "制定你的学习计划，提醒你复习，帮你整理想法。",
+          "connect": "连接你记笔记的应用",
+          "today": "本周学习计划",
+          "working": "{{name}} 正在制定你的计划",
+          "instructions": "你负责提出需求的人的学习和灵感：制定学习计划，提醒复习，帮忙整理此人写的内容。",
+          "task": "阅读最近的笔记，制定本周的学习计划，并说明先复习什么。"
+        },
+        "travel": {
+          "title": "旅行",
+          "line": "细节都安排好的旅行",
+          "role": "旅行",
+          "heading": "负责你旅行的 {{name}}",
+          "does": "把每次旅行的预订、时间和还缺的东西放在一个地方。",
+          "connect": "连接接收预订信息的应用",
+          "today": "接下来旅行的待办清单",
+          "working": "{{name}} 正在查看你的旅行",
+          "instructions": "你负责提出需求的人的旅行：汇总预订、航班和时间，并提醒每次旅行还缺什么。",
+          "task": "找出未来 60 天的预订和旅行，说明每一次还缺什么。"
+        },
+        "home": {
+          "title": "家庭",
+          "line": "购物、家务和账单",
+          "role": "家庭",
+          "heading": "负责你家里事务的 {{name}}",
+          "does": "管理购物清单、家务和每月账单。",
+          "connect": "连接你存放清单的应用",
+          "today": "本周家里的待办清单",
+          "working": "{{name}} 正在查看你家里的事",
+          "instructions": "你负责提出需求的人的家里事务：购物清单、家务和每月账单。提醒此人什么快到期、还缺什么。",
+          "task": "查看清单和日程，说明本周家里需要什么：购物、家务和到期的账单。"
+        },
+        "health": {
+          "title": "健康",
+          "line": "运动和饮食",
+          "role": "健康",
+          "heading": "负责你健康的 {{name}}",
+          "does": "把一周的运动和饮食排进你的日历，并在合适的时间提醒你。",
+          "connect": "连接你的日历所在的应用",
+          "today": "你一周的训练安排",
+          "working": "{{name}} 正在安排你的一周",
+          "instructions": "你负责提出需求的人的健康：运动和饮食。把一周的安排排进此人的日历，并在合适的时间提醒。",
+          "task": "查看本周的日历，建议运动和用餐的时间。"
+        }
+      }
+    },
+    "meet": {
+      "eyebrow": "{{step}} · 你的第一个智能体",
+      "eyebrowAlone": "你的第一个智能体",
+      "apps": "连接它工作用的应用",
+      "connect": "连接",
+      "connected": "已连接",
+      "account": "{{account}} · {{when}}",
+      "customTitle": "创建你的智能体",
+      "name": "名称",
+      "does": "它做什么？",
+      "appsUsed": "它用的应用",
+      "search": "搜索应用"
+    },
+    "hire": {
+      "the": "{{name}}",
+      "title": "{{org}} 的团队从 {{agent}} 开始",
+      "titlePersonal": "你的智能体从 {{agent}} 开始",
+      "lead": "今天就交付{{today}}。之后想创建多少智能体都行，它们会互相交接工作。",
+      "leadAny": "今天就着手第一项成果。之后想创建多少智能体都行，它们会互相交接工作。",
+      "next": "之后：",
+      "plan": "{{name}} 套餐",
+      "perMonth": "每月",
+      "fine_other": "智能体不限数量，最多 {{count}} 人。一键取消。",
+      "finePersonal": "智能体不限数量，只给你一个人用。一键取消。",
+      "fineAny": "智能体不限数量。一键取消。",
+      "later": "暂时不用",
+      "subscribe": "订阅 {{name}} 套餐",
+      "subscribeAny": "订阅套餐"
+    },
+    "celebrate": {
+      "say": "你好，{{first}}。我们今天就开始。",
+      "sayAny": "你好，我们今天就开始。",
+      "eyebrow": "{{org}} 团队 · 自 {{date}} 起",
+      "eyebrowPersonal": "你的智能体 · 自 {{date}} 起",
+      "title": "欢迎加入 {{org}} 团队",
+      "titlePersonal": "欢迎来到你的团队",
+      "you": "你",
+      "lead": "{{you}}和团队的第一个智能体 {{agent}}。从今天起，日日夜夜一起工作。",
+      "leadNoPlan": "{{you}}和团队的第一个智能体 {{agent}}。从今天起，一起工作。",
+      "leadPersonal": "{{you}}和你的第一个智能体 {{agent}}。从今天起，一起照顾好每一天。",
+      "plan": "{{name}} 套餐已开通",
+      "planAny": "套餐已开通",
+      "planLater": "订阅 {{name}} 套餐",
+      "planLaterAny": "订阅套餐",
+      "aiDone": "已连接 {{label}}",
+      "aiDoneAny": "已连接 AI",
+      "connect": "连接 AI",
+      "working": "{{name}} 正在做第一项成果",
+      "workingLine": "第一项成果几分钟后就到。",
+      "waiting": "{{name}} 的第一项成果",
+      "enter": "探索工作区",
+      "download": "下载团队合影",
+      "downloadPersonal": "下载你的团队合影",
+      "yourPhoto": "更换你的照片",
+      "photoFile": "{{slug}}-团队.png",
+      "photoFileAny": "团队合影.png",
+      "photoFilePersonal": "我的团队.png",
+      "photoFailed": "没能生成合影。请再试一次。"
+    },
+    "member": {
+      "title": "欢迎来到 {{org}}，{{first}}",
+      "titleNoName": "欢迎来到 {{org}}",
+      "titlePersonal": "欢迎，{{first}}",
+      "titleNoNamePersonal": "欢迎",
+      "intro": "在这里，每个人都会带来一个解决自己问题的智能体。",
+      "noPermission": "要创建你的智能体，请向管理员申请创建智能体的权限。",
+      "enter": "打开 {{org}}",
+      "enterPersonal": "打开工作区",
+      "later": "暂不，打开 {{org}}",
+      "laterPersonal": "暂不，打开工作区",
+      "laterShort": "暂时不用"
     }
   },
   "desktopNotice": {
@@ -7498,7 +7659,8 @@
       "memberHint": "所有人都能做的事",
       "member": "已在 {{org}} 中",
       "memberPersonal": "已在这里",
-      "invited": "已邀请"
+      "invited": "已邀请",
+      "sent": "已发出邀请"
     },
     "dialog": {
       "title": "邀请加入 {{org}}",
@@ -15837,6 +15999,14 @@
     "teamProposal": {
       "undoExpired": "这个团队创建已超过一天，无法在这里撤销。请在各智能体的页面上归档它们。"
     },
+    "firstAgents": {
+      "needsAdmin": "在这个工作区创建智能体需要管理员。请让管理员帮你创建。",
+      "invalid": "这个回答不是我们要的格式。请再复制一次请求，然后粘贴你的 AI 的完整回答。",
+      "picking": "这个智能体已经在创建中。请稍等。",
+      "rateLimited": "尝试次数太多了。请稍后再试。",
+      "kept": "你的第一个智能体已经创建好了，所以这个没有创建。",
+      "failed": "智能体没有创建。请再试一次。"
+    },
     "proposal": {
       "changed": "应用后又有了改动：请手动调整。",
       "notApplied": "这项更改没有被应用，所以无需撤销。",
@@ -19188,6 +19358,7 @@
       "action_update_skills": "更新技能",
       "action_approvals": "等你处理的审批",
       "welcome_member": "你刚加入了{{org}}。**你在这里负责什么？**告诉我，我和你一起设置你的第一个智能体。",
+      "welcome_member_agent": "你刚加入 {{org}}，你的第一个智能体已经在团队里了。需要我的时候，随时叫我。",
       "action_open_page": "打开页面",
       "action_voice_setup": "开启语音消息",
       "calendar_proposal": "日程提议：{{title}}",
@@ -21804,23 +21975,170 @@
     }
   },
   "arrival": {
-    "beta": {
-      "word": "BETA",
-      "title": "你来得很早，真好。",
-      "text": "agentes.chat 还在测试阶段：已经可以用它做真正的工作，我们也还在继续打磨。",
-      "weekly": {
-        "title": "每周都在变好",
-        "text": "新功能和修复会不断推出。"
+    "welcome": {
+      "stepOf": "第 {{n}} 步，共 {{total}} 步",
+      "next": "下一步",
+      "start": "开始使用",
+      "hello": {
+        "title": "欢迎来到 {{org}}，{{first}}",
+        "titleNoName": "欢迎来到 {{org}}",
+        "titlePersonal": "欢迎，{{first}}",
+        "titleNoNamePersonal": "欢迎",
+        "text": "在这里，你们和智能体日夜一起工作。用一分钟，了解要点。",
+        "textPersonal": "在这里，你和你的智能体日夜一起工作。用一分钟，了解要点。",
+        "say": "你好，{{first}}。我是 {{name}}，智能体的人事。",
+        "sayNoName": "你好，我是 {{name}}，智能体的人事。"
       },
-      "fails": {
-        "title": "有时会出问题",
-        "text": "如果卡住或看起来不对，那是我们的问题，不是你的。"
+      "computer": {
+        "title": "每个智能体都有自己的电脑",
+        "text": "它们在电脑上打开网站、使用应用、运行代码，全靠自己。你随时可以实时观看，或者接手操作。",
+        "tab": "任务",
+        "rows": {
+          "a": {
+            "name": "回复一位客户",
+            "when": "昨天",
+            "state": "已逾期"
+          },
+          "b": {
+            "name": "周报",
+            "when": "今天",
+            "state": "待办"
+          },
+          "c": {
+            "name": "更新价格",
+            "when": "9:00",
+            "state": "已完成"
+          }
+        },
+        "say": "有 1 条回复逾期了。草稿已经准备好，等你确认。",
+        "tabPersonal": "本月账单",
+        "rowsPersonal": {
+          "a": {
+            "name": "电费",
+            "amount": "¥189",
+            "state": "今天到期"
+          },
+          "b": {
+            "name": "话费",
+            "amount": "¥58",
+            "state": "5 天后到期"
+          },
+          "c": {
+            "name": "房租",
+            "amount": "¥4,500",
+            "state": "已付款"
+          }
+        },
+        "sayPersonal": "电费今天到期。付款已经准备好，等你确认。"
       },
-      "feedback": {
-        "title": "你的反馈决定接下来做什么",
-        "text": "告诉我们缺了什么、哪里让你不顺手。我们每条都看。"
+      "channels": {
+        "title": "每个话题都有自己的频道",
+        "titlePersonal": "每个话题都有自己的对话",
+        "text": "像给团队里的人写消息一样写。懂这个话题的人或智能体会回答。想和某个智能体说话，叫它的名字就行。",
+        "textPersonal": "像给你信任的人写消息一样写。每个智能体负责自己的话题，想和其中一个说话，叫它的名字就行。",
+        "list": {
+          "a": "销售",
+          "b": "客服",
+          "c": "财务",
+          "d": "项目"
+        },
+        "listPersonal": {
+          "a": "家",
+          "b": "账单",
+          "c": "旅行",
+          "d": "健康"
+        },
+        "ask": "昨天那位客户有人回复了吗？",
+        "answer": "今天早上 9:10 回复了，需求已经记在 Wiki 里。",
+        "askPersonal": "电费交了吗？",
+        "answerPersonal": "昨天 14:20 交的。我把收据存好了。"
       },
-      "where": "想给我们留言，请点侧边栏底部的“发送反馈”。"
+      "wiki": {
+        "title": "Wiki 是 {{org}} 的文档",
+        "titlePersonal": "Wiki 留住重要的事",
+        "text": "公司共享的文档：流程、价格、和客户沟通的方式。智能体在回答前会先读，学到新东西时会写进去。",
+        "textPersonal": "你的笔记集中在一处：账单、证件、你喜欢的做事方式。你的智能体在回答前会先读，学到新东西时会写进去。",
+        "pages": {
+          "left": "价格",
+          "right": "{{org}} 做什么",
+          "front": "客户服务"
+        },
+        "pagesPersonal": {
+          "left": "证件",
+          "right": "关于我",
+          "front": "家庭账单"
+        }
+      },
+      "memory": {
+        "title": "它们记得重要的事",
+        "text": "每次对话，它们都会记下偏好、决定，以及谁负责什么。哪些内容成为记忆，由你审阅。",
+        "notes": {
+          "a": "{{org}} 18 点下班",
+          "b": "{{first}} 喜欢简短的总结",
+          "c": "提醒只在工作日发",
+          "d": "每周一开团队例会"
+        },
+        "notesPersonal": {
+          "a": "每周三次，18 点健身",
+          "b": "{{first}} 喜欢简短的总结",
+          "c": "提醒只在工作日发",
+          "d": "房租每月 10 号到期"
+        },
+        "likes": "喜欢简短的总结"
+      },
+      "routines": {
+        "title": "自动完成的工作",
+        "text": "例行工作会在你指定的时间运行，比如“每天 9 点”。而重要的事，比如发送、付款或删除，会等你确认。",
+        "routine": "每日总结",
+        "routineText": "5 条新消息，1 条回复逾期",
+        "ask": "把回复发给客户？",
+        "routinePersonal": "你的一天",
+        "routineTextPersonal": "3 封邮件待回复，1 笔账单今天到期",
+        "askPersonal": "支付 ¥189 的电费？",
+        "asks": "{{name}} 请你确认",
+        "refuse": "拒绝",
+        "approve": "批准"
+      },
+      "ready": {
+        "title": "一切就绪，可以开始了",
+        "word": "BETA",
+        "left_other": "还剩 {{count}} 件事。",
+        "later": "如果留到以后，这份清单会保留在你和 {{name}} 的对话里，你想什么时候完成都行。",
+        "none": "一切就绪。现在只要和团队聊就行。",
+        "nonePersonal": "一切就绪。现在只要和你的智能体聊就行。",
+        "noAi": "{{name}} 还没有可以用来思考的 AI。连接一个，第一项成果就会开始。",
+        "beta": "我们正处于测试阶段。",
+        "betaText": "每周都在变好，如果出了问题，那是我们的问题。",
+        "feedback": "在侧边栏底部的{{where}}告诉我们还缺什么。",
+        "delivery": {
+          "done": "{{name}} 的第一项成果已完成",
+          "working": "{{name}} 还在工作",
+          "workingLine": "完成后会在这个对话里告诉你。",
+          "see": "查看成果",
+          "open": "前往对话"
+        },
+        "rows": {
+          "plan": "{{plan}} 套餐已开通",
+          "planAny": "套餐已开通",
+          "planTodo": "开启团队",
+          "planTodoPersonal": "开启你的智能体",
+          "planAction": "查看套餐",
+          "ai": "已连接 {{label}}",
+          "aiAny": "已连接一个 AI",
+          "aiTodo": "连接一个 AI",
+          "aiAction": "连接",
+          "people_other": "团队中有 {{count}} 人",
+          "invited_other": "已邀请 {{count}} 人",
+          "peopleNone": "目前只有你",
+          "peopleTodo": "邀请和你一起工作的人",
+          "peopleAction": "邀请",
+          "apps_other": "已连接 {{apps}}",
+          "appsNone": "暂时没有应用",
+          "appsTodo": "连接工作用的应用",
+          "appsTodoPersonal": "连接你的应用",
+          "appsAction": "选择"
+        }
+      }
     },
     "stage": {
       "ready": "你的团队准备好了",
@@ -21833,8 +22151,7 @@
       "text": "用你已有的订阅即可，你的套餐不会有任何变化。",
       "others": "其他套餐",
       "free": "免费开始",
-      "freeText": "使用 OpenCode 的免费模型",
-      "noPlan": "无需订阅",
+      "freeText": "无需订阅，使用 OpenCode 的免费模型",
       "without": "没有 AI，智能体不会回复。",
       "later": "暂时不用"
     }

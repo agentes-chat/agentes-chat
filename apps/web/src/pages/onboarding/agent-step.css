@@ -1,0 +1,123 @@
+/*
+ * Meeting the first agent (AgentStep.tsx): the label over its apps, then the apps as flat rows (a hairline between
+ * them, no card and no tint): the app's mark, its name on the first line with what ends that line (Connect, or
+ * "Connected" in the ok color as plain text), its account and when its routine runs under it. "Other": the kit's
+ * fields, then the apps found.
+ */
+.onb-apps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.onb-apps__label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+}
+.onb-rows {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* The mark, then the name's line (what ends it on it) centred on the mark. */
+.onb-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "mark head";
+  align-items: center;
+  column-gap: 12px;
+  min-height: 60px;
+  box-sizing: border-box;
+  padding: 12px 0;
+}
+.onb-row > .connector-icon {
+  grid-area: mark;
+}
+.onb-rows > .onb-row + .onb-row {
+  border-top: 1px solid var(--line);
+}
+.onb-row__text {
+  display: contents;
+}
+.onb-row__head {
+  grid-area: head;
+}
+.onb-row__sub {
+  grid-area: sub;
+}
+/* Connected, its account and when its routine runs under the name (the kit's face line): the name's capitals at the
+   mark's top, as `.ac-captop` rises, and that line under the name. */
+.onb-row:has(> .onb-row__text > .onb-row__sub) {
+  grid-template-areas:
+    "mark head"
+    "mark sub";
+  align-items: start;
+}
+.onb-row:has(> .onb-row__text > .onb-row__sub) > .onb-row__text > .onb-row__head {
+  margin-block-start: calc(var(--cap-top) - 11px);
+}
+/* On a phone that line takes the row's whole width, under the mark too (the kit's MediaRow): the mark never owns a
+   column while the words beside it wrap. */
+@container (max-width: 400px) {
+  .onb-row:has(> .onb-row__text > .onb-row__sub) {
+    grid-template-areas:
+      "mark head"
+      "sub sub";
+    align-items: center;
+    row-gap: 6px;
+  }
+  .onb-row:has(> .onb-row__text > .onb-row__sub) > .onb-row__text > .onb-row__head {
+    margin-block-start: 0;
+  }
+}
+/* The name's line holds what ends it (a button, a state in its color): never the row's middle. */
+.onb-row__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 22px;
+  font-size: 15px;
+  line-height: 22px;
+}
+.onb-row__name {
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.onb-row__head > .ac-btn,
+.onb-row__head > .onb-ok {
+  flex: none;
+}
+.onb-row__sub {
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 19px;
+  overflow-wrap: anywhere;
+}
+.onb-ok {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ok);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+/* "Search apps", past the apps listed: the app's picker over the catalog, led by a stack of a few apps' marks. Alone
+   ("Other"), it is the field's control, with no room over it. */
+.onb-find {
+  gap: 10px;
+}
+.onb-rows + .onb-find {
+  margin-top: 12px;
+}
+.onb-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--form-gap, 16px);
+}

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { railSteps } from "@agenteschat/client/lib/onboarding";
+import { phoneRail } from "@agenteschat/client/lib/onboarding";
 import {
   endOnboarding,
   isPushedStep,
@@ -36,7 +36,15 @@ describe("the first run's steps are screens on the stack", () => {
   });
 
   test("a visit picked up again has the steps before it under it; Continue pushes the next one", () => {
-    const team = railSteps({ plan: true, ai: false, personal: false });
+    const rail = (f: { held: boolean }) =>
+      phoneRail({
+        orgId: "o1",
+        standing: f.held ? { state: "hold", reason: "payment" } : undefined,
+        billingUrl: null,
+        context: "",
+        team: 0,
+      }).steps;
+    const team = rail({ held: true });
     expect(team).toEqual(["name", "business", "team", "plan"]);
     // Left at the team's step: what it does and the team go over its name, so back walks them.
     expect(stepsBetween(team, "name", "team")).toEqual(["business", "team"]);
@@ -47,7 +55,7 @@ describe("the first run's steps are screens on the stack", () => {
     expect(nextStep(team, "name")).toBe("business");
     expect(nextStep(team, "team")).toBe("plan");
     // No plan to wait for: after the team, the workspace opens instead of another step.
-    expect(nextStep(railSteps({ plan: false, ai: false, personal: false }), "team")).toBeNull();
+    expect(nextStep(rail({ held: false }), "team")).toBeNull();
   });
 
   test("the answers live while the flow does: a page ends only its own, and says how it ended", () => {

@@ -69,3 +69,31 @@ test("each way is a button named by its title, described by its line, the recomm
   // Each row ends on a chevron: right for steps, down for more rows here.
   expect(list.querySelectorAll(".ac-optrow__go")).toHaveLength(4);
 });
+
+test("flat: the same rows as a box's list, marked for the kit's flat look; each lead in its column", () => {
+  // In a box's padding, as wherever it shows: a flat row's hover reaches past the text on both sides.
+  const { container } = render(
+    <div style={{ padding: "0 16px" }}>
+      <OptionLinks
+        flat
+        className="my-list"
+        aria-label="Works"
+        options={[
+          { value: "support", title: "Support", leading: <span>icon</span>, side: "apps", onSelect: () => {} },
+          { value: "other", title: "Other", onSelect: () => {} },
+        ]}
+      />
+    </div>,
+  );
+  const list = within(container).getByRole("list", { name: "Works" });
+  expect([...list.classList]).toEqual(["ac-optlist", "ac-optlinks", "ac-optlinks--flat", "my-list"]);
+  const [support, other] = within(list).getAllByRole("listitem");
+  // A row with a picture keeps its column; one without has none.
+  expect(support?.classList.contains("ac-optrow--lead")).toBe(true);
+  expect(support?.querySelector(".ac-optrow__side")?.textContent).toBe("apps");
+  expect(other?.classList.contains("ac-optrow--lead")).toBe(false);
+  // Without `flat`, the cards it always had.
+  cleanup();
+  const { container: cards } = render(<OptionLinks options={[{ value: "a", title: "A", onSelect: () => {} }]} />);
+  expect(cards.querySelector(".ac-optlinks--flat")).toBeNull();
+});

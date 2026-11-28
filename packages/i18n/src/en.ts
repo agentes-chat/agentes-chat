@@ -982,7 +982,6 @@ export const en = {
     },
   },
   onboarding: {
-    stepsLabel: "Steps to get started",
     deleteLink: "Delete this workspace",
     optionalTag: "optional",
     stepDone: "(done)",
@@ -1002,90 +1001,31 @@ export const en = {
       theo: "Nice to meet you, I'm Theo. I organize the team's tasks.",
       atlas: "Hey, Atlas here. I look after the computers.",
     },
-    progress: {
-      left_one: "{{count}} step left",
-      left_other: "{{count}} steps left",
-      done: "All set",
-    },
     /**
-     * The blue rail with Lodi (ADR 0162): its steps, Lodi's line on each, the preview, the team step's question and
-     * import, the plan step and the AI step. `<key>Personal`: a personal workspace's words (ADR 0159).
+     * The onboarding's steps with Lodi (ADR 0162, ADR 0264): the phone's steps and Lodi's line on each, the person's
+     * area, the plan, the AI step and the people step. `<key>Personal`: a personal workspace's words (ADR 0159).
      */
     flow: {
       steps: {
         name: "Workspace name",
         business: "What you do",
-        /** The person's own step: their photo, their name and their area. */
-        you: "About you",
         team: "Your team",
         plan: "Turn the team on",
-        /** The rail's last step: connecting the AI the team thinks with. */
-        ai: "Connect an AI",
-        /** A team's last step: inviting the people who work there. */
-        people: "Invite people",
-        /** A personal workspace's first step: what it is for ("For me"). */
-        namePersonal: "What it's for",
-        teamPersonal: "Your agents",
-        planPersonal: "Turn the agents on",
-        aiPersonal: "Connect an AI",
       },
       stepOf: "Step {{n}} of {{total}}",
       lodi: {
         name: "Hi, {{first}}. I'm {{name}}. I'll put the team together with you in about two minutes.",
         business: "With that I'll know who to bring onto the team.",
         team: "This is the team I'd put together. You can change anything later.",
-        /** Back on the team step once the team is made: the list of who is in it. */
-        teamMade: "The team is already put together. We move on whenever you're ready.",
-        teamMadePersonal: "Your agents are already here. We move on whenever you're ready.",
         plan: "After the plan, all that's left is connecting an AI. I'll show you where.",
-        /** On the plan step, with the AI step right after it. */
-        planThen: "Once the plan is on, the next screen is where you connect your AI.",
-        /** The person's own area, asked once: on a team's rail after what it does, on a personal one after its purpose. */
-        you: "Before the team, a little about you.",
-        youPersonal: "Before your agents, a little about you.",
-        /** The team step's question: does the person already have agents in another app. */
-        ask: "Already have a team somewhere else? I'll bring all of it here.",
-        /** How a team with no agents yet starts: the template for what it does, or just the two of them. */
-        start: "I have a team ready for what you do. Or we start with just the two of us.",
-        askPersonal: "Already use agents somewhere else? I'll bring them all here.",
-        /** `{{app}}`: the other app ("Grok Bot"). */
-        bring: "Copy the request, paste it in {{app}} and bring back the answer. I'll do the rest.",
-        /** The same, for an app that hands back a file or a folder, dropped on the step. */
-        bringFiles: "Drop here what the app exported. I'll do the rest.",
-        /** The same, while the import's "Connect with MCP" steps are on screen: the app creates the agents itself. */
-        bringMcp: "Follow the steps in the app and it creates the agents here itself. I'll watch for them.",
-        found: "Found your team. Check that everyone is here.",
-        foundPersonal: "Found your agents. Check that they're all here.",
-        /** The AI step: picking an AI wakes the team (or, alone, Lodi). */
-        ai: "Last step. Pick the AI you already use and the team wakes up.",
-        aiPersonal: "Last step. Pick the AI you already use and I wake up.",
-        /** The same where inviting people comes after it (a team's rail), for the team or the right hand alone. */
-        aiThen: "Pick the AI you already use and the team wakes up. Then all that's left is inviting people.",
-        aiThenAlone: "Pick the AI you already use and I wake up. Then all that's left is inviting people.",
-        /** Once an AI is connected, before the workspace opens. */
-        connected: "There we go. Call me in the workspace and I'll show you the rest.",
-        /** Once an AI is connected, with inviting people still to come. */
-        connectedThen: "There we go. All that's left is inviting the people you work with.",
         /** The people step: by email, or (a server that sends no email) through the workspace's link. */
         people: "Now the people. Give me their emails and I'll send the invitations.",
         peopleLink: "Now the people. Send them the link and I'll show you each request.",
       },
       /**
-       * The person's own area (about them, never the workspace), asked once per account: on a team's rail after what
-       * it does, on a personal one after what it is for. Optional; the operator API reads it.
+       * The person's own area (about them, never the workspace): the answers the right hand offers under its welcome
+       * (right-hand-welcome.ts). Optional; the operator API reads it.
        */
-      /** The person's own step (ADR 0162, amended 2026-11-12): their photo, their name and their area. */
-      you: {
-        title: "Now, about you",
-        lead: "Your name and photo show to the team and to the agents.",
-        leadPersonal: "Your name and photo show to your agents.",
-        photo: "Your photo",
-        build: "Build an avatar",
-        edit: "Edit avatar",
-        upload: "Upload a photo",
-        area: "What do you work on?",
-        areaHint: "Optional. Just so we know who uses agentes.chat.",
-      },
       area: {
         options: {
           dev: "Development",
@@ -1097,161 +1037,39 @@ export const en = {
           other: "Something else",
         },
       },
-      preview: {
-        label: "Your workspace, as you answer",
-        /** The workspace's name in the preview until one is typed. */
-        name: "Your workspace",
-        ghost: "Your team shows up here",
-        ghostPersonal: "Your agents show up here",
-      },
       team: {
         title: "Your team",
-        /** Under the title once the team is made (back from a later step): the list of who is in it. */
-        madeLead: "They're already in the workspace. You can adjust each one later.",
-        /**
-         * After "I don't use any yet", how a team starts: the template for what it does (its templates next) or from
-         * scratch (the next step with only the right hand; the agents are created by hand later). Two radio cards, each
-         * with who comes in it.
-         */
-        start: {
-          title: "How do you want to start the team?",
-          lead: "You can change all of it later, nothing is lost.",
-          template: "Start with a ready-made team",
-          /** `{{template}}`: the template's name ("Marketing agency"). */
-          templateText_one:
-            "{{count}} agent from the {{template}} template, in its own channel, with its routine ready.",
-          templateText_other:
-            "{{count}} agents from the {{template}} template, each in its own channel, with their routines ready.",
-          scratch: "Start from scratch",
-          /** `{{name}}`: the right hand's name. */
-          scratchText: "Just {{name}}, your right hand. You create each agent later, your way.",
-          /** Beside the right hand's face and an empty place: who the team starts with. */
-          scratchWho: "{{name}} and whoever you create",
-          /** The button, with the template's team picked. */
-          see: "See the ready-made team",
-          /** The button, with "Start from scratch" picked. */
-          scratchGo: "Go on with just {{name}}",
-        },
-        /** The team step opens on this question; the cards are the import page's apps, then "none". */
-        ask: {
-          title: "Do you already have agents in another app?",
-          lead: "If you do, I'll bring the whole team: instructions, skills and routines.",
-          leadPersonal: "If you do, I'll bring them all: instructions, skills and routines.",
-          none: "I don't use any yet",
-          /** `{{org}}`: the workspace's name. */
-          noneText: "I'll put together a team for {{org}} from what you do.",
-          noneTextPersonal: "We start with just the two of us. Agents can come later, whenever you want.",
-          /** The button, with an app picked. `{{app}}`: the other app. */
-          from: "Bring from {{app}}",
-          /** The button, with "I don't use any yet" picked. */
-          fresh: "Build a new team",
-          freshPersonal: "Continue without agents",
-          /** A team's quiet link under the button: on to the next step with only the right hand, no agents brought. */
-          skip: "Skip this step",
-          /** Beside "Skip this step": what skipping means. */
-          skipText: "You can create the agents later, one by one.",
-        },
-        /** Bringing the team from an app that answers a request: copy the request there, paste its answer here. */
-        bring: {
-          title: "Bring your team from {{app}}",
-          titlePersonal: "Bring your agents from {{app}}",
-          /** The same, for "Another app". */
-          titleOther: "Bring your team from another app",
-          titleOtherPersonal: "Bring your agents from another app",
-          lead: "It takes a minute. Nothing changes there.",
-          ask: "Ask {{app}} to export",
-          paste: "Paste it in your chat with {{app}}.",
-          reply: "It answers with a JSON: copy the whole answer and paste it in the field below.",
-          field: "Paste the answer from {{app}} here",
-          placeholder: "The answer's JSON",
-          read: "Read the answer",
-          fresh: "I'd rather build a new team",
-        },
-        /** What the other app sent, before anything is made. */
-        found: {
-          title_one: "Found {{count}} agent in {{app}}",
-          title_other: "Found {{count}} agents in {{app}}",
-          lead: "They arrive with the instructions, skills and routines they already have. You can change everything later.",
-          bring: "Bring the team",
-          bringPersonal: "Bring the agents",
-        },
       },
       plan: {
         title: "Turn your team on",
-        lead: "Your team is ready. With the plan and an AI, it starts today.",
-        /** The same, for a team with only its right hand (the team step was skipped). */
-        leadAlone: "With the plan and an AI, your right hand starts today. You can create the other agents later.",
-        asleep: "Asleep until the plan",
-        price: "<b>{{name}} plan</b> · {{price}} a month",
-        name: "<b>{{name}} plan</b>",
         generic: "An agentes.chat plan",
-        cancel: "Cancel anytime",
-        cta: "Turn the team on",
         all: "See all plans",
-        /** Opens the workspace with no plan: the right hand's card then leads with the plan. */
-        skip: "Turn it on later and just look around the workspace",
-        /** Beside the plan's button: the step after it. */
-        next: "Next: connect your AI.",
-        titlePersonal: "Turn your agents on",
-        leadPersonal: "With the plan and an AI, they start today.",
-        asleepPersonal: "Asleep until the plan",
-        ctaPersonal: "Turn the agents on",
+        /** "Not now" asks first: without a plan the agent doesn't start. `{{agent}}`: the first agent, as `hire.the`. */
+        skipTitle: "Continue without a plan?",
+        skipText:
+          "Without a plan, {{agent}} doesn't start working and the first delivery waits. You can subscribe later, in the workspace.",
+        skipGo: "Continue without a plan",
       },
       /** The rail's last step (ADR 0162): the AI the team thinks with, then the workspace. */
       ai: {
-        /** A personal workspace's heading for the step (a team's is `arrival.connect.title`). */
-        titlePersonal: "Connect an AI for your agents to think",
-        /** A team's heading for it with no agents but its right hand: `{{name}}`, the right hand ("Lodi"). */
-        titleAlone: "Connect an AI for {{name}} to think",
+        /** Right after the plan: the AI the first agent thinks with. */
+        title: "Now, the AI you already pay for",
+        /** `{{name}}`: the first agent. */
+        lead: "{{name}} thinks with it, at no extra cost here. As soon as you connect it, the first delivery starts.",
         later: "Connect later",
-        /** `{{org}}`: the workspace's name. */
-        doneTitle: "Done. The {{org}} team is thinking now.",
-        /** `{{name}}`: the right hand, alone in a personal workspace. */
-        doneTitlePersonal: "Done. {{name}} is thinking now.",
-        /** `{{label}}`: the AI picked ("Claude"). */
-        doneLead: "Your {{label}} answers for every agent. You can change it later, one by one.",
-        doneLeadAny: "The AI you connected answers for every agent. You can change it later, one by one.",
-        /** The tag on the card of the AI just connected ("Claude"). */
-        connected: "Connected",
-        enter: "Go to the workspace",
-        /** Under the team, once it wakes. `{{names}}`: the agents, already joined ("Lodi, Nina and Leo"). */
-        awake: "Your team woke up",
-        answer_one: "{{names}} answers now.",
-        answer_other: "{{names}} answer now.",
-        /**
-         * Over a personal workspace's sky (a team's is `arrival.stage`): its agents, or `{{name}}`, its right hand,
-         * while it is alone there. Asleep, then awake.
-         */
-        readyPersonal: "Your agents are ready",
-        readyAlone: "{{name}} is ready",
-        wakePersonal: "Just one AI away from waking up.",
-        awakePersonal: "Your agents woke up",
-        awakeAlone: "{{name}} woke up",
-      },
-      /** A team's last step (ADR 0162, amended 2026-11-11): inviting the people who work there. */
-      people: {
-        title: "Who works with you?",
-        lead: "Invite your teammates. Each one gets an email to join.",
-        /** The button while no address is typed yet. */
-        send: "Send invitations",
-        /** The quiet link under the button: the workspace opens with no invitations. */
-        later: "Invite later",
+        /** "Connect later" asks first: without an AI the first delivery doesn't happen. */
+        skipTitle: "Continue without an AI?",
+        skipText: "Without an AI, {{name}} doesn't make the first delivery or answer. He waits until you connect one.",
+        skipText_female:
+          "Without an AI, {{name}} doesn't make the first delivery or answer. She waits until you connect one.",
+        skipGo: "Continue without AI",
+        connectNow: "Connect now",
       },
       account: "Your account",
-    },
-    railValue: {
-      context: "Written",
-      skipped: "Skipped",
-      later: "Later",
-      /** The plan step, once the plan is on. */
-      on: "On",
-      /** The AI step, once an AI is connected (its name when picked here). */
-      ai: "Connected",
-      invites_one: "{{count}} invite",
-      invites_other: "{{count}} invites",
+      /** Beside Continue on the first question: the workspace's mode changes later in Settings. */
+      switchNote: "You can switch later without losing anything.",
     },
     back: "Back",
-    leave: "Back to {{name}}",
     /** The onboarding rail's back arrow, for someone with another workspace: this one stays, to finish later. */
     leaveLater: "Back to {{name}}, finish later",
     actions: {
@@ -1737,7 +1555,6 @@ export const en = {
       go_other: "Import {{count}} items",
       nothingNew: "All of this is already here.",
       nothingToBring: "Nothing here can come along. Each item says why.",
-      withTeam: "It arrives when you bring the team.",
       applying: "Importing… {{done}} of {{total}}",
       files: {
         copy: "Copy the files to the Drive",
@@ -1977,6 +1794,376 @@ export const en = {
     confirmation: {
       sent: "We sent a confirmation link to {{email}}.",
       first: "Already invited? Confirm your email first.",
+    },
+    /**
+     * Asking the person's own AI for a first agent: the assistants, connecting agentes.chat to it by MCP, the request
+     * to paste, and the way without a connector (the same request asking for a JSON answer, pasted here).
+     */
+    ask: {
+      title: "Ask for your first agent",
+      titleMember: "Ask for your agent",
+      lead: "Your AI already knows your work. With agentes.chat connected, it finds the tasks you repeat the most and proposes an agent for each one. You pick where to start.",
+      leadPersonal:
+        "Your AI already knows your routine. With agentes.chat connected, it finds the tasks you repeat the most, at work or outside it, and proposes an agent for each one. You pick where to start.",
+      /** The row of assistants, for screen readers. */
+      apps: "Your assistant",
+      connect: "Connect agentes.chat",
+      connected: "Connected",
+      paste: "Paste this request into a new conversation",
+      pasteJson: "Paste this request into a new conversation with {{app}}",
+      copy: "Copy the request",
+      waiting: "Waiting for {{app}}'s proposal…",
+      noConnector: "No connector? Paste the answer",
+      useConnector: "Use the connector",
+      answer: "Paste {{app}}'s whole answer here",
+      answerPlaceholder: "The JSON it answered with",
+      read: "Read the answer",
+      notJson: "There's no JSON in this answer. Copy the whole answer and paste it again.",
+      later: "Not now",
+      /** The right hand, over the box while the step waits. */
+      say: "I'm listening. The proposal shows up here.",
+      stuck:
+        "Nothing after a few minutes? Check that the connector is on in that conversation and send the request again.",
+      /**
+       * The request pasted into the person's AI, in parts joined by blank lines: the variant's opening and what to
+       * read first (`team`: a team's owner, `member`: someone who just joined, `personal`), the shared interview and
+       * job descriptions, then how to send it. `propose_first_agents` is the tool's name and stays as is. `json`: the
+       * same request with no connector, answered as JSON (its example keeps its keys in English).
+       */
+      prompt: {
+        team: {
+          open: "I want to start using agentes.chat, which I just connected here, with an AI agent that takes a repetitive piece of work off my day.",
+          know: "1. Before asking me anything, use what you already know about me: our past conversations, your memory and the files and apps you can access. Understand what {{org}} does, for whom, which apps we use and which tasks I repeat every week.",
+          send: "4. Send the 3 options with the propose_first_agents tool of agentes.chat, along with a two or three sentence summary of what {{org}} does. Don't create anything: I'll pick where to start.",
+        },
+        member: {
+          open: "I just joined the {{org}} workspace on agentes.chat, which I connected here, and I want to start with an AI agent that takes a repetitive piece of my role on the team off my day.",
+          know: "1. Before asking me anything, use what you already know about me: our past conversations, your memory and the files and apps you can access. Understand my role at {{org}}, who I work with, which apps I use and which tasks I repeat every week.",
+          send: "4. Send the 3 options with the propose_first_agents tool of agentes.chat, along with a two or three sentence summary of what I do at {{org}}. Don't create anything: I'll pick where to start.",
+        },
+        personal: {
+          open: "I want to start using agentes.chat, which I just connected here, with an AI agent that takes a repetitive piece of work off my day, at work or outside it.",
+          know: "1. Before asking me anything, use what you already know about me: our past conversations, your memory and the files and apps you can access. Understand what I do, what my week looks like, which apps I use and which tasks I repeat.",
+          send: "4. Send the 3 options with the propose_first_agents tool of agentes.chat, along with a two or three sentence summary about me. Don't create anything: I'll pick where to start.",
+        },
+        interview:
+          "2. If something important is missing, interview me: one question at a time, at most 3, starting with the one that changes the recommendation the most. If I don't know an answer, go on with your best guess and say what it was.",
+        design:
+          "3. Pick the 3 repetitive tasks that take most of my time. For each one, design an agent like a job description: a short name, the role, 3 responsibilities (what it does on its own, when it runs and when it calls me), the apps it needs, its routine with day and time, and what it can already deliver on its first day. Order them from the task that takes most of my time to the one that takes the least, and say in one sentence, from what you saw, why you picked each one.",
+        json: {
+          team: "I want to start using agentes.chat with an AI agent that takes a repetitive piece of work off my day.",
+          member:
+            "I just joined the {{org}} workspace on agentes.chat and I want to start with an AI agent that takes a repetitive piece of my role on the team off my day.",
+          personal:
+            "I want to start using agentes.chat with an AI agent that takes a repetitive piece of work off my day, at work or outside it.",
+          cron: "Also give each routine's day and time as a 5-field cron, in my time zone.",
+          send: "4. Answer only with a JSON in this format, with no text before or after it:",
+          example:
+            '{"about":"…","options":[{"name":"…","role":"…","why":"…","tasks":["…","…","…"],"apps":["…"],"routine":{"title":"…","schedule":"every Monday at 8:00","cron":"0 8 * * 1","prompt":"…"},"today":["…","…"],"instructions":"…"}]}',
+        },
+      },
+    },
+    /**
+     * The work the first agent does (ADR 0264, addendum of 2026-11-27): the list, the other ways in, the workspace's
+     * line (`place`: its name and time zone), and each area's words. `{{name}}`: the area's agent; `{{org}}`: the
+     * workspace. `title`/`line`: the list's row; `role`: the agent's role; `heading` and `does`: its step's title and
+     * line; `connect`: the label over its apps; `today`: its first delivery, in the plan step's lead; `working`: the
+     * photo's row while it works; `instructions` and `task`: what the agent is made with and does first (it reads them).
+     */
+    areas: {
+      title: "What will your first agent do?",
+      lead: "Pick one job. You create more agents later.",
+      other: "Other",
+      otherLine: "Create your agent and pick its apps",
+      /** The button over the work step's list: the way in from the AI and the agent apps the person already uses. */
+      ask: "Ask your AI",
+      /** The button's line where agents can also be brought from another app (the workspace's owner). */
+      askLine: "Your AI suggests the first agent. Or bring agents from another app.",
+      /** The button's line where only the AI is offered (a member joining). */
+      askLineAlone: "Your AI suggests the first agent from what you already do.",
+      /** The ask flow's title in the dialog, once an AI is picked. */
+      askTitle: "Ask your AI for your first agent",
+      /** The button's dialog: what the person already uses, in two groups. */
+      startTitle: "Start from what you already use",
+      startAi: "Your AI",
+      startAiLine: "Suggests the first agent from what you already do",
+      startApps: "Agents from another app",
+      startAppsLine: "Brings the agents with their instructions and routines",
+      /** The last row of each group: every other AI (the ask flow's own row), every other app (the import's list). */
+      startMoreAi: "Another AI",
+      startMoreApp: "Another app",
+      /** That row's line. `{{names}}`: three of them, by their brand names ("Grok, Perplexity, Cursor"). */
+      startMore: "{{names}} and more",
+      place: "{{name}} · {{zone}}",
+      change: "Change",
+      changeTitle: "Name and time zone",
+      list: {
+        support: {
+          title: "Support",
+          line: "Answers customer emails and tickets",
+          role: "Support",
+          heading: "{{name}}, for support",
+          does: "Answers customer emails and tickets, with a draft ready for each one. Nothing goes out without your OK.",
+          connect: "Connect where customers write",
+          today: "the emails that need a reply",
+          working: "{{name}} is reading your emails",
+          instructions:
+            "You look after support: you read customer emails and tickets, sort out what needs a reply and leave a draft ready for each one. Nothing is sent without the OK of whoever asked.",
+          task: "Read the last 7 days of email, say how many need a reply and leave a draft ready for today's.",
+        },
+        sales: {
+          title: "Sales",
+          line: "Follows up new leads and stalled deals",
+          role: "Sales",
+          heading: "{{name}}, for sales",
+          does: "Follows up new leads and stalled deals, with the next message ready for each one. Nothing goes out without your OK.",
+          connect: "Connect where your customers are",
+          today: "the deals that need attention",
+          working: "{{name}} is looking at your deals",
+          instructions:
+            "You look after sales: you follow up new leads and stalled deals and leave the next message ready for each one. Nothing is sent without the OK of whoever asked.",
+          task: "Look at new leads and deals stalled for over 7 days, say how many need attention and leave the next message ready for the most important ones.",
+        },
+        finance: {
+          title: "Finance",
+          line: "Flags payments with a problem",
+          role: "Finance",
+          heading: "{{name}}, for finance",
+          does: "Finds payments with a problem and leaves the reminder to the customer ready. Nothing goes out without your OK.",
+          connect: "Connect where you get paid",
+          today: "the payments with a problem",
+          working: "{{name}} is looking at your payments",
+          instructions:
+            "You look after finance: you find payments that failed or are late and leave the reminder ready for each customer. Nothing is sent without the OK of whoever asked.",
+          task: "Look at the last 7 days of payments, say how many failed or are late and leave the reminder ready for each customer.",
+        },
+        marketing: {
+          title: "Marketing",
+          line: "Finds what people say about the company, and content ideas",
+          role: "Marketing",
+          heading: "{{name}}, for marketing",
+          does: "Finds what people say about {{org}} online and brings what needs an answer.",
+          connect: "He starts with the web already. Connect to go further",
+          connect_female: "She starts with the web already. Connect to go further",
+          today: "what people say about {{org}} online",
+          working: "{{name}} is looking for what people say about {{org}}",
+          instructions:
+            "You look after marketing: you find what people say about {{org}} online and on social media, bring what needs an answer and suggest content ideas. Nothing is published without the OK of whoever asked.",
+          task: "Look for what people said about {{org}} online in the last 7 days, say what needs an answer and bring 3 content ideas.",
+        },
+        day: {
+          title: "My day",
+          line: "Today's emails, meetings and tasks",
+          role: "Your day",
+          heading: "{{name}}, for your day",
+          does: "Puts today's emails, meetings and tasks in one summary, every morning.",
+          connect: "Connect where your days are",
+          today: "your day's summary",
+          working: "{{name}} is putting your day together",
+          instructions:
+            "You look after the day of whoever asked: every morning, you put the emails that need a reply, the meetings and today's tasks in one short summary.",
+          task: "Put together today's summary: the meetings, the tasks due and the emails that need a reply.",
+        },
+        tech: {
+          title: "Engineering",
+          line: "Finds PRs waiting for review and new errors",
+          role: "Engineering",
+          heading: "{{name}}, for engineering",
+          does: "Finds the PRs waiting for review and the new errors, and says what to look at first.",
+          connect: "Connect where the team works",
+          today: "the PRs and errors that need attention",
+          working: "{{name}} is looking at the PRs and errors",
+          instructions:
+            "You look after engineering: you find the PRs waiting for review and the new errors, and say what the team should look at first. Nothing is changed without the OK of whoever asked.",
+          task: "List the PRs waiting for review and the new errors from the last 7 days, and say what to look at first.",
+        },
+        life: {
+          title: "Life in order",
+          line: "Calendar, reminders and bills",
+          role: "Life in order",
+          heading: "{{name}}, for your life in order",
+          does: "Puts today's meetings, tasks and emails in one summary.",
+          connect: "Connect where your days are",
+          today: "your day's summary",
+          working: "{{name}} is putting your day together",
+          instructions:
+            "You keep the life of whoever asked in order: calendar, reminders and bills. Every morning, you put today's meetings, tasks and emails in one summary.",
+          task: "Put together today's summary: the meetings, the tasks, the emails that need a reply and the bills due this week.",
+        },
+        freelance: {
+          title: "Working for myself",
+          line: "Clients, invoices and calendar",
+          role: "Work",
+          heading: "{{name}}, for your work",
+          does: "Keeps up with your clients, invoices and calendar, and tells you what needs you today.",
+          connect: "Connect where you work",
+          today: "what needs you",
+          working: "{{name}} is looking at your clients",
+          instructions:
+            "You look after the work of whoever asked, who works for themselves: clients, invoices and calendar. You flag what needs attention and get ready what can be. Nothing is sent without the OK of whoever asked.",
+          task: "Look at client emails, open invoices and this week's calendar, and say what needs attention today.",
+        },
+        study: {
+          title: "Studies and ideas",
+          line: "Study plan, reviews and writing",
+          role: "Studies",
+          heading: "{{name}}, for your studies",
+          does: "Makes your study plan, reminds you of reviews and helps you organize your ideas.",
+          connect: "Connect where your notes are",
+          today: "the week's study plan",
+          working: "{{name}} is making your plan",
+          instructions:
+            "You look after the studies and ideas of whoever asked: you make the study plan, remind them of reviews and help organize what they write.",
+          task: "Read the recent notes, make this week's study plan and say what to review first.",
+        },
+        travel: {
+          title: "Travel",
+          line: "Trips planned to the last detail",
+          role: "Travel",
+          heading: "{{name}}, for your trips",
+          does: "Keeps bookings, times and what's missing for each trip in one place.",
+          connect: "Connect where your bookings arrive",
+          today: "what's missing for your next trips",
+          working: "{{name}} is looking at your trips",
+          instructions:
+            "You look after the trips of whoever asked: you gather bookings, flights and times, and flag what's missing for each trip.",
+          task: "Look for the bookings and trips in the next 60 days and say what's missing for each one.",
+        },
+        home: {
+          title: "Home",
+          line: "Shopping, chores and bills",
+          role: "Home",
+          heading: "{{name}}, for your home",
+          does: "Looks after the shopping list, the chores and the month's bills.",
+          connect: "Connect where your lists are",
+          today: "what the house needs this week",
+          working: "{{name}} is looking at your home",
+          instructions:
+            "You look after the home of whoever asked: shopping list, chores and the month's bills. You remind them of what's due and what's missing.",
+          task: "Look at the lists and the calendar and say what the house needs this week: shopping, chores and bills due.",
+        },
+        health: {
+          title: "Health",
+          line: "Workouts and meals",
+          role: "Health",
+          heading: "{{name}}, for your health",
+          does: "Plans the week's workouts and meals in your calendar and reminds you at the right time.",
+          connect: "Connect where your calendar is",
+          today: "your week of workouts",
+          working: "{{name}} is planning your week",
+          instructions:
+            "You look after the health of whoever asked: workouts and meals. You plan the week in their calendar and remind them at the right time.",
+          task: "Look at this week's calendar and suggest times for workouts and meals.",
+        },
+      },
+    },
+    /**
+     * Meeting the first agent (ADR 0264, addendum of 2026-11-27): its portrait, what it does and the apps it works in,
+     * each with Connect. `{{step}}`: "Step 3 of 4". `account`: a connected app's account and when its routine runs.
+     * `custom*`, `name`, `does`, `appsUsed`, `search`: the agent a person makes on "Other".
+     */
+    meet: {
+      eyebrow: "{{step}} · Your first agent",
+      eyebrowAlone: "Your first agent",
+      apps: "Connect the apps he works in",
+      apps_female: "Connect the apps she works in",
+      connect: "Connect",
+      connected: "Connected",
+      account: "{{account}} · {{when}}",
+      customTitle: "Create your agent",
+      name: "Name",
+      does: "What does it do?",
+      appsUsed: "Apps it uses",
+      search: "Search apps",
+    },
+    /**
+     * The plan step (ADR 0162, amended by ADR 0264's addendum of 2026-11-27). `{{agent}}`: the first agent as `the`
+     * writes it (its name, with the article where a language has one); `{{today}}`: its first delivery
+     * (`areas.list.*.today`); `fine`: the plan's people, from the billing service's list.
+     */
+    hire: {
+      the: "{{name}}",
+      title: "{{org}}'s team starts with {{agent}}",
+      titlePersonal: "Your agents start with {{agent}}",
+      lead: "He delivers {{today}} today. Then create as many agents as you like, and they hand work to each other.",
+      lead_female:
+        "She delivers {{today}} today. Then create as many agents as you like, and they hand work to each other.",
+      leadAny:
+        "He starts his first delivery today. Then create as many agents as you like, and they hand work to each other.",
+      leadAny_female:
+        "She starts her first delivery today. Then create as many agents as you like, and they hand work to each other.",
+      next: "Later:",
+      plan: "{{name}} plan",
+      perMonth: "a month",
+      fine_one: "Unlimited agents and up to {{count}} person. Cancel in one click.",
+      fine_other: "Unlimited agents and up to {{count}} people. Cancel in one click.",
+      finePersonal: "Unlimited agents, just for you. Cancel in one click.",
+      fineAny: "Unlimited agents. Cancel in one click.",
+      later: "Not now",
+      subscribe: "Subscribe to the {{name}} plan",
+      subscribeAny: "Subscribe to the plan",
+    },
+    /**
+     * The team's photo, the onboarding's last step: who is in it and what is left. `{{you}}`: "You" (or the person's
+     * first name on the downloaded photo); `{{agent}}`: the first agent with its article. `working`: its first delivery
+     * on its way; `waiting`: the same while no AI is connected.
+     */
+    celebrate: {
+      say: "Hi, {{first}}. We start today.",
+      sayAny: "Hi, we start today.",
+      eyebrow: "{{org}}'s team · since {{date}}",
+      eyebrowPersonal: "Your agents · since {{date}}",
+      title: "Welcome to the {{org}} team",
+      titlePersonal: "Welcome to your team",
+      you: "You",
+      lead: "{{you}} and {{agent}}, the team's first. From today on, working together, day and night.",
+      /** The same where there is no plan to wait for (a self-hosted server): its computers aren't ours to keep on. */
+      leadNoPlan: "{{you}} and {{agent}}, the team's first. From today on, working together.",
+      leadPersonal: "{{you}} and {{agent}}, your first agent. From today on, looking after your days together.",
+      plan: "{{name}} plan on",
+      planAny: "Plan on",
+      /** The plan's row on the photo when it was left for later ("Not now"). */
+      planLater: "Subscribe to the {{name}} plan",
+      planLaterAny: "Subscribe to a plan",
+      aiDone: "{{label}} connected",
+      aiDoneAny: "AI connected",
+      connect: "Connect the AI",
+      working: "{{name}} is making the first delivery",
+      workingLine: "The first delivery arrives in a few minutes.",
+      waiting: "{{name}}'s first delivery",
+      enter: "Explore the workspace",
+      /** Saves the team's photo with its words as a picture, drawn in the browser. */
+      download: "Download the team photo",
+      downloadPersonal: "Download your team's photo",
+      /** Opens the avatar builder (and the photo upload) for the person's own face on the photo. */
+      yourPhoto: "Change your photo",
+      /** The saved picture's name. `{{slug}}`: the workspace's name in lower case, words joined by dashes ("acme"). */
+      photoFile: "{{slug}}-team.png",
+      /** The same when the workspace's name has no letter a file name keeps. */
+      photoFileAny: "team-photo.png",
+      photoFilePersonal: "my-team.png",
+      photoFailed: "Couldn't make the photo. Try again.",
+    },
+    /**
+     * The onboarding of someone who joined a workspace, where they may not create agents: the team as it is and the way
+     * in. `{{org}}`: the workspace's name. `{{first}}`: the person's first name.
+     */
+    member: {
+      title: "Welcome to {{org}}, {{first}}",
+      titleNoName: "Welcome to {{org}}",
+      titlePersonal: "Welcome, {{first}}",
+      titleNoNamePersonal: "Welcome",
+      /** What people do here, under the team. */
+      intro: "Here, each person brings the agent that solves a problem of theirs.",
+      /** Without the permission to create agents: one line, then the way into the workspace. */
+      noPermission: "To create your agent, ask an admin for the permission to create agents.",
+      enter: "Open {{org}}",
+      enterPersonal: "Open the workspace",
+      /** The way into the workspace with no agent of theirs yet, beside the logo. */
+      later: "Not now, open {{org}}",
+      laterPersonal: "Not now, open the workspace",
+      /** Its visible words, beside the logo; `later` is its full name. */
+      laterShort: "Not now",
     },
   },
   // The desktop app's notifications while its window is in the background (lib/desktop.ts `desktopNotice`).
@@ -8364,6 +8551,8 @@ export const en = {
       member: "already in {{org}}",
       memberPersonal: "already here",
       invited: "already invited",
+      /** An address the onboarding's people step has just invited, while the workspace opens. */
+      sent: "invited",
     },
     // The invite dialog, opened from Members, the workspace menu, ⌘K and a channel (ADR 0090): a step at a time, the
     // workspace's first agent asking each one in its bubble; the link on a screen of its own.
@@ -16873,6 +17062,16 @@ export const en = {
       undoExpired:
         "It is more than a day since this team was created, so it can't be undone here. Archive its agents on their pages.",
     },
+    /** The first agents a person's own AI proposed (ADR 0264). */
+    firstAgents: {
+      needsAdmin: "Creating agents in this workspace needs an admin. Ask one to create it for you.",
+      invalid: "This answer isn't in the format we asked for. Copy the request again and paste your AI's whole answer.",
+      picking: "This agent is already being created. Wait a moment.",
+      rateLimited: "Too many tries for now. Try again in a little while.",
+      /** Another first agent is already kept and this request doesn't take its place (ADR 0264 addendum). */
+      kept: "Your first agent is already made, so this one wasn't created.",
+      failed: "The agent wasn't created. Try again.",
+    },
     /** Undo on a change an agent applied (ADR 0219). */
     proposal: {
       changed: "This changed after it was applied: adjust it by hand.",
@@ -20643,6 +20842,9 @@ export const en = {
       /** The right hand's greeting to someone who just joined the workspace, the first message of their DM with it. */
       welcome_member:
         "You just joined {{org}}. **What do you look after here?** Tell me and I set up your first agent with you.",
+      /** That greeting for someone who already picked their first agent on their own onboarding: nothing to build. */
+      welcome_member_agent:
+        "You just joined {{org}}, and your first agent is already on the team. Whenever you need me, just call.",
       action_open_page: "Open a screen",
       action_voice_setup: "Turn on voice messages",
       calendar_proposal: "Event proposal: {{title}}",
@@ -23410,28 +23612,174 @@ export const en = {
       talk: "Talk to {{name}}",
     },
   },
-  /** Right after the onboarding (ADR 0160): the beta notice, then Connect an AI with the team beside it. */
+  /** Right after the onboarding (ADR 0160): the welcome wizard, then Connect an AI with the team beside it. */
   arrival: {
-    beta: {
-      /** Drawn large over the sky: the word itself, in capitals. */
-      word: "BETA",
-      title: "You're early. We're glad.",
-      text: "agentes.chat is in beta: you can already do real work with it, and we're still polishing.",
-      weekly: {
-        title: "It gets better every week",
-        text: "New things and fixes come out all the time.",
+    /**
+     * The welcome wizard (ADR 0160, addendum of 2026-11-26): seven short steps, each under a moving picture drawn with
+     * the app's own pieces. The pictures are decorative: their sample words (a list of tasks, a chat, notes) are
+     * never the person's data, and each step's title and text say it in words. A team's sample words are work any
+     * business has (a customer to answer, a report, its prices), never one trade's. `*Personal` keys are a personal
+     * workspace's (ADR 0159).
+     */
+    welcome: {
+      /** For screen readers, where the dots show it. */
+      stepOf: "Step {{n}} of {{total}}",
+      next: "Next",
+      /** The last step's button: the wizard closes on the workspace. */
+      start: "Get started",
+      hello: {
+        /** `{{org}}`: the workspace's name. `{{first}}`: the person's first name; `titleNoName` when it isn't known. */
+        title: "Welcome to {{org}}, {{first}}",
+        titleNoName: "Welcome to {{org}}",
+        titlePersonal: "Welcome, {{first}}",
+        titleNoNamePersonal: "Welcome",
+        text: "Here you and the agents work together, by day and by night. In a minute, the essentials.",
+        textPersonal: "Here you and your agents work together, by day and by night. In a minute, the essentials.",
+        /** The right hand's line, in a bubble over it, as the team rises. `{{name}}`: its name. */
+        say: "Hi, {{first}}. I'm {{name}}, HR for the agents.",
+        sayNoName: "Hi, I'm {{name}}, HR for the agents.",
       },
-      fails: {
-        title: "Sometimes something fails",
-        text: "If it gets stuck or looks odd, the problem is ours, not yours.",
+      computer: {
+        title: "Every agent has its own computer",
+        text: "On it, they open sites, use apps and run code, on their own. Whenever you like, you watch live or take control.",
+        /**
+         * The picture: the agent's tasks on its screen, its cursor finding the late one. Sample words. The screen's
+         * title is the agent's role; `tab` when it has none.
+         */
+        tab: "Tasks",
+        /** Each task, when it was due and how it stands: short, as the columns are narrow. */
+        rows: {
+          a: { name: "Reply to a customer", when: "Yesterday", state: "Late" },
+          b: { name: "Weekly report", when: "Today", state: "To do" },
+          c: { name: "Update the prices", when: "9:00 AM", state: "Done" },
+        },
+        /** The agent's line beside its screen. */
+        say: "One reply is late. The draft is ready for your OK.",
+        tabPersonal: "This month's bills",
+        rowsPersonal: {
+          a: { name: "Power", amount: "$89", state: "Due today" },
+          b: { name: "Phone", amount: "$45", state: "In 5 days" },
+          c: { name: "Rent", amount: "$1,400", state: "Paid" },
+        },
+        sayPersonal: "The power bill is due today. The payment is ready for your OK.",
       },
-      /** Only where the feedback form exists. */
-      feedback: {
-        title: "Your feedback decides what comes next",
-        text: "Tell us what was missing or got in your way. We read everything.",
+      channels: {
+        title: "Every subject in its channel",
+        titlePersonal: "Every subject in its conversation",
+        text: "Write as you would to someone on the team. Whoever knows the subject answers, person or agent. To talk to an agent, just call it by name.",
+        textPersonal:
+          "Write as you would to someone you trust. Each agent takes care of its subject, and to talk to one, just call it by name.",
+        /** The picture's list, the second one open: channel names (no #), or a personal workspace's subjects. */
+        list: { a: "sales", b: "support", c: "finance", d: "projects" },
+        listPersonal: { a: "Home", b: "Bills", c: "Trips", d: "Health" },
+        /** The person's question in the picture, then the agent's answer. Sample words. */
+        ask: "Did anyone get back to yesterday's customer?",
+        answer: "I replied this morning at 9:10 and noted the request in the wiki.",
+        askPersonal: "Did the power bill get paid?",
+        answerPersonal: "Yesterday at 2:20 PM. I saved the receipt.",
       },
-      /** "Send feedback" is the row at the bottom of the sidebar (`feedback.open`): the same words. */
-      where: "To write to us, use Send feedback, at the bottom of the sidebar.",
+      wiki: {
+        title: "The wiki is {{org}}'s documentation",
+        titlePersonal: "The wiki keeps what matters",
+        text: "The company's shared documentation: processes, prices, how to talk to customers. The agents read it before they answer and write to it when they learn something new.",
+        textPersonal:
+          "Your notes in one place: bills, documents, how you like things done. Your agents read them before they answer and write when they learn something new.",
+        /** The picture's pages: one being written in front, two behind it. Sample titles. */
+        pages: { left: "Prices", right: "What {{org}} does", front: "Customer service" },
+        pagesPersonal: { left: "Documents", right: "About me", front: "Household bills" },
+      },
+      memory: {
+        title: "They remember what matters",
+        text: "With every conversation, they keep preferences, decisions and who takes care of what. You review what becomes memory.",
+        /** What the agent learned, drifting in to it. `{{first}}`: the person's first name. Sample notes. */
+        notes: {
+          a: "{{org}} closes at 6 PM",
+          b: "{{first}} likes short summaries",
+          c: "Reminders on weekdays only",
+          d: "Team meeting on Mondays",
+        },
+        notesPersonal: {
+          a: "Workout at 6 PM, three times a week",
+          b: "{{first}} likes short summaries",
+          c: "Reminders on weekdays only",
+          d: "Rent is due on the 10th",
+        },
+        /** Note `b` when the person's name isn't known. */
+        likes: "Likes short summaries",
+      },
+      routines: {
+        title: "Work that happens on its own",
+        text: "Routines run at the time you ask, like “every day at 9”. And anything serious, like sending, paying or deleting, waits for your OK.",
+        /** The picture: a routine's card as the clock turns 9:00, then an action waiting for the person. */
+        routine: "Daily summary",
+        routineText: "5 new messages, 1 reply is late",
+        ask: "Send the reply to the customer?",
+        routinePersonal: "Your day",
+        routineTextPersonal: "3 emails need a reply, 1 bill is due today",
+        askPersonal: "Pay the $89 power bill?",
+        /** `{{name}}`: the agent asking. */
+        asks: "{{name}} asks for your OK",
+        refuse: "Decline",
+        approve: "Approve",
+      },
+      ready: {
+        title: "All set to begin",
+        /** Drawn large over the sky: the word itself, in capitals. */
+        word: "BETA",
+        /** How many rows of the list below are still open. */
+        left_one: "Just one thing left.",
+        left_other: "{{count}} things left.",
+        /** The same list stays on the right hand's card, in the person's conversation with it. `{{name}}`: its name. */
+        later:
+          "If you leave it for later, this list stays in your conversation with {{name}}, for you to finish whenever you like.",
+        none: "Everything is in place. Now just talk to the team.",
+        nonePersonal: "Everything is in place. Now just talk to your agents.",
+        /** Someone who doesn't own the workspace, their own first agent with no AI yet. `{{name}}`: the agent's name. */
+        noAi: "{{name}} has no AI to think with yet. Connect one so its first delivery can start.",
+        /** The beta line under the list: `beta` in bold, then the rest. */
+        beta: "We're in beta.",
+        betaText: "It gets better every week, and if something fails, the problem is ours.",
+        /** `{{where}}`: the sidebar row's own words (`feedback.open`). Only where the server takes feedback. */
+        feedback: "Tell us what's missing in {{where}}, at the bottom of the sidebar.",
+        /** The first agent's first delivery, the list's first row (`useFirstDelivery`). */
+        delivery: {
+          done: "{{name}}'s first delivery is ready",
+          working: "{{name}} is still working",
+          workingLine: "He says so in this conversation when he's done.",
+          workingLine_female: "She says so in this conversation when she's done.",
+          see: "See the delivery",
+          open: "Go to the conversation",
+        },
+        /** The list's rows: done, or still to do with their button. */
+        rows: {
+          /** `{{plan}}`: the plan's name, as the billing service writes it ("Team"). */
+          plan: "{{plan}} plan active",
+          planAny: "Plan active",
+          planTodo: "Turn the team on",
+          planTodoPersonal: "Turn your agents on",
+          planAction: "See plans",
+          /** `{{label}}`: what the team thinks with ("Claude"). */
+          ai: "{{label}} connected",
+          aiAny: "An AI is connected",
+          aiTodo: "Connect an AI",
+          aiAction: "Connect",
+          people_one: "{{count}} person on the team",
+          people_other: "{{count}} people on the team",
+          /** Invited, not in yet. */
+          invited_one: "{{count}} person invited",
+          invited_other: "{{count}} people invited",
+          peopleNone: "Just you for now",
+          peopleTodo: "Invite the people you work with",
+          peopleAction: "Invite",
+          /** `{{apps}}`: the apps connected, joined as the language lists names ("Gmail and Drive"). */
+          apps_one: "{{apps}} connected",
+          apps_other: "{{apps}} connected",
+          appsNone: "No apps for now",
+          appsTodo: "Connect your work apps",
+          appsTodoPersonal: "Connect your apps",
+          appsAction: "Choose",
+        },
+      },
     },
     /** Over the sky where the workspace's agents stand: asleep at night, then awake by day. */
     stage: {
@@ -23445,9 +23793,7 @@ export const en = {
       text: "Use a subscription you already have. Nothing changes in your plan.",
       others: "Another plan",
       free: "Start free",
-      freeText: "With OpenCode's free models",
-      /** A short label at the end of the free option's card. */
-      noPlan: "No subscription",
+      freeText: "No subscription, with OpenCode's free models",
       without: "Without an AI, agents don't answer.",
       later: "Not now",
     },

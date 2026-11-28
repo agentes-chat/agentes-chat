@@ -95,6 +95,10 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     // The computer step's plan offer: only where the workspace gets its own computer (`setupView`, as
     // `computerSetup.`) and waits for its first plan (ADR 0079).
     "onboarding.computer.payment.",
+    // The plan step's lead, and the team's photo after it: where the workspace waits for its first plan, so its
+    // computer is the Cloud's, always on (ADR 0264).
+    "onboarding.hire.lead",
+    "onboarding.celebrate.lead",
   ],
   selfhost: [
     // Settings › About's newer release and computers ahead: self-hosted servers only (`useServerUpdate`).

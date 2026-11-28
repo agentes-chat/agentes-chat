@@ -1,0 +1,80 @@
+/*
+ * The team's photo, the onboarding's last step (CelebrateStep.tsx): what is in place, as quiet rows with a hairline
+ * between them. Each done row checked, a row still to do by its number in a ring, then the first delivery on its way
+ * with the kit's working sign in the number's place, or muted while it waits for an AI.
+ */
+.onb-next {
+  display: flex;
+  flex-direction: column;
+  margin: -4px 0;
+  padding: 0;
+  list-style: none;
+}
+.onb-next__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 9px 0;
+  font-size: 15px;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+}
+.onb-next__row + .onb-next__row {
+  border-top: 1px solid var(--line);
+}
+.onb-next__n {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-top: -1px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--line-strong);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.onb-next__row[data-done] {
+  color: var(--muted);
+}
+.onb-next__row[data-done] .onb-next__n {
+  background: var(--ok);
+  box-shadow: none;
+  color: #fff;
+}
+/* On its way: the working sign in the number's column, as tall as the first line and on it, however many lines its
+   words and the line under them wrap to. */
+.onb-next__delivery .onb-next__n {
+  height: 22px;
+  margin-top: 0;
+  box-shadow: none;
+}
+.onb-next__delivery[data-waiting] .onb-next__n {
+  height: 24px;
+  margin-top: -1px;
+}
+.onb-next__delivery[data-waiting] {
+  color: var(--muted);
+}
+.onb-next__delivery[data-waiting] .onb-next__n {
+  box-shadow: inset 0 0 0 1.5px var(--line-strong);
+}
+.onb-next__text {
+  display: flex;
+  flex-direction: column;
+}
+.onb-next__sub {
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 19px;
+}
+/* "Change your photo": a quiet way under the list, its ghost plate flush with the rows' numbers. Its 4px gives back the
+   list's own -4px, so it sits at the box's 16px rhythm like every other block in it. */
+.onb-face {
+  margin: 4px 0 0;
+}
+.onb-face .ac-btn {
+  margin-inline-start: calc(-1 * var(--ghost-plate));
+}

@@ -10,6 +10,7 @@ export * from "./dashboards";
 export * from "./databases";
 export * from "./early-access";
 export * from "./feedback";
+export * from "./first-agents";
 export * from "./forum";
 export * from "./hosts";
 export * from "./imports";

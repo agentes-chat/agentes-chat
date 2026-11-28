@@ -50,6 +50,7 @@ import { desktopRoutes } from "./routes/app/desktop";
 import { deviceWaitRoutes } from "./routes/app/device-waits";
 import { dmRoutes } from "./routes/app/dms";
 import { feedbackRoutes, registerFeedbackFiles, registerFeedbackInbox } from "./routes/app/feedback";
+import { firstAgentRoutes } from "./routes/app/first-agents";
 import { gifKeyRoutes } from "./routes/app/gif-key";
 import { gifRoutes } from "./routes/app/gifs";
 import { imageRoutes } from "./routes/app/images";
@@ -261,6 +262,8 @@ export function createApp(options: AppOptions) {
     api.route("/app", planUsageRoutes(deps));
     api.route("/app", personUsageRoutes(deps));
     api.route("/app", teamWeekRoutes(deps));
+    // The first agents a person's own AI proposes on the onboarding (ADR 0264).
+    api.route("/app", firstAgentRoutes(deps));
     api.route("/app", dashboardRoutes(deps));
     api.route("/app", telemetryRoutes(deps));
     api.route("/app", problemReportRoutes(deps));

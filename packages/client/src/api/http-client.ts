@@ -118,6 +118,9 @@ import type {
   FeedbackOffer,
   FileConversationRef,
   FileWave,
+  FirstAgentPicked,
+  FirstAgents,
+  FirstDeliveryRow,
   ForeignMailbox,
   FormerAgent,
   GifKey,
@@ -1106,6 +1109,26 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         return files.upload<ImportedFile>(`${org(orgId)}/imports/files`, form);
       },
       exportUrl: (orgId) => `${base}${org(orgId)}/export`,
+    },
+    firstAgents: {
+      latest: async (orgId) => (await request<{ proposal: FirstAgents | null }>(`${org(orgId)}/first-agents`)).proposal,
+      paste: async (orgId, input) =>
+        (await request<{ proposal: FirstAgents }>(`${org(orgId)}/first-agents`, { json: input })).proposal,
+      pick: (orgId, proposalId, index, replace) =>
+        request<FirstAgentPicked>(`${org(orgId)}/first-agents/${enc(proposalId)}/pick`, {
+          json: { index, ...(replace ? { replace } : {}) },
+        }),
+      start: (orgId, input) => request<FirstAgentPicked>(`${org(orgId)}/first-agents/start`, { json: input }),
+      adopt: (orgId, input) => request<FirstAgentPicked>(`${org(orgId)}/first-agents/adopt`, { json: input }),
+      delivery: async (orgId) =>
+        (await request<{ delivery: FirstDeliveryRow | null }>(`${org(orgId)}/first-delivery`)).delivery,
+      keepDelivery: async (orgId, agentId) =>
+        (
+          await request<{ delivery: FirstDeliveryRow }>(`${org(orgId)}/first-delivery`, {
+            method: "PUT",
+            json: { agentId },
+          })
+        ).delivery,
     },
     voice: {
       allowed: (orgId) => request<{ allowed: boolean; reason?: "plan" }>(`${org(orgId)}/voice/allowed`),

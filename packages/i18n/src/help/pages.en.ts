@@ -683,6 +683,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
               "`list_recent_tasks`: the tasks you sent from apps and what agents are doing now.",
             ],
           },
+          "`propose_first_agents`: sends up to 3 agents your AI proposes for you to start with. It creates nothing: you pick one in agentes.chat.",
           "The app acts as you and sees only what you see. It never approves agents' actions: when an agent stops to ask for approval, the reply says so with a link, and a person decides in agentes.chat. It doesn't change settings, members or permissions either.",
         ],
       },

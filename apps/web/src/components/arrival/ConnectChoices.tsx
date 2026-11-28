@@ -1,6 +1,6 @@
 import { joinNames } from "@agenteschat/client/lib/format";
 import { type AiChoice, PLAN_CHOICES, type PlanChoice, planLabel, planMark } from "@agenteschat/client/lib/no-ai";
-import { Icon, type OptionLinkItem, OptionLinks, ProviderLogo } from "@agenteschat/ui";
+import { Icon, type OptionLinkItem, OptionLinks, ProviderLogo, ProviderStack } from "@agenteschat/ui";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -8,10 +8,14 @@ import { useTranslation } from "react-i18next";
 const FIRST: readonly PlanChoice[] = ["claude", "chatgpt"];
 const FREE: PlanChoice = "zen";
 const OTHERS = PLAN_CHOICES.filter((c) => !FIRST.includes(c) && c !== FREE);
+/** The other plans' row leads with three of their makers, overlapping. */
+const OTHERS_SHOWN = 3;
 
 /**
- * Which AI, as the first thing a new workspace's owner is asked (ADR 0160): one card each, in words, instead of the
- * picker's two controls. A pick opens that plan's own steps (`PlanPanel`, `KeyPanel`), unchanged.
+ * Which AI, as the first thing a new workspace's owner is asked (ADR 0160): one row each, in words, instead of the
+ * picker's two controls. Flat rows (ADR 0264, the onboarding's look everywhere the choices show): each maker's bare
+ * mark on the title's line in a column as wide as the other plans' stack of marks, no card and no chip. A pick opens
+ * that plan's own steps (`PlanPanel`, `KeyPanel`), unchanged.
  */
 export function ConnectChoices({
   onPick,
@@ -39,13 +43,13 @@ export function ConnectChoices({
     leading: ReactNode,
     title: string,
     description: string,
-    more: Pick<OptionLinkItem, "tag" | "side"> = {},
+    more: Pick<OptionLinkItem, "side"> = {},
   ): OptionLinkItem => ({ value: choice, leading, title, description, onSelect: () => onPick(choice), ...more });
   const off = (c: PlanChoice) => offSystem?.(c) ?? null;
   const plan = (c: PlanChoice) =>
     card(
       c,
-      <ProviderLogo id={planMark(c)} size="tile" off={dims(c)} />,
+      <ProviderLogo id={planMark(c)} size="xs" off={dims(c)} />,
       planLabel(t, c),
       off(c) ? t("connectAi.offSystem", { system: off(c) }) : t(`connectAi.plan.${c}.tiers`),
       // A plan that can't run there has no logins to count.
@@ -54,13 +58,7 @@ export function ConnectChoices({
   const offOthers = OTHERS.filter((c) => off(c));
   const more: OptionLinkItem = {
     value: "others",
-    leading: (
-      <span className="arrival-opts__tile arrival-opts__tile--four" aria-hidden="true">
-        {OTHERS.slice(0, 4).map((c) => (
-          <ProviderLogo key={c} id={planMark(c)} size="xs" />
-        ))}
-      </span>
-    ),
+    leading: <ProviderStack ids={OTHERS.slice(0, OTHERS_SHOWN).map(planMark)} />,
     title: t("arrival.connect.others"),
     description: (
       <>
@@ -88,28 +86,19 @@ export function ConnectChoices({
   };
   return (
     <OptionLinks
+      flat
       className="arrival-opts"
       options={[
         ...FIRST.map(plan),
         ...(others ? OTHERS.map(plan) : [more]),
         ...(mayAddKey
-          ? [
-              card(
-                "key",
-                <span className="arrival-opts__tile" aria-hidden="true">
-                  <Icon name="key" />
-                </span>,
-                t("connectAi.key.title"),
-                t("connectAi.key.sub"),
-              ),
-            ]
+          ? [card("key", <Icon name="key" size={20} />, t("connectAi.key.title"), t("connectAi.key.sub"))]
           : []),
         card(
           FREE,
-          <ProviderLogo id={planMark(FREE)} size="tile" off={dims(FREE)} />,
+          <ProviderLogo id={planMark(FREE)} size="xs" off={dims(FREE)} />,
           t("arrival.connect.free"),
           t("arrival.connect.freeText"),
-          { tag: t("arrival.connect.noPlan") },
         ),
       ]}
     />

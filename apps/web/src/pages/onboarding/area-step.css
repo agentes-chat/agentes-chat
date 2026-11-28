@@ -1,0 +1,163 @@
+/*
+ * The work step (AreaStep.tsx): "Ask your AI" first, one button as wide as the step, then the areas as the kit's flat
+ * rows (`OptionLinks flat`), the apps' bare marks on each title's line, and the workspace's line in the footer. The
+ * button's own dialog lists what the person already uses in two groups of flat rows.
+ */
+.onb-areas {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+/*
+ * "Ask your AI": a real button in the kit's raised surface (its line and lift, its hover, its press, its focus ring),
+ * no tint. The marks on a line of their own on top, then the title over its quiet line, the chevron on the title's
+ * line.
+ */
+.onb-start {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "marks ."
+    "text go";
+  row-gap: 12px;
+  column-gap: 12px;
+  width: 100%;
+  padding: 16px;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--raised);
+  box-shadow: var(--e1), var(--top);
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition:
+    transform 0.18s var(--spring),
+    box-shadow 0.18s var(--out);
+}
+.onb-start:hover:not(:disabled) {
+  box-shadow: var(--e2), var(--top);
+}
+.onb-start:active:not(:disabled) {
+  transform: scale(0.99);
+}
+html:not([data-pointer]) .onb-start:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.onb-start:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+/* The makers' and the apps' marks on their own line: 28px plates, each a little over the one before. */
+.onb-start__marks {
+  grid-area: marks;
+  display: inline-flex;
+  align-items: center;
+}
+.onb-start__plate {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+  border-radius: 9px 9px 9px 3px;
+  background: var(--raised);
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    0 0 0 2px var(--raised);
+}
+.onb-start__plate + .onb-start__plate {
+  margin-inline-start: -4px;
+}
+.onb-start__plate > img,
+.onb-start__plate > .ac-brand,
+.onb-start__plate > .ac-brand svg {
+  width: 18px;
+  height: 18px;
+}
+.onb-start__plate > img {
+  object-fit: contain;
+}
+.onb-start__text {
+  grid-area: text;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.onb-start__title {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+}
+.onb-start__line {
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 19px;
+  text-wrap: pretty;
+}
+.onb-start__go {
+  grid-area: go;
+  margin-top: 3px;
+  color: var(--muted);
+}
+/* "or" between the button and the list, the sign-in's divider: a hairline each side. */
+.onb-or {
+  margin-block: -2px;
+}
+/* The ask flow's Back, before the title: on the title's capitals, as a dialog's face is (the kit centres the line). */
+.onb-askdlg .ac-dialog__lead {
+  translate: 0 calc(var(--control-h-sm) / 2 - var(--cap-mid) - 50%);
+}
+/* The dialog's two groups, each a heading over its flat rows; one mark column on every row, as wide as a stack. */
+.onb-start-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.onb-start-opts.ac-optlinks--flat {
+  --optlinks-lead: 56px;
+}
+.onb-start-opts.ac-optlinks--flat > .ac-optrow--link > .ac-optrow__lead {
+  color: var(--ink);
+}
+.onb-start-opts .ac-optrow__lead > img,
+.onb-start-opts .ac-optrow__lead > .ac-brand--xs,
+.onb-start-opts .ac-optrow__lead > .ac-brand--xs svg {
+  width: 20px;
+  height: 20px;
+}
+.onb-start-opts .ac-optrow__lead > img {
+  object-fit: contain;
+}
+.onb-area__apps {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+/* The bare marks, as small as a line's icons. */
+.onb-area__apps .connector-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.onb-area__apps .connector-icon__mark {
+  width: 16px;
+  height: 16px;
+}
+/* The workspace and its time zone, as the old name step's zone line: faint, its link muted (over the note's own color,
+   whatever order the sheets load in); a long name wraps, never cut. */
+.onbx__note.onb-place-line {
+  min-width: 0;
+  color: var(--faint);
+  overflow-wrap: anywhere;
+}
+.onb-place-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--form-gap, 16px);
+}

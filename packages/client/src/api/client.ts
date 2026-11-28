@@ -160,6 +160,12 @@ import type {
   FeedbackOffer,
   FileConversationRef,
   FileWave,
+  FirstAgentAdoptInput,
+  FirstAgentPicked,
+  FirstAgentStartInput,
+  FirstAgents,
+  FirstAgentsInput,
+  FirstDeliveryRow,
   ForeignMailbox,
   FormerAgent,
   GifKey,
@@ -1046,6 +1052,35 @@ export interface ApiClient {
     copyFile(orgId: string, input: ImportFileInput): Promise<ImportedFile>;
     /** Same-origin URL that downloads this workspace as a bundle (`.json`). */
     exportUrl(orgId: string): string;
+  };
+  /**
+   * The first agents my own AI proposed (ADR 0264): sent through `propose_first_agents` or pasted, one picked into an
+   * agent. All of it works while the workspace waits for its first plan.
+   */
+  firstAgents: {
+    /** My newest proposal here, or null. */
+    latest(orgId: string): Promise<FirstAgents | null>;
+    /** An AI's answer pasted ("Sem conector? Cole a resposta"): 400 `first_agents.invalid` says what is wrong. */
+    paste(orgId: string, input: FirstAgentsInput): Promise<FirstAgents>;
+    /**
+     * "Criar o …": the option at `index` becomes one agent; again, the same one. `replace`: the onboarding's first agent
+     * made a moment ago, archived. 403 `create_agents_required`.
+     */
+    pick(orgId: string, proposalId: string, index: number, replace?: string | null): Promise<FirstAgentPicked>;
+    /** My first agent from an area of the onboarding, its first delivery kept. 403 `create_agents_required`. */
+    start(orgId: string, input: FirstAgentStartInput): Promise<FirstAgentPicked>;
+    /**
+     * An agent my import on the onboarding brought becomes my first agent, in the place of `replace`. 409
+     * `first_agents.kept` while another first agent of mine is kept and `replace` doesn't name it.
+     */
+    adopt(orgId: string, input: FirstAgentAdoptInput): Promise<FirstAgentPicked>;
+    /** My first delivery here, or null. */
+    delivery(orgId: string): Promise<FirstDeliveryRow | null>;
+    /**
+     * Arms my first delivery as I leave the agent's step ("Continuar"): that agent's keeps its area and task; another
+     * agent of this workspace (one brought from another app) takes its place.
+     */
+    keepDelivery(orgId: string, agentId: string): Promise<FirstDeliveryRow>;
   };
   chat: {
     channels(orgId: string): Promise<Channel[]>;
@@ -2287,9 +2322,16 @@ export interface ApiClient {
      * `desktop`: started in the desktop app's window, which opens the page in the browser and gets the return back.
      * `accountId` reconnects that mailbox (one that needs it) instead of adding one.
      */
+    /** `back`: started on the onboarding or a member's welcome page, which the sign-in returns to (ADR 0264 addendum). */
     connectComposio(
       orgId: string,
-      input: { provider: "gmail" | "outlook"; label?: string; accountId?: string; desktop?: boolean },
+      input: {
+        provider: "gmail" | "outlook";
+        label?: string;
+        accountId?: string;
+        desktop?: boolean;
+        back?: "onboarding" | "welcome";
+      },
     ): Promise<{ accountId: string; redirectUrl: string }>;
     /** A new name, actions, other addresses and the default From, or a new app password (reconnects an IMAP mailbox). */
     update(orgId: string, accountId: string, input: MailAccountUpdate): Promise<MailAccount>;

@@ -317,7 +317,24 @@ export async function useTeamTemplate(
     templateInput(id, locale, org, taken, blocked),
     locale,
   );
-  const place = { orgId, channelId: dm.id, threadId: null, agentId: lodi.id, runId: null, hop: 0 };
+  const made = await createTeamNow(deps, userId, orgId, { lodi, dm }, params);
+  return { channelId: dm.id, messageId: made.messageId, state: made.card.state, error: made.card.error ?? null };
+}
+
+/**
+ * A team made at once, as the right hand's card in the person's DM with it, which then reads created with Undo: a
+ * template's (`useTeamTemplate`) and a first agent picked on the onboarding (ADR 0264). A step that fails leaves the
+ * card open with its reason, as `createTeam` does for any team card. With no plan to wait for, the team says hi now; on
+ * a hold, once the first plan starts.
+ */
+export async function createTeamNow(
+  deps: TeamDeps,
+  userId: string,
+  orgId: string,
+  at: Awaited<ReturnType<typeof rightHandDm>>,
+  params: TeamParams,
+) {
+  const place = { orgId, channelId: at.dm.id, threadId: null, agentId: at.lodi.id, runId: null, hop: 0 };
   // The conversation hears of the card once it is made (or failed), so no device shows it open for a moment.
   const card = await postTeamCard(deps, place, params, userId, undefined, false);
   let made: Awaited<ReturnType<typeof createTeam>>;
@@ -335,7 +352,7 @@ export async function useTeamTemplate(
       payload: { how: "created", userId },
       dedupeKey: `${TEAM_HELLO_JOB}:${orgId}`,
     });
-  return { channelId: dm.id, messageId: card.id, state: made.card.state, error: made.card.error ?? null };
+  return { messageId: card.id, card: made.card, noAi: made.noAi };
 }
 
 /* ---------- The team's hello (ADR 0162) ---------- */

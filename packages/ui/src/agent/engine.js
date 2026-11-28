@@ -750,6 +750,16 @@ export const ACCESSORY_NAMES = ["none", ...Object.keys(ACCESSORIES)];
 export const ACCESSORY_REACH = { top: 9 / 16, left: 1 / 16, right: 2 / 16, bottom: 7 / 16 };
 
 /**
+ * How far one accessory reaches above the body, in body fractions, with the row the head's parallax may lift it (as
+ * `ACCESSORY_REACH.top` leaves for the tallest): 0 for none or one that stays on the body. Whatever sits over a drawn
+ * agent (a bubble it says) starts above it, so a cap or a headset is never under it.
+ */
+export function accessoryTop(name) {
+  const a = ACCESSORIES[name];
+  return a && a.oy < 0 ? (1 - a.oy) / 16 : 0;
+}
+
+/**
  * Draws an accessory on a body of side `s` in the body's own space (inside
  * drawAgent's `after`): `frame` adds the head's parallax, `t` and `active`
  * blink the antenna.

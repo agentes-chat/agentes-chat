@@ -35,6 +35,7 @@ import { Route as DesktopSignedInRouteImport } from './routes/desktop.signed-in'
 import { Route as DevGalleryRouteImport } from './routes/dev.gallery'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as OrgOrgIdRouteImport } from './routes/org.$orgId'
+import { Route as WelcomeOrgIdRouteImport } from './routes/welcome.$orgId'
 import { Route as OrgOrgIdIndexRouteImport } from './routes/org.$orgId.index'
 import { Route as OrgOrgIdApprovalsRouteImport } from './routes/org.$orgId.approvals'
 import { Route as OrgOrgIdCalendarRouteImport } from './routes/org.$orgId.calendar'
@@ -207,6 +208,11 @@ const InviteTokenRoute = InviteTokenRouteImport.update({
 const OrgOrgIdRoute = OrgOrgIdRouteImport.update({
   id: '/org/$orgId',
   path: '/org/$orgId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WelcomeOrgIdRoute = WelcomeOrgIdRouteImport.update({
+  id: '/welcome/$orgId',
+  path: '/welcome/$orgId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrgOrgIdIndexRoute = OrgOrgIdIndexRouteImport.update({
@@ -461,6 +467,7 @@ export interface FileRoutesByFullPath {
   '/dev/gallery': typeof DevGalleryRoute
   '/invite/$token': typeof InviteTokenRoute
   '/org/$orgId': typeof OrgOrgIdRouteWithChildren
+  '/welcome/$orgId': typeof WelcomeOrgIdRoute
   '/org/$orgId/approvals': typeof OrgOrgIdApprovalsRoute
   '/org/$orgId/calendar': typeof OrgOrgIdCalendarRoute
   '/org/$orgId/connectors': typeof OrgOrgIdConnectorsRoute
@@ -531,6 +538,7 @@ export interface FileRoutesByTo {
   '/desktop/signed-in': typeof DesktopSignedInRoute
   '/dev/gallery': typeof DevGalleryRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/welcome/$orgId': typeof WelcomeOrgIdRoute
   '/org/$orgId/approvals': typeof OrgOrgIdApprovalsRoute
   '/org/$orgId/calendar': typeof OrgOrgIdCalendarRoute
   '/org/$orgId/connectors': typeof OrgOrgIdConnectorsRoute
@@ -603,6 +611,7 @@ export interface FileRoutesById {
   '/dev/gallery': typeof DevGalleryRoute
   '/invite/$token': typeof InviteTokenRoute
   '/org/$orgId': typeof OrgOrgIdRouteWithChildren
+  '/welcome/$orgId': typeof WelcomeOrgIdRoute
   '/org/$orgId/approvals': typeof OrgOrgIdApprovalsRoute
   '/org/$orgId/calendar': typeof OrgOrgIdCalendarRoute
   '/org/$orgId/connectors': typeof OrgOrgIdConnectorsRoute
@@ -676,6 +685,7 @@ export interface FileRouteTypes {
     | '/dev/gallery'
     | '/invite/$token'
     | '/org/$orgId'
+    | '/welcome/$orgId'
     | '/org/$orgId/approvals'
     | '/org/$orgId/calendar'
     | '/org/$orgId/connectors'
@@ -746,6 +756,7 @@ export interface FileRouteTypes {
     | '/desktop/signed-in'
     | '/dev/gallery'
     | '/invite/$token'
+    | '/welcome/$orgId'
     | '/org/$orgId/approvals'
     | '/org/$orgId/calendar'
     | '/org/$orgId/connectors'
@@ -817,6 +828,7 @@ export interface FileRouteTypes {
     | '/dev/gallery'
     | '/invite/$token'
     | '/org/$orgId'
+    | '/welcome/$orgId'
     | '/org/$orgId/approvals'
     | '/org/$orgId/calendar'
     | '/org/$orgId/connectors'
@@ -889,6 +901,7 @@ export interface RootRouteChildren {
   DevGalleryRoute: typeof DevGalleryRoute
   InviteTokenRoute: typeof InviteTokenRoute
   OrgOrgIdRoute: typeof OrgOrgIdRouteWithChildren
+  WelcomeOrgIdRoute: typeof WelcomeOrgIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1073,6 +1086,13 @@ declare module '@tanstack/react-router' {
       path: '/org/$orgId'
       fullPath: '/org/$orgId'
       preLoaderRoute: typeof OrgOrgIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/welcome/$orgId': {
+      id: '/welcome/$orgId'
+      path: '/welcome/$orgId'
+      fullPath: '/welcome/$orgId'
+      preLoaderRoute: typeof WelcomeOrgIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/org/$orgId/': {
@@ -1506,6 +1526,7 @@ const rootRouteChildren: RootRouteChildren = {
   DevGalleryRoute: DevGalleryRoute,
   InviteTokenRoute: InviteTokenRoute,
   OrgOrgIdRoute: OrgOrgIdRouteWithChildren,
+  WelcomeOrgIdRoute: WelcomeOrgIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

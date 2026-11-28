@@ -147,6 +147,11 @@ export const STORAGE_KEYS = {
   joinAsked: "agentes.join.asked",
   /** Prefix (`.<user id>.<org id>`): "1" once a newcomer closed their welcome in #general (ADR 0090). */
   arrivalClosed: "agentes.arrival.closed",
+  /**
+   * Prefix (`.<user id>.<org id>`): "1" once the welcome wizard was on screen there (ADR 0160, addendum of
+   * 2026-11-26), so it opens once per person and workspace in this browser, whatever the address asks again.
+   */
+  welcomeSeen: "agentes.welcome.seen",
   /** Prefix (`.<user id>.<org id>`): that person's recent searches there, newest first (JSON array, ADR 0123). */
   searchRecent: "agentes.search.recent",
   /**

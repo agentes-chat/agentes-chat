@@ -147,6 +147,8 @@ import type {
   EndpointModel,
   FileConversation,
   FileConversationRef,
+  FirstAgentStartInput,
+  FirstAgentsInput,
   ForeignMailbox,
   FormerAgent,
   GifCategory,
@@ -1310,6 +1312,89 @@ export function useApplyTeamTemplate(orgId: string) {
         ]);
       await qc.invalidateQueries({ queryKey: keys.agents(orgId) });
     },
+  });
+}
+
+/**
+ * My newest first-agent proposal (ADR 0264), null while none came. `poll`: read again every that many ms while the
+ * onboarding waits for the AI's answer (it has no socket); off by default.
+ */
+export function useFirstAgents(orgId: string, opts: { poll?: number | false } = {}) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.firstAgents(orgId),
+    queryFn: () => api.firstAgents.latest(orgId),
+    enabled: Boolean(orgId),
+    refetchInterval: opts.poll || false,
+  });
+}
+
+/** "Sem conector? Cole a resposta": the answer pasted from an AI with no connector, kept as my newest proposal. */
+export function usePasteFirstAgents(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: FirstAgentsInput) => api.firstAgents.paste(orgId, input),
+    onSuccess: (proposal) => qc.setQueryData(keys.firstAgents(orgId), proposal),
+  });
+}
+
+/**
+ * "Criar o …": the option at `index` becomes one agent (the same one when picked again). Pending until the agents'
+ * list has it, so a screen that shows it next finds it there; the proposal, channels and routines are read again.
+ */
+export function usePickFirstAgent(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ proposalId, index, replace }: { proposalId: string; index: number; replace?: string | null }) =>
+      api.firstAgents.pick(orgId, proposalId, index, replace),
+    // The onboarding's pages say what went wrong themselves (a tab that lost the race moves on): no global toast.
+    meta: { silent: true },
+    onSuccess: async () => {
+      for (const key of [keys.firstAgents(orgId), keys.channels(orgId), keys.routines(orgId)])
+        void qc.invalidateQueries({ queryKey: key });
+      await qc.invalidateQueries({ queryKey: keys.agents(orgId) });
+    },
+  });
+}
+
+/**
+ * My first agent from an area of the onboarding (ADR 0264 addendum), its first delivery kept. Pending until the agents'
+ * list has it; channels, routines, my first delivery and my DMs are read again.
+ */
+export function useStartFirstAgent(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: FirstAgentStartInput) => api.firstAgents.start(orgId, input),
+    // The onboarding's pages say what went wrong themselves (a tab that lost the race moves on): no global toast.
+    meta: { silent: true },
+    onSuccess: async () => {
+      for (const key of [keys.channels(orgId), keys.routines(orgId), keys.firstDelivery(orgId), keys.dms(orgId)])
+        void qc.invalidateQueries({ queryKey: key });
+      await qc.invalidateQueries({ queryKey: keys.agents(orgId) });
+    },
+  });
+}
+
+/** My first delivery here (ADR 0264 addendum), null when none was kept; `enabled` false skips the read. */
+export function useFirstDeliveryRow(orgId: string, enabled = true) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.firstDelivery(orgId),
+    queryFn: () => api.firstAgents.delivery(orgId),
+    enabled: Boolean(orgId) && enabled,
+  });
+}
+
+/** Arms my first delivery as I leave the agent's step, for that agent (or one brought from another app). */
+export function useKeepFirstDelivery(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (agentId: string) => api.firstAgents.keepDelivery(orgId, agentId),
+    onSuccess: (delivery) => qc.setQueryData(keys.firstDelivery(orgId), delivery),
   });
 }
 
@@ -3384,8 +3469,7 @@ export function useMailAction(orgId: string) {
       meta: { silent: true },
     }),
     connectComposio: useMutation({
-      mutationFn: (input: { provider: "gmail" | "outlook"; label?: string; accountId?: string; desktop?: boolean }) =>
-        api.mail.connectComposio(orgId, input),
+      mutationFn: (input: Parameters<typeof api.mail.connectComposio>[1]) => api.mail.connectComposio(orgId, input),
     }),
     update: useMutation({
       mutationFn: ({ accountId, ...input }: MailAccountUpdate & { accountId: string }) =>

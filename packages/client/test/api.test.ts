@@ -755,3 +755,105 @@ describe("push devices (ADR 0035, ADR 0071)", () => {
     expect(JSON.parse(String(calls.at(-1)?.init.body))).toEqual({ ids: ["n1", "n2"] });
   });
 });
+
+describe("the first agents my own AI proposed (ADR 0264)", () => {
+  const org = "/api/app/organizations/o1";
+  const proposal = {
+    id: "p 1",
+    about: "Loja online de roupas",
+    source: "paste",
+    options: [],
+    picked: null,
+    agentId: null,
+    createdAt: "2026-11-26T12:00:00.000Z",
+  };
+
+  test("my newest proposal unwrapped, null while none came", async () => {
+    const none = fakeFetch({ [`GET ${org}/first-agents`]: { status: 200, body: { proposal: null } } });
+    expect(await createHttpApi({ fetch: none.fetch }).firstAgents.latest("o1")).toBeNull();
+    const one = fakeFetch({ [`GET ${org}/first-agents`]: { status: 200, body: { proposal } } });
+    expect(await createHttpApi({ fetch: one.fetch }).firstAgents.latest("o1")).toEqual(proposal as never);
+    expect(one.calls.map((c) => `${c.init.method} ${c.url}`)).toEqual([`GET ${org}/first-agents`]);
+  });
+
+  test("an answer pasted goes as JSON and comes back as the proposal; a pick names its option by index", async () => {
+    const picked = { agentId: "a1", handle: "iara", channelId: "c1" };
+    const { fetch, calls } = fakeFetch({
+      [`POST ${org}/first-agents`]: { status: 201, body: { proposal } },
+      [`POST ${org}/first-agents/p%201/pick`]: { status: 200, body: picked },
+    });
+    const api = createHttpApi({ fetch });
+    const input = {
+      about: "Loja online de roupas",
+      options: [{ name: "Iara", role: "Atendimento", why: "Responde clientes", tasks: ["Responder o chat da loja"] }],
+    };
+    expect(await api.firstAgents.paste("o1", input)).toEqual(proposal as never);
+    expect(await api.firstAgents.pick("o1", "p 1", 0)).toEqual(picked);
+    expect(calls.map((c) => `${c.init.method} ${c.url}`)).toEqual([
+      `POST ${org}/first-agents`,
+      `POST ${org}/first-agents/p%201/pick`,
+    ]);
+    expect(JSON.parse(String(calls[0]?.init.body))).toEqual(input);
+    expect(JSON.parse(String(calls[1]?.init.body))).toEqual({ index: 0 });
+  });
+
+  test("a pasted answer the server can't read is refused with its code", async () => {
+    const { fetch } = fakeFetch({
+      [`POST ${org}/first-agents`]: {
+        status: 400,
+        body: { error: { code: "first_agents.invalid", message: "options: Required" } },
+      },
+    });
+    const error = await createHttpApi({ fetch })
+      .firstAgents.paste("o1", { options: [] })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).code).toBe("first_agents.invalid");
+    expect((error as ApiError).status).toBe(400);
+  });
+
+  test("an agent from an area, and my first delivery read and armed as I leave the agent's step", async () => {
+    const made = { agentId: "a1", handle: "iara", channelId: "c1" };
+    const delivery = {
+      agentId: "a1",
+      area: "support",
+      task: "Ler os e-mails",
+      armedAt: null,
+      firedAt: null,
+      runId: null,
+    };
+    const { fetch, calls } = fakeFetch({
+      [`POST ${org}/first-agents/start`]: { status: 201, body: made },
+      [`GET ${org}/first-delivery`]: { status: 200, body: { delivery } },
+      [`PUT ${org}/first-delivery`]: {
+        status: 200,
+        body: { delivery: { ...delivery, armedAt: "2026-11-27T12:00:00.000Z" } },
+      },
+    });
+    const api = createHttpApi({ fetch });
+    const input = { area: "support", name: "Iara", role: "Atendimento", task: "Ler os e-mails", apps: ["zendesk"] };
+    expect(await api.firstAgents.start("o1", input)).toEqual(made);
+    expect(await api.firstAgents.delivery("o1")).toEqual(delivery);
+    expect(await api.firstAgents.keepDelivery("o1", "a1")).toEqual({
+      ...delivery,
+      armedAt: "2026-11-27T12:00:00.000Z",
+    });
+    expect(calls.map((c) => `${c.init.method} ${c.url}`)).toEqual([
+      `POST ${org}/first-agents/start`,
+      `GET ${org}/first-delivery`,
+      `PUT ${org}/first-delivery`,
+    ]);
+    expect(JSON.parse(String(calls[0]?.init.body))).toEqual(input);
+    expect(JSON.parse(String(calls[2]?.init.body))).toEqual({ agentId: "a1" });
+    const none = fakeFetch({ [`GET ${org}/first-delivery`]: { status: 200, body: { delivery: null } } });
+    expect(await createHttpApi({ fetch: none.fetch }).firstAgents.delivery("o1")).toBeNull();
+  });
+
+  test("an agent brought from another app as my first agent, in the place of the one made a moment ago", async () => {
+    const adopted = { agentId: "a2", handle: "bruno", channelId: "d1" };
+    const { fetch, calls } = fakeFetch({ [`POST ${org}/first-agents/adopt`]: { status: 200, body: adopted } });
+    expect(await createHttpApi({ fetch }).firstAgents.adopt("o1", { agentId: "a2", replace: "a1" })).toEqual(adopted);
+    expect(calls.map((c) => `${c.init.method} ${c.url}`)).toEqual([`POST ${org}/first-agents/adopt`]);
+    expect(JSON.parse(String(calls[0]?.init.body))).toEqual({ agentId: "a2", replace: "a1" });
+  });
+});

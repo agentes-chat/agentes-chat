@@ -1,0 +1,734 @@
+/*
+ * The onboarding's frame (Shell.tsx): the page's sky on top, the top bar, one box in the middle with the team standing
+ * on its top edge, and the headers a box may have (the apps a team works in, the team's sky, its photo). Unlayered, so
+ * these win over the kit's base layer.
+ */
+
+/* ---------- the page: the sky fading into the page, the top bar, the column ---------- */
+.onbw {
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  grid-template-columns: minmax(0, 1fr);
+  overflow-x: clip;
+  /* Clear the notch (viewport-fit=cover). */
+  padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
+  background: var(--bg);
+  color: var(--ink);
+}
+/* The page's header, as the agent page's cover: light tones of the sky melting into the page, behind the team. */
+.onbw__cover {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: -1;
+  height: 320px;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 45%, transparent);
+  mask-image: linear-gradient(to bottom, #000 45%, transparent);
+}
+.onbw__cover > .ac-sky {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* In dark, the cover is a breath of color: the page's own dark shows through it. */
+[data-theme="dark"] .onbw__cover {
+  opacity: 0.42;
+}
+.onbw__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  height: 56px;
+  padding: 0 20px;
+}
+.onbw__top-start {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.onbw__top .ac-logo {
+  color: inherit;
+}
+.onbw__me {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--control-h-sm);
+  height: var(--control-h-sm);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  cursor: pointer;
+}
+.onbw__me:hover {
+  background: var(--plate);
+}
+html:not([data-pointer]) .onbw__me:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+/*
+ * The box's top stays in one place on every step (ADR 0264, addendum of 2026-11-27): room under the top bar for who
+ * stands on it, and who does stands over it, out of the flow, its feet on the edge.
+ */
+.onbw {
+  --onb-top: 104px;
+}
+.onbw__stage {
+  --onb-bottom: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-width: 0;
+  padding: var(--onb-top) 16px var(--onb-bottom);
+}
+.onbw__col {
+  position: relative;
+  width: min(480px, 100%);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.onbw__col[data-wide] {
+  width: min(760px, 100%);
+}
+/* Their feet 6px into the box's edge, over it. */
+.onbw__ground {
+  position: absolute;
+  inset-inline: 0;
+  bottom: calc(100% - 6px);
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+.onbw__cast {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+.onbw__agent {
+  position: relative;
+  display: block;
+  flex: none;
+}
+.onbw__agent .ac-avatar {
+  width: 48px;
+  height: 48px;
+}
+.onbw__agent[data-lead] .ac-avatar {
+  width: 64px;
+  height: 64px;
+}
+.onbw__cast[data-awake] .onbw__agent {
+  animation: team-hop 0.52s var(--spring) both;
+  animation-delay: calc(var(--i) * 0.12s + 0.2s);
+}
+.onbw__cast .team-scene__trail,
+.onbw__cast .connect-scene__marks {
+  align-self: center;
+}
+.onbw__cast .connect-scene__marks {
+  display: flex;
+}
+.onbw__cast .connect-scene__marks > .team-scene__mark {
+  width: 40px;
+  height: 40px;
+  animation: none;
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 6px 18px -8px rgb(0 0 0 / 0.35);
+}
+.onbw__cast .connect-scene__marks > .team-scene__mark + .team-scene__mark {
+  margin-inline-start: calc(-1 * var(--space-2));
+}
+/* On the page's own ground the trail and its walk take the ink, not the sky's white. */
+.onbw__cast .team-scene__trail i {
+  background: color-mix(in srgb, var(--ink) 16%, transparent);
+  animation-name: onbw-walk;
+}
+.onbw__cast .team-scene__trail[data-state="done"] i {
+  background: color-mix(in srgb, var(--ink) 70%, transparent);
+  animation: none;
+}
+@keyframes onbw-walk {
+  0% {
+    background: color-mix(in srgb, var(--ink) 80%, transparent);
+  }
+  14% {
+    background: color-mix(in srgb, var(--ink) 45%, transparent);
+  }
+  28%,
+  100% {
+    background: color-mix(in srgb, var(--ink) 16%, transparent);
+  }
+}
+/* The page's main region: the box, under the cast. */
+.onbw__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+/* What the right hand says, over its head and what it wears there (`--reach`, its face's), the cut corner pointing
+   down at it. */
+.onbw__say {
+  position: absolute;
+  bottom: calc(100% * (1 + var(--reach, 0)) + 6px);
+  left: 58%;
+  display: block;
+  width: max-content;
+  max-width: 280px;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-xs);
+  background: var(--raised);
+  box-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.5);
+  color: var(--ink);
+  font-size: 13.5px;
+  line-height: 1.38;
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+  transition:
+    opacity 0.3s var(--out),
+    transform 0.3s var(--out);
+}
+@starting-style {
+  .onbw__say {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* ---------- the box ---------- */
+/*
+ * Never taller than the window (under the top bar and the room for who stands on it): only the answer scrolls, inside
+ * the box, so the page itself doesn't, and the header, the title, what is pinned under the answer and the step's
+ * buttons stay in view. A window too short for a useful box (480px) lets the page scroll instead.
+ */
+.onbx {
+  --dialog-pad: 28px;
+  width: 100%;
+  min-width: 0;
+  max-height: max(480px, calc(100dvh - var(--onb-bar, 56px) - var(--onb-top) - var(--onb-bottom, 32px)));
+  display: flex;
+  flex-direction: column;
+  /* The scroll inside keeps to the rounded corners. */
+  overflow: hidden;
+  border-radius: var(--radius-section);
+  background: var(--surface-raised);
+  box-shadow: var(--e2);
+  font-size: 15px;
+  line-height: 22px;
+}
+/* A header of its own reaches the box's edges: the sky or the apps, the words under it. */
+.onbx[data-cover] {
+  overflow: hidden;
+}
+.onbx__lede {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 28px var(--dialog-pad) 0;
+}
+.onbx[data-cover] .onbx__lede {
+  padding-top: 22px;
+}
+.onbx__eyebrow {
+  margin: 0 0 2px;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 550;
+  color: var(--faint);
+}
+.onbx__title {
+  margin: 0;
+  outline: none;
+  font-size: 24px;
+  font-weight: 650;
+  line-height: 30px;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.onbx__lead {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 22px;
+  text-wrap: pretty;
+}
+.onbx > * {
+  flex: none;
+}
+.onbx .ac-dialog__body.onbx__body {
+  flex: 0 1 auto;
+  min-height: 0;
+  padding-top: 20px;
+  /* Room under the last line of what scrolls: a link there ("See all plans" on a phone) clears the edge. */
+  padding-bottom: 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+/* A new step's words and answer come in where they stand; the box itself stays put. Played once, on insertion. */
+.onbx__lede,
+.onbx__body {
+  transition:
+    opacity 0.36s var(--out),
+    transform 0.36s var(--out);
+}
+@starting-style {
+  .onbx__lede,
+  .onbx__body {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+.onbx .ac-dialog__foot {
+  padding-top: 24px;
+}
+/* A footer with only a note keeps a button's height: every step's footer has the same shape. */
+.onbx .ac-dialog__foot:not(:has(.ac-btn)) > .ac-dialog__foot-note {
+  display: flex;
+  align-items: center;
+  min-height: var(--control-h-md);
+}
+.onbx__back {
+  display: inline-flex;
+  align-items: center;
+  /* The kit's room between a button's icon and its words. */
+  gap: var(--icon-gap);
+  height: var(--control-h-md);
+  margin-inline-start: -8px;
+  padding: 0 10px 0 6px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+.onbx__back:hover:not(:disabled) {
+  background: var(--plate);
+  color: var(--ink);
+}
+html:not([data-pointer]) .onbx__back:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.onbx__back:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+/* A way out in words alone ("Not now"): no arrow, its text on the box's edge. */
+.onbx__back--text {
+  padding-inline: 8px;
+}
+.onbx__note {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+/* With an icon the note is an .ac-iconline: the icon on its first line's capitals. */
+.onbx__note .ac-icon {
+  flex: none;
+  color: var(--faint);
+}
+/* ---------- a choice: quiet rows, a hairline between them, the round choice at the end ---------- */
+.onb-pick {
+  display: flex;
+  flex-direction: column;
+  margin-top: -10px;
+}
+.onb-pick__item + .onb-pick__item {
+  border-top: 1px solid var(--line);
+}
+/* The last row's padding shorter, not the list pulled past its end: inside the answer's scroll a negative margin
+   there would scroll a sliver of empty row. */
+.onb-pick__item:last-child > .onb-pick__row {
+  padding-bottom: 8px;
+}
+.onb-pick__row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: 14px 0;
+  cursor: pointer;
+}
+.onb-pick__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.onb-pick__title {
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 600;
+}
+.onb-pick__desc {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+/* On the title's line, never in the middle of the two. */
+.onb-pick .ac-radio {
+  flex: none;
+  margin-top: 2px;
+}
+.onb-pick__row:hover .ac-radio:not([data-state="checked"]) {
+  border-color: var(--ink);
+}
+
+/* ---------- the team's sky as a box's header ---------- */
+.onb-pass {
+  position: relative;
+  flex: none;
+  height: 172px;
+  color: #fff;
+}
+.onb-pass__sky.team-scene {
+  position: absolute;
+  inset: 0;
+}
+.onb-pass .team-scene__row {
+  bottom: 18px;
+  gap: 18px;
+}
+/* One class over the arrival's own sizes for a team on its sky (arrival.css), whatever order the sheets load in. */
+.onb-pass .team-scene .team-scene__agent .ac-avatar {
+  width: 44px;
+  height: 44px;
+}
+.onb-pass .team-scene .team-scene__agent[data-lead] .ac-avatar {
+  width: 58px;
+  height: 58px;
+}
+/* The photo: taller, the person among the agents, a few pixels of confetti. */
+.onb-pass.onb-photo {
+  height: 248px;
+}
+.onb-photo .team-scene__row {
+  bottom: 22px;
+  gap: 16px;
+}
+.onb-photo .team-scene__cast {
+  gap: 16px;
+}
+.onb-photo .team-scene__agent {
+  position: relative;
+}
+.onb-photo .team-scene .team-scene__agent.onb-photo__me .ac-avatar {
+  width: 50px;
+  height: 50px;
+  box-shadow:
+    0 0 0 3px #fff,
+    0 8px 18px -6px rgb(0 20 60 / 0.45);
+}
+.onbw__say.onb-photo__say {
+  left: 46%;
+  bottom: calc(100% * (1 + var(--reach, 0)) + 8px);
+  max-width: 240px;
+  font-weight: 550;
+  box-shadow: 0 10px 30px -10px rgb(0 20 60 / 0.45);
+}
+/* On a phone the agent and the person stand in the sky's middle, the bubble rising from the agent towards its right
+   edge: it takes the room from there to that edge (half the screen and a little, the pair being centred), never past
+   the sky. */
+@media (max-width: 560px) {
+  .onbw__say.onb-photo__say {
+    max-width: min(240px, calc(50vw + 8px));
+  }
+}
+.onb-confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.onb-confetti i {
+  position: absolute;
+  display: block;
+  image-rendering: pixelated;
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.08);
+}
+
+/* ---------- meeting the first agent: its portrait, among a faint grid of others ---------- */
+.onb-meet {
+  --cell: 38px;
+  position: relative;
+  flex: none;
+  height: 200px;
+  overflow: hidden;
+  isolation: isolate;
+  background: color-mix(in srgb, var(--tone) 7%, var(--surface-raised));
+}
+/* An even grid wider and taller than the band, centred on it: it runs off every edge. */
+.onb-meet__grid {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  grid-template-columns: repeat(13, var(--cell));
+  grid-auto-rows: var(--cell);
+  gap: 10px;
+  transform: translate(-50%, -50%);
+}
+.onb-meet__face {
+  display: grid;
+  place-items: center;
+  filter: saturate(0.65);
+}
+.onb-meet__face .ac-avatar {
+  width: var(--cell);
+  height: var(--cell);
+}
+/* A soft glow of its own color behind it: no ring. */
+.onb-meet__glow {
+  position: absolute;
+  top: 53%;
+  left: 50%;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--tone) 30%, transparent), transparent);
+}
+/* A little under the middle: what it wears on its head keeps clear of the band's top. */
+.onb-meet .onb-meet__agent {
+  position: absolute;
+  top: 53%;
+  left: 50%;
+  width: 112px;
+  height: 112px;
+  transform: translate(-50%, -50%);
+}
+
+/* ---------- the apps a team works in, as a box's header ---------- */
+.onb-wall {
+  position: relative;
+  flex: none;
+  height: 178px;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, #3f88f5 16%, transparent), transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, #3f88f5 7%, var(--surface-raised)), var(--surface-raised));
+}
+.onb-wall__rows {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent);
+}
+.onb-wall__row {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+.onb-wall__row:nth-child(2) {
+  transform: translateX(28px);
+}
+.onb-wall__row:nth-child(3) {
+  transform: translateX(-14px);
+}
+.onb-wall__tile {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  background: var(--surface-raised);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 6px 14px -8px rgb(10 30 70 / 0.28);
+}
+.onb-wall__tile .connector-icon {
+  width: 24px;
+  height: 24px;
+  background: none;
+  box-shadow: none;
+}
+.onb-wall__tile .connector-icon__mark {
+  width: 22px;
+  height: 22px;
+}
+/* An agent's tile takes a breath of the sky behind it, so the faces read as the team among the apps. */
+.onb-wall__tile--agent {
+  background: color-mix(in srgb, #3f88f5 9%, var(--surface-raised));
+}
+.onb-wall__tile--agent .ac-avatar {
+  width: 34px;
+  height: 34px;
+}
+
+/* ---------- a phone: the same box at full width, 16px from the edges ---------- */
+@media (max-width: 560px) {
+  .onbw__top {
+    height: calc(52px + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) 16px 0;
+  }
+  .onbw {
+    --onb-top: 92px;
+    --onb-bar: calc(52px + env(safe-area-inset-top, 0px));
+  }
+  .onbw__stage {
+    --onb-bottom: 32px;
+  }
+  .onbw__agent .ac-avatar {
+    width: 40px;
+    height: 40px;
+  }
+  .onbw__agent[data-lead] .ac-avatar {
+    width: 52px;
+    height: 52px;
+  }
+  /* With the AI's marks after them, only the first two fit beside the trail. */
+  .onbw__cast:has(.team-scene__trail) .onbw__agent:nth-child(n + 3) {
+    display: none;
+  }
+  .onbw__cast .team-scene__trail i:nth-child(n + 4) {
+    display: none;
+  }
+  /* The team at the box's start, so the bubble has the width of the screen beside it. */
+  .onbw__ground {
+    justify-content: flex-start;
+    padding-inline: 20px;
+  }
+  .onbw__say {
+    max-width: 210px;
+    font-size: 13px;
+  }
+  .onbx {
+    --dialog-pad: 20px;
+  }
+  .onbx__lede {
+    padding-top: 24px;
+  }
+  .onbx__title {
+    font-size: 21px;
+    line-height: 27px;
+  }
+  /* The way back as a square beside the buttons, which share the rest of the row. */
+  .onbx .ac-dialog__foot:has(.onbx__back-label) {
+    flex-wrap: nowrap;
+  }
+  .onbx .ac-dialog__foot:has(.onbx__back-label) > .ac-dialog__foot-note {
+    flex: none;
+  }
+  .onbx__back:has(.onbx__back-label) {
+    justify-content: center;
+    width: var(--control-h-md);
+    margin: 0;
+    padding: 0;
+    box-shadow: inset 0 0 0 1px var(--line2);
+  }
+  .onbx__back-label {
+    display: none;
+  }
+  .onbx .ac-dialog__foot:has(.onbx__back-label) > .ac-dialog__foot-acts {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .onbx .ac-dialog__foot:has(.onbx__back-label) > .ac-dialog__foot-acts > .ac-btn {
+    flex: 1 1 auto;
+  }
+  .onb-pass .team-scene .team-scene__agent .ac-avatar {
+    width: 38px;
+    height: 38px;
+  }
+  .onb-pass .team-scene .team-scene__agent[data-lead] .ac-avatar {
+    width: 50px;
+    height: 50px;
+  }
+  .onb-meet {
+    height: 176px;
+  }
+  .onb-meet .onb-meet__agent {
+    width: 96px;
+    height: 96px;
+  }
+  .onb-meet__glow {
+    width: 180px;
+    height: 180px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onbw__cast[data-awake] .onbw__agent,
+  .onbw__cast .team-scene__trail i {
+    animation: none;
+  }
+  @starting-style {
+    .onbw__say,
+    .onbx__lede,
+    .onbx__body {
+      transform: none;
+    }
+  }
+}
+/* A short window keeps the work step's list in view: the apps' header with two rows. */
+@media (max-height: 860px) {
+  .onb-wall {
+    height: 122px;
+  }
+  .onb-wall__row:nth-child(3) {
+    display: none;
+  }
+}
+/* A few apps' marks as the kit's stack of makers (`.ac-brand-stack`), as the work step's "Another app" and the agent
+   step's "Search apps" lead with them: each on its 20px plate, ringed in its own surface, a little over the one
+   before. */
+.onb-marks {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+}
+.onb-marks__plate {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+  border-radius: 7px 7px 7px 3px;
+  background: var(--raised);
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    0 0 0 2px var(--raised);
+}
+.onb-marks__plate + .onb-marks__plate {
+  margin-inline-start: -2px;
+}
+.onb-marks__plate > img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+/* An app's own mark in a plate: bare, at the plate's mark size. */
+.onb-marks__plate .connector-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.onb-marks__plate .connector-icon__mark {
+  width: 14px;
+  height: 14px;
+}

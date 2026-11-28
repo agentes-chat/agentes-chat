@@ -38,6 +38,8 @@ import type {
   EmailChange,
   EndpointCheck,
   FeedbackOffer,
+  FirstAgents,
+  FirstDeliveryRow,
   ForeignMailbox,
   FormerAgent,
   Gif,
@@ -317,6 +319,13 @@ export interface FakeState {
   githubFiles?: Record<string, { path: string; text: string }[]>;
   /** Each item an applied import brought, as the server keeps them (`imports.sources`). */
   imported?: { app: string; ref: string; kind: ImportItemKind }[];
+  /** My newest first-agent proposal (`firstAgents.latest`, ADR 0264): none until a test seeds one or pastes one. */
+  firstAgents?: FirstAgents | null;
+  /**
+   * My first delivery (`firstAgents.delivery`, ADR 0264 addendum): kept disarmed by `start`, armed by `keepDelivery`; a
+   * test fires it by setting `firedAt`.
+   */
+  firstDelivery?: FirstDeliveryRow | null;
   online: Set<string>;
   /** People's chosen availability and line (`orgs.setStatus`); unset = auto, nothing written. */
   statuses?: Map<string, { availability: Availability; status: MemberStatus | null }>;
@@ -2282,11 +2291,12 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         log("orgs.updateSettings", orgId, input);
         // A switch of mode (ADR 0159), with the name it may bring: `me` says them at once, as the server's.
         const { mode, name } = input;
-        if (mode !== undefined && state.me) {
-          const named = name ? { name } : {};
+        // A new name (the onboarding's Trocar, Settings) is the workspace's everywhere, as the server's.
+        if ((mode !== undefined || name) && state.me) {
+          const changed = { ...(mode !== undefined ? { mode } : {}), ...(name ? { name } : {}) };
           state.me = {
             ...state.me,
-            organizations: state.me.organizations.map((o) => (o.id === orgId ? { ...o, mode, ...named } : o)),
+            organizations: state.me.organizations.map((o) => (o.id === orgId ? { ...o, ...changed } : o)),
           };
         }
         if (input.context !== undefined) state.context = input.context;
@@ -3407,6 +3417,219 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         if (there) return { status: "exists", artifactId: there.id, title, folder };
         const created = await drive.upload(orgId, new File([file], input.name), { title });
         return { status: "created", artifactId: created.id, title, folder };
+      },
+    },
+    // Like the backend (ADR 0264): my newest proposal, a pasted answer kept as one, a pick that makes one agent once.
+    firstAgents: {
+      latest: async (orgId) => {
+        log("firstAgents.latest", orgId);
+        return structuredClone(state.firstAgents ?? null);
+      },
+      paste: async (orgId, input) => {
+        log("firstAgents.paste", orgId, input);
+        const colors = ["teal", "violet", "amber"];
+        const proposal: FirstAgents = {
+          id: id("first-agents"),
+          about: input.about ?? null,
+          source: "paste",
+          options: input.options.map((o, i) => ({
+            name: o.name,
+            handle: o.handle ?? (o.name.toLowerCase().replace(/[^a-z0-9]+/g, "") || `agent-${i + 1}`),
+            role: o.role,
+            why: o.why,
+            tasks: o.tasks,
+            apps: (o.apps ?? []).map((label) => ({ key: null, label })),
+            routine: o.routine
+              ? {
+                  title: o.routine.title,
+                  schedule: o.routine.schedule,
+                  prompt: o.routine.prompt,
+                  cron: o.routine.cron ?? null,
+                  timezone: o.routine.cron ? "America/Sao_Paulo" : null,
+                }
+              : null,
+            today: o.today ?? [],
+            instructions: o.instructions ?? "",
+            appearance: { color: colors[i % colors.length] ?? "teal", eyes: "happy", accessory: "none" },
+          })),
+          picked: null,
+          agentId: null,
+          createdAt: new Date().toISOString(),
+        };
+        state.firstAgents = proposal;
+        return structuredClone(proposal);
+      },
+      // `replace`, as the backend: my pending first agent from the onboarding takes the new one's place.
+      pick: async (orgId, proposalId, index, replace) => {
+        log("firstAgents.pick", orgId, proposalId, index, ...(replace ? [replace] : []));
+        const proposal = state.firstAgents;
+        if (!proposal || proposal.id !== proposalId) {
+          throw new ApiError(404, "first_agents.not_found", "Proposal not found");
+        }
+        const option = proposal.options[index];
+        if (!option) throw new ApiError(400, "first_agents.no_option", "Pick one of the options");
+        const mine = state.me ? withPermissions(state.me).organizations.find((o) => o.id === orgId) : undefined;
+        if (!mine?.permissions?.includes("create_agents")) {
+          throw new ApiError(403, "create_agents_required", "Ask an admin to create agents");
+        }
+        // Picked again: the same agent.
+        const made = proposal.agentId ? state.agents.find((a) => a.id === proposal.agentId) : undefined;
+        if (made) {
+          const entry = Object.entries(state.channelMembers).find(([, ms]) => ms.some((m) => m.id === made.id));
+          return { agentId: made.id, handle: made.handle, channelId: entry?.[0] ?? "" };
+        }
+        const pending = state.firstDelivery;
+        if (replace && pending && !pending.firedAt && pending.area !== null && pending.agentId === replace)
+          state.agents = state.agents.filter((a) => a.id !== replace);
+        const taken = new Set(state.agents.map((a) => a.handle));
+        let handle = option.handle;
+        for (let i = 2; taken.has(handle); i++) handle = `${option.handle}${i}`;
+        const agentId = id("agent");
+        state.agents.push({
+          id: agentId,
+          name: option.name,
+          handle,
+          role: option.role,
+          instructions: option.instructions,
+          model: "claude-sonnet-5-5",
+          ownerUserId: state.me?.user.id ?? null,
+          hasCredential: false,
+          monthlyBudgetUsd: null,
+          createdAt: new Date().toISOString(),
+          audience: { mode: "everyone", userIds: [] },
+          appearance: option.appearance,
+        });
+        const me = { type: "person" as const, id: state.me?.user.id ?? "" };
+        const agent = { type: "agent" as const, id: agentId };
+        // Its own channel in a team's workspace; in a personal one it lives in my DM with it.
+        let channelId: string;
+        if (personalOrg(orgId)) {
+          channelId = `dm-${agentId}`;
+          state.dms.push({ channelId, with: { ...agent, name: option.name, handle }, unread: 0 });
+        } else {
+          channelId = id("chan");
+          state.channels.push({
+            id: channelId,
+            name: handle,
+            topic: option.role,
+            visibility: "public",
+            isMember: true,
+            createdAt: new Date().toISOString(),
+            groupId: null,
+          });
+        }
+        state.channelMembers[channelId] = [me, agent];
+        proposal.picked = index;
+        proposal.agentId = agentId;
+        // Like the backend: the agent picked is my first delivery's, unless one already went.
+        if (!state.firstDelivery?.firedAt)
+          state.firstDelivery = {
+            agentId,
+            area: "ask",
+            task: option.today[0] ?? option.tasks[0] ?? "",
+            armedAt: null,
+            firedAt: null,
+            runId: null,
+          };
+        return { agentId, handle, channelId };
+      },
+      // Like the backend: one agent as me, no routine, its first delivery kept disarmed; `replace` takes my pending one's
+      // place.
+      start: async (orgId, input) => {
+        log("firstAgents.start", orgId, input);
+        const mine = state.me ? withPermissions(state.me).organizations.find((o) => o.id === orgId) : undefined;
+        if (!mine?.permissions?.includes("create_agents")) {
+          throw new ApiError(403, "create_agents_required", "Ask an admin to create agents");
+        }
+        const pending = state.firstDelivery;
+        if (input.replace && pending && !pending.firedAt && pending.area !== null && pending.agentId === input.replace)
+          state.agents = state.agents.filter((a) => a.id !== input.replace);
+        const base = input.name.toLowerCase().replace(/[^a-z0-9]+/g, "") || "agent";
+        const taken = new Set(state.agents.map((a) => a.handle));
+        let handle = base;
+        for (let i = 2; taken.has(handle); i++) handle = `${base}${i}`;
+        const agentId = id("agent");
+        state.agents.push({
+          id: agentId,
+          name: input.name,
+          handle,
+          role: input.role ?? "",
+          instructions: input.instructions ?? "",
+          model: "claude-sonnet-5-5",
+          ownerUserId: state.me?.user.id ?? null,
+          hasCredential: false,
+          monthlyBudgetUsd: null,
+          createdAt: new Date().toISOString(),
+          audience: { mode: "everyone", userIds: [] },
+          appearance: input.appearance ?? { color: "teal", eyes: "happy", accessory: "none" },
+        });
+        const me = { type: "person" as const, id: state.me?.user.id ?? "" };
+        const agent = { type: "agent" as const, id: agentId };
+        let channelId: string;
+        if (personalOrg(orgId)) {
+          channelId = `dm-${agentId}`;
+          state.dms.push({ channelId, with: { ...agent, name: input.name, handle }, unread: 0 });
+        } else {
+          channelId = id("chan");
+          state.channels.push({
+            id: channelId,
+            name: handle,
+            topic: input.role ?? "",
+            visibility: "public",
+            isMember: true,
+            createdAt: new Date().toISOString(),
+            groupId: null,
+          });
+        }
+        state.channelMembers[channelId] = [me, agent];
+        if (!pending?.firedAt)
+          state.firstDelivery = {
+            agentId,
+            area: input.area,
+            task: input.task ?? "",
+            armedAt: null,
+            firedAt: null,
+            runId: null,
+          };
+        return { agentId, handle, channelId };
+      },
+      // Like the backend: an agent my import brought becomes my first agent (area `import`); `replace` takes my pending
+      // one's place.
+      adopt: async (orgId, input) => {
+        log("firstAgents.adopt", orgId, input);
+        const agent = state.agents.find((a) => a.id === input.agentId);
+        if (!agent) throw new ApiError(404, "first_delivery.no_agent", "Agent not found");
+        const pending = state.firstDelivery;
+        if (input.replace && pending && !pending.firedAt && pending.area !== null && pending.agentId === input.replace)
+          state.agents = state.agents.filter((a) => a.id !== input.replace);
+        if (!pending?.firedAt)
+          state.firstDelivery = {
+            agentId: agent.id,
+            area: "import",
+            task: "",
+            armedAt: null,
+            firedAt: null,
+            runId: null,
+          };
+        const entry = Object.entries(state.channelMembers).find(([, ms]) => ms.some((m) => m.id === agent.id));
+        return { agentId: agent.id, handle: agent.handle, channelId: entry?.[0] ?? `dm-${agent.id}` };
+      },
+      delivery: async (orgId) => {
+        log("firstAgents.delivery", orgId);
+        const kept = state.firstDelivery;
+        return kept && state.agents.some((a) => a.id === kept.agentId) ? structuredClone(kept) : null;
+      },
+      keepDelivery: async (orgId, agentId) => {
+        log("firstAgents.keepDelivery", orgId, agentId);
+        if (!state.agents.some((a) => a.id === agentId))
+          throw new ApiError(404, "first_delivery.no_agent", "Agent not found");
+        // Like the backend: my waiting one of this agent is armed as it is; another agent takes its place, armed.
+        const kept = state.firstDelivery;
+        const armedAt = new Date().toISOString();
+        if (kept && !kept.firedAt && kept.agentId === agentId) kept.armedAt = armedAt;
+        else if (!kept?.firedAt)
+          state.firstDelivery = { agentId, area: null, task: "", armedAt, firedAt: null, runId: null };
+        return structuredClone(state.firstDelivery as FirstDeliveryRow);
       },
     },
     chat: {

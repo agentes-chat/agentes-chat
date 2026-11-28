@@ -477,6 +477,41 @@ export const EMAIL_SAMPLES: Record<string, EmailTemplate> = {
     routines: 2,
     url: `${APP}/org/${ORG}/settings/billing`,
   },
+  /**
+   * Its first agent was picked from what the person's own AI proposed (ADR 0264): that agent, ready, and what it
+   * delivers on its first day, instead of the counts.
+   */
+  "plan_waiting-picked.en": {
+    kind: "plan_waiting",
+    locale: "en",
+    orgName: "Souza Bakery",
+    agents: 1,
+    channels: 1,
+    routines: 1,
+    url: `${APP}/org/${ORG}/settings/billing`,
+    picked: {
+      agentName: "Iara",
+      role: "Billing",
+      today: ["The list of who is late", "A reminder ready for each one"],
+      ai: "Claude",
+    },
+  },
+  /** Its second reminder, on the third day: the first day's deliveries that haven't started yet. */
+  "plan_waiting-picked-later.pt-BR": {
+    kind: "plan_waiting",
+    locale: "pt-BR",
+    orgName: "Padaria Souza",
+    agents: 1,
+    channels: 1,
+    routines: 1,
+    url: `${APP}/org/${ORG}/settings/billing`,
+    picked: {
+      agentName: "Caio",
+      role: "Cobrança",
+      today: ["A lista de quem está atrasado", "Um lembrete pronto para cada um"],
+      later: true,
+    },
+  },
   /** Deleted by the person: the date, the workspace that closed with it, and how to come back. */
   "account_deleting.en": {
     kind: "account_deleting",
@@ -631,6 +666,8 @@ export const PERSONAL_EMAIL_SAMPLES: Record<string, EmailTemplate> = Object.from
     "plan_opened.en",
     "plan_lent.pt-BR",
     "plan_waiting.pt-BR",
+    "plan_waiting-picked.en",
+    "plan_waiting-picked-later.pt-BR",
   ].map((id) => {
     const sample = EMAIL_SAMPLES[id] as EmailTemplate;
     const orgName = sample.locale === "pt-BR" ? "Pessoal" : "Personal";

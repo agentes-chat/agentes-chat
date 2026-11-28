@@ -51,6 +51,7 @@ import { TYPED_VALUES } from "@/i18n";
 import { inDesktopApp } from "@/lib/desktop";
 import { useHumanCheck } from "@/lib/human-check";
 import { lookOf } from "@/lib/look";
+import { useOpenJoined } from "@/lib/member-welcome";
 import { STORAGE_KEYS, sessionStore } from "@/lib/storage";
 import { NameHint, PasswordHelp, passwordHelp } from "@/pages/AuthPage";
 import "./invite.css";
@@ -475,7 +476,7 @@ function EmailInvitation({
   const api = useApi();
   const auth = useAuth();
   const qc = useQueryClient();
-  const navigate = useNavigate();
+  const openJoined = useOpenJoined();
   const user = useMe().data?.user ?? null;
   const config = useAuthConfig().data;
   const signOutHere = useSignOutHere(token);
@@ -538,14 +539,17 @@ function EmailInvitation({
     }
   };
 
-  /** Accepts as the account signed in now, then opens the workspace from the host. */
+  /**
+   * Accepts as the account signed in now, then opens the workspace from the host: their own onboarding first when they
+   * may create agents there and have none yet (`useOpenJoined`).
+   */
   const accept = async (signedInNow = false): Promise<boolean> => {
     try {
       const { orgId } = await api.orgs.acceptInvitation(token, proof);
       const burst = prepareBurst(header.current ?? document.body);
       await qc.invalidateQueries({ queryKey: keys.me });
       burst();
-      await navigate({ to: "/org/$orgId", params: { orgId } });
+      await openJoined(orgId);
       return true;
     } catch (e) {
       // A known code in the invited person's words (a full workspace says whom to tell), never the server's English.
@@ -1522,6 +1526,7 @@ function Waiting({ token, preview, asked }: { token: string; preview: Invitation
   const auth = useAuth();
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const openJoined = useOpenJoined();
   const header = useRef<HTMLElement>(null);
   const started = useRef(false);
   const [answer, setAnswer] = useState<Answer | null>(null);
@@ -1543,7 +1548,10 @@ function Waiting({ token, preview, asked }: { token: string; preview: Invitation
   });
   const got = claim.data;
 
-  /** Approved: "Aprovado" for a moment while the one-time sign-in goes through, then the workspace. */
+  /**
+   * Approved: "Aprovado" for a moment while the one-time sign-in goes through, then the workspace, or their own
+   * onboarding first (`useOpenJoined`).
+   */
   const enter = async (orgId: string, signIn: string) => {
     if (started.current) return;
     started.current = true;
@@ -1552,7 +1560,7 @@ function Waiting({ token, preview, asked }: { token: string; preview: Invitation
     const burst = prepareBurst(header.current ?? document.body);
     await qc.invalidateQueries({ queryKey: keys.me });
     burst();
-    await navigate({ to: "/org/$orgId", params: { orgId } });
+    await openJoined(orgId);
   };
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: each answer once; signing in starts on the first
@@ -1668,6 +1676,7 @@ function AskAsAccount({ token, preview }: { token: string; preview: InvitationPr
   const api = useApi();
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const openJoined = useOpenJoined();
   const user = useMe().data?.user ?? null;
   const config = useAuthConfig();
   const signOutHere = useSignOutHere(token);
@@ -1737,9 +1746,12 @@ function AskAsAccount({ token, preview }: { token: string; preview: InvitationPr
     else void ask(proof);
   };
 
+  // Approved now: their own onboarding first, as on accepting (`useOpenJoined`). Someone who was already a member opens
+  // the workspace, as before.
   const open = async (orgId: string) => {
     await qc.invalidateQueries({ queryKey: keys.me });
-    await navigate({ to: "/org/$orgId", params: { orgId } });
+    if (view.state === "in" && !view.already) await openJoined(orgId);
+    else await navigate({ to: "/org/$orgId", params: { orgId } });
   };
 
   switch (view.state) {

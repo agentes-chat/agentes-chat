@@ -2,283 +2,163 @@ import { describe, expect, test } from "bun:test";
 import type { TFunction } from "i18next";
 import type { AiStatus, OrgStanding } from "../src/api/types";
 import { teamThinks } from "../src/lib/no-ai";
-import { firstJob, landingOf, railState, railStepAt, railSteps } from "../src/lib/onboarding";
+import {
+  firstJob,
+  landingOf,
+  phoneRail,
+  type RailFunnel,
+  type RailStep,
+  railState,
+  railStepAt,
+  railSteps,
+  stepCount,
+} from "../src/lib/onboarding";
 import { aboutContext, aboutOf, templateFor } from "../src/lib/team-plan";
 
-describe("the onboarding's rail (ADR 0162)", () => {
-  test("the plan step for a first plan, the AI step on the web's rail, no business step when personal", () => {
-    expect(railSteps({ plan: true, ai: false, personal: false })).toEqual(["name", "business", "team", "plan"]);
-    expect(railSteps({ plan: false, ai: false, personal: false })).toEqual(["name", "business", "team"]);
-    expect(railSteps({ plan: true, ai: true, personal: false })).toEqual(["name", "business", "team", "plan", "ai"]);
-    expect(railSteps({ plan: false, ai: true, personal: false })).toEqual(["name", "business", "team", "ai"]);
-    expect(railSteps({ plan: true, ai: true, personal: true })).toEqual(["name", "team", "plan", "ai"]);
-    expect(railSteps({ plan: false, ai: true, personal: true })).toEqual(["name", "team", "ai"]);
-    // A team's web rail ends on inviting people (ADR 0162, amended 2026-11-11).
-    expect(railSteps({ plan: true, ai: true, personal: false, people: true })).toEqual([
-      "name",
-      "business",
-      "team",
-      "plan",
-      "ai",
-      "people",
-    ]);
+const payment = { state: "hold", reason: "payment" } as OrgStanding;
+const BILLING = "https://billing.example.com";
+
+type WebRail = Omit<Parameters<typeof railState>[0], "funnel">;
+
+/** A web onboarding's state: a workspace that exists, no agent yet, nothing stored, no plan to wait for, no AI yet. */
+const web = (f: Partial<WebRail> & { funnel?: Partial<RailFunnel> } = {}) => {
+  const { funnel, ...rest } = f;
+  return railState({
+    orgId: "o1",
+    standing: undefined,
+    billingUrl: null,
+    agent: false,
+    picked: null,
+    ...rest,
+    funnel: { thinks: false, passed: undefined, ...funnel },
+  });
+};
+
+describe("the web onboarding's rail (ADR 0162, amended by ADR 0264's addendum of 2026-11-27)", () => {
+  test("its steps: the work, its agent, the plan where there is one, the AI and the photo", () => {
+    expect(railSteps({ plan: true })).toEqual(["area", "agent", "plan", "ai", "celebrate"]);
+    // A self-hosted server has no plan step.
+    expect(railSteps({ plan: false })).toEqual(["area", "agent", "ai", "celebrate"]);
   });
 
   test("the step comes from the workspace's own data, so a workspace left at any step resumes there", () => {
     const at = (f: Partial<Parameters<typeof railStepAt>[0]>) =>
-      railStepAt({
-        created: true,
-        context: true,
-        team: true,
-        waitsForPlan: false,
-        personal: false,
-        ai: false,
-        thinks: false,
-        ...f,
-      });
-    expect(at({ created: false, context: false, team: false })).toBe("name");
-    expect(at({ context: false, team: false })).toBe("business");
-    expect(at({ team: false })).toBe("team");
-    expect(at({ waitsForPlan: true })).toBe("plan");
-    expect(at({})).toBe("open");
-    // A context saved some other way still counts: the team is next.
-    expect(at({ team: false, waitsForPlan: true })).toBe("team");
-    // With the AI step: it comes after the plan, and a team that already thinks opens.
-    expect(at({ ai: true })).toBe("ai");
-    expect(at({ ai: true, waitsForPlan: true })).toBe("plan");
-    expect(at({ ai: true, thinks: true })).toBe("open");
-    // With the people step: after the AI step, until the invitations are answered.
-    expect(at({ ai: true, people: true })).toBe("ai");
-    expect(at({ ai: true, thinks: true, people: true })).toBe("people");
-    expect(at({ ai: true, thinks: true, people: true, invited: true })).toBe("open");
-    // A personal workspace is never asked what it does.
-    expect(at({ personal: true, context: false, team: false })).toBe("team");
+      railStepAt({ agent: true, agentSeen: true, waitsForPlan: false, aiSeen: true, ...f });
+    expect(at({})).toBe("celebrate");
+    // No agent yet: the work, whatever else is stored.
+    expect(at({ agent: false })).toBe("area");
+    expect(at({ agent: false, waitsForPlan: true, aiSeen: false })).toBe("area");
+    // Made, its Continue not pressed yet: its step, before any plan.
+    expect(at({ agentSeen: false, waitsForPlan: true })).toBe("agent");
+    expect(at({ waitsForPlan: true, aiSeen: false })).toBe("plan");
+    expect(at({ aiSeen: false })).toBe("ai");
+    // "Not now" on the plan: the photo, the plan waiting; no AI step without a plan.
+    expect(at({ waitsForPlan: true, planLater: true, aiSeen: false })).toBe("celebrate");
   });
 
-  test("where it stands, web and phone: the data's step, a step gone back to while it stays answered", () => {
-    const base = {
-      orgId: "o1",
-      standing: undefined,
-      billingUrl: null,
-      context: "",
-      team: 0,
-      picked: null,
-      funnel: null,
-    };
-    // Before the workspace exists only the server's billing says whether a plan step comes.
-    expect(railState({ ...base, orgId: null, billingUrl: "https://billing.example.com" })).toMatchObject({
-      steps: ["name", "business", "team", "plan"],
-      step: "name",
+  test("before the workspace exists only the server's billing says whether a plan step comes", () => {
+    expect(web({ orgId: null, billingUrl: BILLING })).toMatchObject({
+      steps: ["area", "agent", "plan", "ai", "celebrate"],
+      at: "area",
+      step: "area",
       reached: 0,
-    });
-    expect(railState({ ...base, orgId: null }).steps).toEqual(["name", "business", "team"]);
-    const held = { ...base, standing: { state: "hold", reason: "payment" } as OrgStanding };
-    expect(railState(held)).toMatchObject({ at: "business", step: "business", index: 1, reached: 1 });
-    expect(railState({ ...held, context: "  ", team: 3 }).step).toBe("business");
-    expect(railState({ ...held, context: "Loja online", team: 3 })).toMatchObject({
-      at: "plan",
-      step: "plan",
-      index: 3,
-    });
-    expect(railState({ ...held, context: "Loja online", team: 3, picked: "name" })).toMatchObject({
-      step: "name",
-      index: 0,
-      reached: 3,
-    });
-    // Only an answered step can be gone back to.
-    expect(railState({ ...held, picked: "team" }).step).toBe("business");
-    // No plan to wait for (a self-hosted server, or paid meanwhile): three steps, and it opens once the team is there.
-    expect(railState({ ...base, context: "Agência", team: 2 })).toMatchObject({ at: "open", step: "team", reached: 3 });
-    expect(railState({ ...base, context: "Agência", team: 2, picked: "plan" }).step).toBe("team");
-    // The phone's personal workspace opens once made, whatever its data (ADR 0159).
-    expect(railState({ ...base, personal: true }).at).toBe("open");
-  });
-
-  test("the web's funnel (ADR 0162, amended 2026-11-10): the AI step last, answered by the data", () => {
-    const funnel = { thinks: false, passed: "context" as const };
-    const base = {
-      orgId: "o1",
-      standing: undefined,
-      billingUrl: null,
-      context: "Loja online",
-      team: 3,
-      picked: null,
-      funnel,
-    };
-    const payment = { state: "hold", reason: "payment" } as OrgStanding;
-    // A team made with no AI: the AI step; once every agent thinks, inviting people (ADR 0162, amended 2026-11-11).
-    expect(railState(base)).toMatchObject({
-      steps: ["name", "business", "you", "team", "ai", "people"],
-      at: "ai",
-      step: "ai",
-    });
-    expect(railState({ ...base, funnel: { ...funnel, thinks: true } })).toMatchObject({ at: "people", step: "people" });
-    // Not known yet reads as not yet: the page waits for it before showing a step.
-    expect(railState({ ...base, funnel: { ...funnel, thinks: undefined } }).at).toBe("ai");
-    // Waiting for its first plan: the plan step, then the AI step.
-    expect(railState({ ...base, standing: payment })).toMatchObject({
-      steps: ["name", "business", "you", "team", "plan", "ai", "people"],
-      at: "plan",
       waitsForPlan: true,
       hasPlanStep: true,
     });
-    // Paid once the plan step was shown ("computer" saved): it stays on the rail, answered, and may be gone back to.
-    const paid = { ...base, funnel: { ...funnel, passed: "computer" as const } };
-    expect(railState(paid)).toMatchObject({
-      steps: ["name", "business", "you", "team", "plan", "ai", "people"],
+    expect(web({ orgId: null })).toMatchObject({
+      steps: ["area", "agent", "ai", "celebrate"],
+      at: "area",
+      hasPlanStep: false,
+    });
+  });
+
+  test("on agentes.chat Cloud: the agent until its Continue, the plan it waits for, then the AI and the photo", () => {
+    const held = { standing: payment, billingUrl: BILLING };
+    expect(web(held)).toMatchObject({ at: "area", step: "area", reached: 0, waitsForPlan: true });
+    // Made on the work step: its own step, until its Continue stores "agents".
+    expect(web({ ...held, agent: true })).toMatchObject({
+      steps: ["area", "agent", "plan", "ai", "celebrate"],
+      at: "agent",
+      reached: 1,
+    });
+    expect(web({ ...held, agent: true, funnel: { passed: "agents" } })).toMatchObject({ at: "plan", reached: 2 });
+    // Paid once the plan step was shown ("computer"): it stays on the rail, answered, and the AI step is next.
+    const paid = { agent: true, billingUrl: BILLING, funnel: { passed: "computer" as const } };
+    expect(web(paid)).toMatchObject({
+      steps: ["area", "agent", "plan", "ai", "celebrate"],
       at: "ai",
-      reached: 5,
+      reached: 3,
       waitsForPlan: false,
       hasPlanStep: true,
     });
-    expect(railState({ ...paid, picked: "plan" })).toMatchObject({ step: "plan", index: 4 });
-    // A server with billing that never held the workspace: no plan step, once the workspace exists.
-    expect(railState({ ...base, billingUrl: "https://billing.example.com" })).toMatchObject({
-      steps: ["name", "business", "you", "team", "ai", "people"],
-      hasPlanStep: false,
-    });
-    // A step gone back to is shown only while it stays answered: the AI step isn't, the plan step on a hold isn't.
-    expect(railState({ ...base, standing: payment, picked: "ai" }).step).toBe("plan");
-    expect(railState({ ...base, picked: "plan" }).step).toBe("ai");
-    // A team's "no agents yet" ("import") doesn't answer its team step: its templates still make the team.
-    expect(railState({ ...base, team: 0, funnel: { ...funnel, passed: "import" } }).at).toBe("team");
-  });
-
-  test("a team's step left with no agents answers it, on the web only (ADR 0162, amended 2026-11-11)", () => {
-    const funnel = { thinks: false, passed: "agents" as const };
-    const base = {
-      orgId: "o1",
-      standing: undefined,
-      billingUrl: null,
-      context: "Loja online",
-      team: 0,
-      picked: null,
-      funnel,
-    };
-    // Self-hosted: on to the AI step with the right hand alone; once it thinks, inviting people.
-    expect(railState(base)).toMatchObject({
-      steps: ["name", "business", "you", "team", "ai", "people"],
-      at: "ai",
-      step: "ai",
+    // Its agents already thinking (a server's own key): the AI step all the same, once.
+    expect(web({ ...paid, funnel: { ...paid.funnel, thinks: true } })).toMatchObject({ at: "ai", thinks: true });
+    // Answered ("ai"), with an AI: the photo, its AI connected.
+    expect(web({ ...paid, funnel: { passed: "ai", thinks: true } })).toMatchObject({
+      at: "celebrate",
       reached: 4,
-    });
-    expect(railState({ ...base, funnel: { thinks: true, passed: "agents" } }).at).toBe("people");
-    // Waiting for its first plan: the plan step next, then the AI step; still so once the plan step showed and was paid.
-    const held = { ...base, standing: { state: "hold", reason: "payment" } as OrgStanding };
-    expect(railState(held)).toMatchObject({
-      steps: ["name", "business", "you", "team", "plan", "ai", "people"],
-      at: "plan",
-      index: 4,
-    });
-    expect(railState({ ...base, funnel: { thinks: false, passed: "computer" } })).toMatchObject({
-      steps: ["name", "business", "you", "team", "plan", "ai", "people"],
-      at: "ai",
-    });
-    // Answered, the team step may be gone back to (its question again, to bring or build a team after all).
-    expect(railState({ ...base, picked: "team" })).toMatchObject({ step: "team", index: 3, reached: 4 });
-    // Only past the question ("import": its templates next), the step still waits for a team.
-    expect(railState({ ...base, funnel: { ...funnel, passed: "import" } })).toMatchObject({ at: "team", reached: 3 });
-    // The phone (no funnel) reads no stored step: a team with no agents stays on its team step, held or not.
-    expect(railState({ ...base, funnel: null })).toMatchObject({ steps: ["name", "business", "team"], at: "team" });
-    expect(railState({ ...held, funnel: null })).toMatchObject({
-      steps: ["name", "business", "team", "plan"],
-      at: "team",
-    });
-  });
-
-  test("a team's rail ends on inviting people, never a personal workspace's nor the phone's (ADR 0162, amended 2026-11-11)", () => {
-    const funnel = { thinks: false, passed: "context" as const };
-    const base = {
-      orgId: "o1",
-      standing: undefined,
-      billingUrl: null,
-      context: "Loja online",
-      team: 3,
-      picked: null,
-      funnel,
-    };
-    const sixSteps = ["name", "business", "you", "team", "ai", "people"];
-    // Every agent thinking, or "Connect later" ("ai"), answers the AI step: the people step is next.
-    expect(railState({ ...base, funnel: { thinks: true, passed: "context" } })).toMatchObject({
-      steps: sixSteps,
-      at: "people",
-      step: "people",
-      index: 5,
-      reached: 5,
       thinks: true,
+      aiLater: false,
     });
-    expect(railState({ ...base, funnel: { thinks: false, passed: "ai" } })).toMatchObject({
-      steps: sixSteps,
-      at: "people",
-      thinks: false,
-    });
-    // Not known yet reads as not yet: the AI step.
-    expect(railState({ ...base, funnel: { thinks: undefined, passed: "context" } }).at).toBe("ai");
-    // The invitations sent ("team"): it opens.
-    expect(railState({ ...base, funnel: { thinks: false, passed: "team" } }).at).toBe("open");
-    // Gone back from it: the AI step, answered.
-    expect(railState({ ...base, funnel: { thinks: true, passed: "context" }, picked: "ai" })).toMatchObject({
-      step: "ai",
-      index: 4,
-      reached: 5,
-    });
-    // A step stored past the plan's lists the plan only on a server with billing, which held the workspace for it.
-    expect(
-      railState({ ...base, billingUrl: "https://billing.example.com", funnel: { thinks: false, passed: "ai" } }),
-    ).toMatchObject({
-      steps: ["name", "business", "you", "team", "plan", "ai", "people"],
-      at: "people",
-      hasPlanStep: true,
-    });
-    // A personal workspace ends on the AI step; the phone has neither.
-    expect(railState({ ...base, team: 0, personal: true, funnel: { thinks: true, passed: "agents" } })).toMatchObject({
-      steps: ["name", "you", "team", "ai"],
-      at: "open",
-    });
-    expect(railState({ ...base, funnel: null })).toMatchObject({ steps: ["name", "business", "team"], at: "open" });
-    expect(
-      railState({ ...base, standing: { state: "hold", reason: "payment" } as OrgStanding, funnel: null }),
-    ).toMatchObject({ steps: ["name", "business", "team", "plan"], at: "plan" });
+    // "Continue without an AI" ("ai"): the photo all the same, the AI left for later.
+    expect(web({ ...paid, funnel: { passed: "ai" } })).toMatchObject({ at: "celebrate", thinks: false, aiLater: true });
   });
 
-  test("the person's own step, after what it does, on the web only (ADR 0162, amended 2026-11-12)", () => {
-    const base = {
-      orgId: "o1",
-      standing: undefined,
-      billingUrl: null,
-      context: "Loja online",
-      team: 0,
-      picked: null,
-      funnel: { thinks: false, passed: "context" as const, about: false },
-    };
-    // Not said yet: their step, before the team's.
-    expect(railState(base)).toMatchObject({
-      steps: ["name", "business", "you", "team", "ai", "people"],
-      at: "you",
-      step: "you",
-      index: 2,
-      reached: 2,
+  test("self-hosted: no plan step, before or after the AI", () => {
+    const made = { agent: true, funnel: { passed: "agents" as const } };
+    expect(web(made)).toMatchObject({ steps: ["area", "agent", "ai", "celebrate"], at: "ai", hasPlanStep: false });
+    expect(web({ ...made, funnel: { passed: "ai" } })).toMatchObject({ at: "celebrate", hasPlanStep: false });
+    // A step stored past the plan's lists the plan only on a server with billing, which held the workspace for it.
+    expect(web({ ...made, billingUrl: BILLING, funnel: { passed: "ai" } }).hasPlanStep).toBe(true);
+  });
+
+  test('"Not now" on the plan: the photo next, the plan still waiting', () => {
+    const atPlan = { agent: true, standing: payment, billingUrl: BILLING, funnel: { passed: "computer" as const } };
+    expect(web(atPlan)).toMatchObject({ at: "plan", waitsForPlan: true, planLater: false });
+    expect(web({ ...atPlan, planLater: true })).toMatchObject({
+      at: "celebrate",
+      step: "celebrate",
+      waitsForPlan: true,
+      planLater: true,
     });
-    // Said (an area, or skipped), once per account: the team step is next, and theirs may be gone back to.
-    const said = { ...base, funnel: { ...base.funnel, about: true } };
-    expect(railState(said)).toMatchObject({ at: "team", reached: 3 });
-    expect(railState({ ...said, picked: "you" })).toMatchObject({ step: "you", index: 2 });
-    // A workspace already past its team asks it too, before going on.
-    expect(railState({ ...base, team: 3 }).at).toBe("you");
-    // A personal workspace has it right after its first question.
-    expect(railState({ ...base, context: "", personal: true })).toMatchObject({
-      steps: ["name", "you", "team", "ai"],
-      at: "you",
+    // Saved ("ai" while the plan waits): a reload keeps the photo, the plan still to do.
+    expect(web({ ...atPlan, funnel: { passed: "ai" } })).toMatchObject({
+      at: "celebrate",
+      waitsForPlan: true,
+      planLater: true,
     });
-    // The phone has no such step.
-    expect(railState({ ...base, funnel: null })).toMatchObject({ steps: ["name", "business", "team"], at: "team" });
-    expect(railSteps({ plan: false, ai: true, personal: false, you: true })).toEqual([
-      "name",
-      "business",
-      "you",
-      "team",
-      "ai",
-    ]);
+    // Paid since: the photo, the plan no longer left for later.
+    expect(web({ agent: true, billingUrl: BILLING, funnel: { passed: "ai" } })).toMatchObject({
+      at: "celebrate",
+      planLater: false,
+    });
+  });
+
+  test("a first delivery armed: past the agent step whatever was stored, and never back to the work or the agent", () => {
+    // Self-hosted: the AI step; on agentes.chat Cloud, the plan.
+    expect(web({ agent: true, armed: true })).toMatchObject({ at: "ai", step: "ai" });
+    expect(web({ agent: true, armed: true, standing: payment, billingUrl: BILLING })).toMatchObject({ at: "plan" });
+    expect(web({ agent: true, armed: true, picked: "area" }).step).toBe("ai");
+    expect(web({ agent: true, armed: true, picked: "agent" }).step).toBe("ai");
+    // Not armed yet: back to the work from its agent, as before.
+    expect(web({ agent: true, picked: "area" }).step).toBe("area");
+  });
+
+  test("an AI not known yet reads as not yet: the AI step, never the photo", () => {
+    const made = { agent: true, funnel: { passed: "agents" as const, thinks: undefined } };
+    expect(web(made)).toMatchObject({ at: "ai", thinks: false, aiLater: false });
+  });
+
+  test("a step gone back to is shown only while it stays answered", () => {
+    const atPlan = { agent: true, standing: payment, billingUrl: BILLING, funnel: { passed: "agents" as const } };
+    // Back to the work from its agent, or from the plan.
+    expect(web({ agent: true, picked: "area" })).toMatchObject({ step: "area", at: "agent", reached: 1 });
+    expect(web({ ...atPlan, picked: "agent" })).toMatchObject({ step: "agent", at: "plan" });
+    // Not answered yet: the step reached.
+    expect(web({ agent: true, standing: payment, billingUrl: BILLING, picked: "plan" }).step).toBe("agent");
+    expect(web({ ...atPlan, picked: "ai" }).step).toBe("plan");
+    // A step the rail doesn't have: the one reached.
+    expect(web({ agent: true, funnel: { passed: "agents" }, picked: "plan" }).step).toBe("ai");
   });
 
   test("the AI step's answer: every agent thinks, read only from a status that lists them all", () => {
@@ -287,52 +167,90 @@ describe("the onboarding's rail (ADR 0162)", () => {
       agents: Object.entries(states).map(([agentId, state]) => ({ agentId, state })),
     });
     // Waiting for its computer still thinks.
-    expect(teamThinks(["lodi", "nina"], status({ lodi: "ready", nina: "waiting" }))).toBe(true);
-    expect(teamThinks(["lodi", "nina"], status({ lodi: "ready", nina: "no_ai" }))).toBe(false);
+    expect(teamThinks(["lodi", "iara"], status({ lodi: "ready", iara: "waiting" }))).toBe(true);
+    expect(teamThinks(["lodi", "iara"], status({ lodi: "ready", iara: "no_ai" }))).toBe(false);
     // Not read yet, or read before an agent was made: no answer, so the page waits for a fresh read.
     expect(teamThinks(["lodi"], undefined)).toBeUndefined();
-    expect(teamThinks(["lodi", "nina"], status({ lodi: "ready" }))).toBeUndefined();
+    expect(teamThinks(["lodi", "iara"], status({ lodi: "ready" }))).toBeUndefined();
     expect(teamThinks([], status({}))).toBe(false);
   });
+});
 
-  test("a personal workspace walks the same funnel with no business step (ADR 0159)", () => {
-    const funnel = { thinks: false, passed: "context" as const };
-    const base = {
-      orgId: "o1",
-      standing: undefined,
-      billingUrl: null,
-      context: "",
-      team: 0,
-      picked: null,
-      personal: true,
-      funnel,
-    };
-    // Before it exists, "For me" already shows its path; self-hosted 4 steps, agentes.chat Cloud 5.
-    expect(railState({ ...base, orgId: null }).steps).toEqual(["name", "you", "team", "ai"]);
-    expect(railState({ ...base, orgId: null, billingUrl: "https://billing.example.com" })).toMatchObject({
-      steps: ["name", "you", "team", "plan", "ai"],
-      at: "name",
-    });
-    // Made, with no context and no agents: the team step's question, never "what it does".
-    expect(railState(base)).toMatchObject({
-      steps: ["name", "you", "team", "ai"],
-      at: "team",
-      step: "team",
-      reached: 2,
-    });
-    // Agents brought in, or "no agents yet" saved ("agents"), answer it.
-    expect(railState({ ...base, team: 2 }).at).toBe("ai");
-    expect(railState({ ...base, funnel: { ...funnel, passed: "agents" } }).at).toBe("ai");
-    expect(railState({ ...base, funnel: { thinks: true, passed: "agents" } }).at).toBe("open");
-    // On a hold for its first plan: the plan step after the team's.
-    const held = { ...base, standing: { state: "hold", reason: "payment" } as OrgStanding };
-    expect(railState({ ...held, funnel: { ...funnel, passed: "agents" } })).toMatchObject({
-      steps: ["name", "you", "team", "plan", "ai"],
-      at: "plan",
-      index: 3,
-    });
+describe("Step N of M (stepCount)", () => {
+  const count = (steps: RailStep[]) => (["who", ...steps] as const).map((s) => [s, stepCount(steps, s)] as const);
+
+  test("on agentes.chat Cloud: what it is for, the work, its agent and the plan; the AI and the photo past the count", () => {
+    expect(count(["area", "agent", "plan", "ai", "celebrate"])).toEqual([
+      ["who", { n: 1, total: 4 }],
+      ["area", { n: 2, total: 4 }],
+      ["agent", { n: 3, total: 4 }],
+      ["plan", { n: 4, total: 4 }],
+      ["ai", null],
+      ["celebrate", null],
+    ]);
   });
 
+  test("self-hosted, with no plan: three", () => {
+    expect(count(["area", "agent", "ai", "celebrate"])).toEqual([
+      ["who", { n: 1, total: 3 }],
+      ["area", { n: 2, total: 3 }],
+      ["agent", { n: 3, total: 3 }],
+      ["ai", null],
+      ["celebrate", null],
+    ]);
+  });
+
+  test("a team names its workspace second: five with a plan, four without", () => {
+    const named = (steps: RailStep[]) =>
+      (["who", "name", ...steps] as const).map((s) => [s, stepCount(steps, s, { named: true })] as const);
+    expect(named(["area", "agent", "plan", "ai", "celebrate"])).toEqual([
+      ["who", { n: 1, total: 5 }],
+      ["name", { n: 2, total: 5 }],
+      ["area", { n: 3, total: 5 }],
+      ["agent", { n: 4, total: 5 }],
+      ["plan", { n: 5, total: 5 }],
+      ["ai", null],
+      ["celebrate", null],
+    ]);
+    expect(named(["area", "agent", "ai", "celebrate"]).slice(0, 4)).toEqual([
+      ["who", { n: 1, total: 4 }],
+      ["name", { n: 2, total: 4 }],
+      ["area", { n: 3, total: 4 }],
+      ["agent", { n: 4, total: 4 }],
+    ]);
+    // No name step for a personal workspace: its name is the person's.
+    expect(stepCount(["area", "agent", "plan"], "name")).toBeNull();
+  });
+});
+
+describe("the phone's rail (phoneRail), its own until the phone takes the web's", () => {
+  const phone = (f: Partial<Parameters<typeof phoneRail>[0]> = {}) =>
+    phoneRail({ orgId: "o1", standing: undefined, billingUrl: null, context: "", team: 0, ...f });
+
+  test("its steps: the name, what it does, the team, and the plan only while one is waited for", () => {
+    expect(phone({ orgId: null, billingUrl: BILLING })).toEqual({
+      steps: ["name", "business", "team", "plan"],
+      at: "name",
+    });
+    expect(phone({ orgId: null })).toEqual({ steps: ["name", "business", "team"], at: "name" });
+    // Made on a server with billing that never held it: no plan step.
+    expect(phone({ billingUrl: BILLING }).steps).toEqual(["name", "business", "team"]);
+    expect(phone({ standing: payment }).steps).toEqual(["name", "business", "team", "plan"]);
+  });
+
+  test("the step comes from the workspace's data: what it does, its team, its plan, then it opens", () => {
+    expect(phone().at).toBe("business");
+    expect(phone({ context: "  ", team: 3 }).at).toBe("business");
+    expect(phone({ context: "Loja online" }).at).toBe("team");
+    expect(phone({ context: "Loja online", team: 3, standing: payment }).at).toBe("plan");
+    expect(phone({ context: "Loja online", team: 3 }).at).toBe("open");
+    // A personal workspace (ADR 0159) opens once made, whatever its data: its right hand's card holds the rest.
+    expect(phone({ personal: true, standing: payment }).at).toBe("open");
+    expect(phone({ orgId: null, personal: true }).at).toBe("name");
+  });
+});
+
+describe("the onboarding's other answers", () => {
   test("the plan step says what each agent does first: its first routine, else its role", () => {
     const iara = { id: "a1", role: "Atendimento" };
     expect(firstJob(iara, [{ agentId: "a2", name: "Posts da semana" }])).toBe("Atendimento");
@@ -342,7 +260,7 @@ describe("the onboarding's rail (ADR 0162)", () => {
     expect(firstJob(iara)).toBe("Atendimento");
   });
 
-  test("step 2's type and sentence are saved together and read back, on any device", () => {
+  test("the phone's step 2: its type and sentence are saved together and read back, on any device", () => {
     const words: Record<string, string> = {
       "teamPlan.business.store": "Loja online",
       "teamPlan.business.clinic": "Clínica ou consultório",
@@ -363,7 +281,7 @@ describe("the onboarding's rail (ADR 0162)", () => {
     expect(aboutOf(t, "Lojas online de roupas")).toEqual({ business: null, line: "Lojas online de roupas" });
   });
 
-  test("the team step's template: the one picked, else the business's, else the first", () => {
+  test("the phone's team step's template: the one picked, else the business's, else the first", () => {
     const list = [{ id: "agency" }, { id: "store" }];
     expect(templateFor(list, null, "store")?.id).toBe("store");
     expect(templateFor(list, "agency", "store")?.id).toBe("agency");
@@ -372,9 +290,12 @@ describe("the onboarding's rail (ADR 0162)", () => {
     expect(templateFor([], null, "store")).toBeUndefined();
   });
 
-  test("where it opens: #general once paid or done, its right hand's DM when the plan was left", () => {
+  test("where it opens: #general once paid or done, its right hand's DM when the plan was left or it is personal", () => {
     expect(landingOf("paid")).toBe("general");
     expect(landingOf("done")).toBe("general");
     expect(landingOf("skipped")).toBe("rightHand");
+    // A personal workspace's #general is out of sight (ADR 0159).
+    expect(landingOf("paid", true)).toBe("rightHand");
+    expect(landingOf("done", true)).toBe("rightHand");
   });
 });

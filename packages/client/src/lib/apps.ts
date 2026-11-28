@@ -77,8 +77,8 @@ export function appCreatedLine(t: TFunction, n: Pick<AppNotification, "latest">)
 /**
  * The import's "Connect with MCP" way in: the address to connect and the request to paste, or unavailable with the
  * line saying why: apps that call from their own servers can't reach this one (a self-hosted server on a private
- * host), or the workspace is on a hold, which refuses an app's sign-in and its calls (`workRefusal`), as a new Cloud
- * workspace is until its first plan. Null while loading.
+ * host), or the workspace is on a hold, which refuses an app's calls (`workRefusal`), as a new Cloud workspace's are
+ * until its first plan (all but `propose_first_agents`, `aiAppAsk`). Null while loading.
  */
 export function aiAppImport(
   t: TFunction,
@@ -97,6 +97,28 @@ export function aiAppImport(
     url: list.serverUrl,
     prompt: t("onboarding.import.aiApp.prompt", { url: list.serverUrl }),
   };
+}
+
+/**
+ * The onboarding's ask for the first agents (ADR 0264): the address the person connects their own AI to, or
+ * unavailable with the line saying why. Unlike `aiAppImport`, a workspace waiting for its first plan is open: the ask
+ * comes before Checkout, and the server takes that connection and its `propose_first_agents` (ADR 0119 addendum of
+ * 2026-11-26). Any other hold or a suspension still refuses. Null while loading.
+ */
+export function aiAppAsk(
+  t: TFunction,
+  list: Pick<AppsList, "serverUrl" | "serverPublic"> | undefined,
+  standing: Pick<OrgStanding, "state" | "reason"> | null | undefined,
+) {
+  if (!list) return null;
+  if (!list.serverPublic) return { available: false as const, note: t("onboarding.import.aiApp.private") };
+  const hold = billingHoldOf(standing);
+  if (!standingActive(standing) && hold !== "payment")
+    return {
+      available: false as const,
+      note: t(hold ? "onboarding.import.aiApp.held" : "onboarding.import.aiApp.paused"),
+    };
+  return { available: true as const, url: list.serverUrl };
 }
 
 /** The workspace a consent pre-selects: the current one, else the first one that isn't paused. */

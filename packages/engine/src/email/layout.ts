@@ -325,7 +325,7 @@ function block(b: Block, src: (file: string) => string, last: boolean): string {
       .map(
         ([title, text], i) => `<tr>
 <td width="36" valign="top" style="width:36px;padding:0 0 ${under(i, b.steps, 14)}px"><table ${T("")}><tr><td class="num" width="22" height="22" align="center" valign="middle" style="width:22px;height:22px;border:1px solid ${L.border};border-radius:7px;background:${L.card};${P};font-size:13px;line-height:22px;font-weight:600;color:${L.muted}">${i + 1}</td></tr></table></td>
-<td valign="top" class="tx" style="padding:0 0 ${under(i, b.steps, 14)}px;${P};font-size:16px;line-height:24px;color:${L.text}"><b class="ink" style="font-weight:600;color:${L.ink}">${esc(title)}</b> ${html(text)}</td>
+<td valign="top" class="tx" style="padding:0 0 ${under(i, b.steps, 14)}px;${PW};font-size:16px;line-height:24px;color:${L.text}"><b class="ink" style="font-weight:600;color:${L.ink}">${esc(title)}</b> ${html(text)}</td>
 </tr>`,
       )
       .join("")}</table>`;

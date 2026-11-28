@@ -20,7 +20,6 @@ import { playSound } from "@agenteschat/client/lib/sounds";
 import { isEmail } from "@agenteschat/client/lib/text";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
 import {
-  Avatar,
   Button,
   ChipField,
   type ChipFieldToken,
@@ -62,8 +61,8 @@ import { useDirectory } from "@/hooks/useDirectory";
 import { useEdited } from "@/hooks/useEdited";
 import { useTextLimit } from "@/hooks/useTextLimit";
 import { useToast } from "@/lib/toast";
+import { addressToken, type ChipAddress, type ChipState, chipsFrom } from "./AddressTokens";
 import { useCopied } from "./copied";
-import { type ChipAddress, chipsFrom } from "./EmailChips";
 import {
   AgentsField,
   agentsToSend,
@@ -214,13 +213,14 @@ function InviteDialog({ request, open, onClose }: { request: InviteRequest; open
   const waiting = new Set(
     (invitations.data ?? []).filter((i) => i.status === "pending").map((i) => i.email.toLowerCase()),
   );
-  const stateOf = (c: ChipAddress) =>
+  const stateOf = (c: ChipAddress): ChipState =>
     !c.valid ? "bad" : members.has(c.email) ? "member" : waiting.has(c.email) ? "invited" : "ok";
-  // What's typed and not a token yet counts, as leaving the field would make it one.
+  // What's typed and not a token yet counts for the send, as leaving the field would make it one.
   const all = draft.trim() ? [...chips, ...chipsFrom(draft, chips)] : chips;
   const ready = all.filter((c) => stateOf(c) === "ok");
-  const bad = all.some((c) => !c.valid);
-  const leftOut = all.some((c) => stateOf(c) === "member" || stateOf(c) === "invited");
+  // The line under the field reads the tokens alone: an address still being typed isn't finished, so it is never marked.
+  const bad = chips.some((c) => !c.valid);
+  const leftOut = chips.some((c) => stateOf(c) === "member" || stateOf(c) === "invited");
 
   // An agent's page opens over this dialog's place: the dialog closes for it.
   const goTo = (a: Agent) => {
@@ -288,24 +288,8 @@ function InviteDialog({ request, open, onClose }: { request: InviteRequest; open
     void sendNow();
   };
 
-  const tokens: ChipFieldToken[] = chips.map((c) => {
-    const state = stateOf(c);
-    return {
-      key: c.email,
-      label: c.email,
-      leading: <Avatar name={c.email} initials={c.email.charAt(0).toUpperCase()} size="xs" />,
-      removeLabel: t("common.removeName", { name: c.email }),
-      state: state === "bad" ? "invalid" : state === "ok" ? undefined : "soft",
-      note:
-        state === "bad"
-          ? t("members.chips.check")
-          : state === "member"
-            ? t(modeKey(org, "members.chips.member"), { org: org.name })
-            : state === "invited"
-              ? t("members.chips.invited")
-              : undefined,
-    };
-  });
+  const inAlready = t(modeKey(org, "members.chips.member"), { org: org.name });
+  const tokens: ChipFieldToken[] = chips.map((c) => addressToken(t, c, stateOf(c), { member: inAlready }));
 
   if (held) {
     return (

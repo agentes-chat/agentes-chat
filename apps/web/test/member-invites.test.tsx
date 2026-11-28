@@ -308,6 +308,26 @@ describe("the invite dialog, one screen", () => {
     expect(invite.querySelector("#invite-to-line")?.textContent).toBe("Quem já está ou já foi convidado fica de fora.");
   });
 
+  test("Para: an address still being typed is never marked; once finished, one that isn't an address is", async () => {
+    await members();
+    const invite = await openInvite();
+    const to = within(invite).getByLabelText("Para");
+    // Half an address, then a member's: nothing said under the field while it is being typed.
+    for (const value of ["a", "ana@", "joao@acme.com.br"]) {
+      await act(async () => fireEvent.change(to, { target: { value } }));
+      expect({ value, line: invite.querySelector("#invite-to-line")?.textContent ?? null }).toEqual({
+        value,
+        line: null,
+      });
+    }
+    await act(async () => fireEvent.change(to, { target: { value: "ana@" } }));
+    await key(to, "Enter");
+    expect(tokensOf("invite-to")).toEqual(["ana@"]);
+    expect(invite.querySelector("#invite-to-line")?.textContent).toBe(
+      "Confira os e-mails marcados: eles não recebem convite.",
+    );
+  });
+
   test("agents: each one says whether it can go and why; a restricted one you open starts answering the person", async () => {
     const state = withSupport();
     const atlas = state.agents.find((a) => a.id === ATLAS_ID) as Agent;

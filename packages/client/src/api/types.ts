@@ -1467,6 +1467,127 @@ export interface TeamTemplate {
   team: TeamPlan;
 }
 
+/** An app a first agent needs: `key` names its mark (a connector's brand, a mailbox's provider) when known. */
+export interface FirstAgentApp {
+  key: string | null;
+  label: string;
+}
+
+/** The routine of a first agent: `cron` read by the server in the person's time zone, null when it couldn't be. */
+export interface FirstAgentRoutine {
+  title: string;
+  /** As the AI wrote it ("toda segunda às 8:00"). */
+  schedule: string;
+  prompt: string;
+  cron: string | null;
+  timezone: string | null;
+}
+
+/** One option for the person's first agent, proposed by their own AI like a job opening (ADR 0264). */
+export interface FirstAgentOption {
+  name: string;
+  /** Free when proposed; the server takes a free one again when it is picked. */
+  handle: string;
+  role: string;
+  why: string;
+  /** Its responsibilities, 1 to 4. */
+  tasks: string[];
+  apps: FirstAgentApp[];
+  routine: FirstAgentRoutine | null;
+  /** What it delivers on its first day, up to 3. */
+  today: string[];
+  instructions: string;
+  /** Picked by the server: a different color for each option. */
+  appearance: Required<AgentLookInput>;
+}
+
+/** The person's newest first-agent proposal (`GET …/first-agents`): sent through `propose_first_agents` or pasted. */
+export interface FirstAgents {
+  id: string;
+  /** What the AI said the workspace (or the person) does. */
+  about: string | null;
+  source: "mcp" | "paste";
+  /** 1 to 3, the task that takes the most time first. */
+  options: FirstAgentOption[];
+  /** The option picked, from when the pick starts. */
+  picked: number | null;
+  /** The agent made from it, once made. */
+  agentId: string | null;
+  createdAt: string;
+}
+
+/** What an AI with no connector answers, pasted (`POST …/first-agents`): the shape `propose_first_agents` takes. */
+export interface FirstAgentsInput {
+  about?: string;
+  options: {
+    name: string;
+    handle?: string;
+    role: string;
+    why: string;
+    tasks: string[];
+    apps?: string[];
+    routine?: { title: string; schedule: string; prompt: string; cron?: string };
+    today?: string[];
+    instructions?: string;
+  }[];
+}
+
+/** The agent an option became (`POST …/first-agents/{id}/pick`): its channel in a team's workspace, else my DM. */
+export interface FirstAgentPicked {
+  agentId: string;
+  handle: string;
+  channelId: string;
+}
+
+/**
+ * An agent of one of the onboarding's areas, or of "Outro" (`POST …/first-agents/start`, ADR 0264 addendum): made with
+ * no routine (connecting an app brings it, ADR 0242); its first delivery is kept.
+ */
+export interface FirstAgentStartInput {
+  /** The onboarding's area (`support`, `life`, `custom`), up to 40 characters. */
+  area: string;
+  /** 1 to 60 characters. */
+  name: string;
+  /** Up to 80 characters. */
+  role?: string;
+  /** Up to 4000 characters. */
+  instructions?: string;
+  appearance?: Required<AgentLookInput> | null;
+  /** What it delivers first when it has no routine of mine, up to 500 characters. */
+  task?: string;
+  /** Catalog ids of the apps its job needs, up to 8: its checklist asks for those not connected yet. */
+  apps?: string[];
+  /** My first agent made a moment ago that this one takes the place of: archived while its delivery hasn't fired. */
+  replace?: string | null;
+}
+
+/**
+ * An agent I brought from another app on the onboarding's work step, as my first agent (`POST …/first-agents/adopt`,
+ * ADR 0264 addendum): its first delivery kept, in the place of the one made a moment ago (`replace`, archived).
+ */
+export interface FirstAgentAdoptInput {
+  agentId: string;
+  replace?: string | null;
+}
+
+/**
+ * My first delivery here (`GET …/first-delivery`, ADR 0264 addendum): what the agent I set up on the onboarding does
+ * for me first, in my DM with it, once I left the agent's step (`keepDelivery` arms it), the workspace has its plan and
+ * the agent its AI. Its reply carries `meta.firstDelivery` (`{ summary }`).
+ */
+export interface FirstDeliveryRow {
+  agentId: string;
+  /** The onboarding's area; null for an agent brought from another app. */
+  area: string | null;
+  task: string;
+  /** When I left the agent's step: it fires only once armed. */
+  armedAt: string | null;
+  /** When it went out; null while it waits to be armed, for the plan or the AI. */
+  firedAt: string | null;
+  /** The run it woke in my DM with the agent, once fired. */
+  runId: string | null;
+}
+
 /** `meta.replyChips` of a right hand's question: answers to tap, each sent as the person's own message. */
 export interface ReplyChips {
   choices: string[];
@@ -2389,6 +2510,12 @@ export type IssueActivityEvent = {
 /** You followed or unfollowed a thread (on any of your devices). */
 export type ThreadFollowEvent = { type: "thread.follow" } & ThreadFollow;
 
+/** A first-agent proposal arrived for me (ADR 0264): `GET …/first-agents` has it. */
+export interface FirstAgentsEvent {
+  type: "first_agents.received";
+  id: string;
+}
+
 /** Events for one person (`{ type: "event", scope: "user" }` frames), e.g. approvals they can decide. */
 export type UserEvent =
   | { type: "approval.created" | "approval.decided"; approval: Approval }
@@ -2396,6 +2523,7 @@ export type UserEvent =
   | NotificationEvent
   | ThreadFollowEvent
   | VoiceDroppedEvent
+  | FirstAgentsEvent
   | { type: string };
 
 // ── Approvals, connectors, scopes ─────────────────────────────────────────────

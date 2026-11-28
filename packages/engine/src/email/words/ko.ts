@@ -50,6 +50,8 @@ export const words: EmailWords = {
       ),
     more: (n) => `${n}개 더`,
     what: "agentes.chat은 사람과 AI 에이전트가 함께 일하는 곳이에요.",
+    arrive:
+      "참여하면 나만의 에이전트를 만들어요. 내 AI가 시간을 가장 많이 쓰는 일을 찾아서 그 일을 맡을 에이전트를 제안해요.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "보낸 메시지: " }, `“${note}”`],
     button: "초대 수락",
     small: "초대는 7일 동안 유효해요. 이 이메일 주소로 수락하세요.",
@@ -561,6 +563,50 @@ export const words: EmailWords = {
         return `${routines > 0 ? `${a}와 ${r}` : a}가 준비됐어요. 이제 agentes.chat 요금제만 있으면 돼요.`;
       },
       why: () => "agentes.chat의 이 워크스페이스가 내 것이어서 이 메일을 보내 드렸어요. 이런 알림은 두 번만 보내요.",
+    },
+    picked: {
+      first: {
+        subject: "첫 에이전트가 준비됐어요",
+        preheader: "AI가 어디서 시작할지 찾았어요. 이제 채용만 하면 돼요.",
+        headline: "첫 에이전트가 준비됐어요",
+        body: (ai, agent, _feminine, role, today) => [
+          `${ai ?? "AI"}가 어디서 시작할지 찾았어요. `,
+          ...(role ? [`${role} 담당 `] : []),
+          { b: agent },
+          today > 0 ? `이(가) 오늘 바로 결과물 ${today}개를 낼 수 있어요. ` : "이(가) 기다리고 있어요. ",
+          "이제 채용만 하면 돼요.",
+        ],
+        button: "팀 채용하기",
+        personal: { subject: "첫 에이전트가 준비됐어요", button: "에이전트 채용하기" },
+      },
+      later: {
+        subject: (today) =>
+          today > 1
+            ? `첫 결과물 ${today}개가 아직 시작되지 않았어요`
+            : today === 1
+              ? "첫 결과물이 아직 시작되지 않았어요"
+              : "첫 에이전트가 아직 일을 시작하지 않았어요",
+        preheader: "오늘 채용하면 오늘 일이 시작돼요.",
+        headline: (today) =>
+          today > 1
+            ? `첫 결과물 ${today}개가 아직 시작되지 않았어요`
+            : today === 1
+              ? "첫 결과물이 아직 시작되지 않았어요"
+              : "첫 에이전트가 아직 일을 시작하지 않았어요",
+        body: (agent, _feminine, today, org) =>
+          today > 0
+            ? [{ b: agent }, "이(가) ", { b: org }, "에서 첫날 낼 결과물:"]
+            : [{ b: agent }, "은(는) ", { b: org }, " 요금제가 시작되기를 기다리고 있어요."],
+        start: (agent) => ["오늘 채용하면 ", { b: agent }, "은(는) 오늘 시작해요."],
+        button: "팀 채용하기",
+        personal: {
+          body: (agent, _feminine, today) =>
+            today > 0
+              ? [{ b: agent }, "이(가) 첫날 낼 결과물:"]
+              : [{ b: agent }, "은(는) 요금제가 시작되기를 기다리고 있어요."],
+          button: "에이전트 채용하기",
+        },
+      },
     },
   },
   surface: {

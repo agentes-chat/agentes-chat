@@ -260,7 +260,8 @@ describe("an invitation link asks to join", () => {
     await act(() => new Promise((r) => setTimeout(r, 1300)));
     await settle(10);
     expect(calls.filter((c) => c.method === "signInOneTime").map((c) => c.args)).toEqual([["one-time-token"]]);
-    expect(router.state.location.pathname.startsWith(`/org/${ORG_ID}`)).toBe(true);
+    // Someone who may create agents there and has none of their own opens their own onboarding first (ADR 0264).
+    expect(router.state.location.pathname).toBe(`/welcome/${ORG_ID}`);
   });
 
   test("an admin's answer while the page waits: turned down with their note, or a request that ended", async () => {

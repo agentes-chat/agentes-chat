@@ -5,6 +5,7 @@ import {
   and,
   asc,
   type Database,
+  desc,
   type Executor,
   eq,
   inArray,
@@ -41,6 +42,7 @@ import {
   type Text,
 } from "./email/layout";
 import { type Words, wordsFor } from "./email/words";
+import type { FirstAgentOption } from "./first-agents";
 import { dayAndTime } from "./format";
 import { adminIds } from "./gateway";
 import { publicHostAddress, type ResolveHost, resolveHostDns } from "./net-guard";
@@ -53,7 +55,17 @@ import { isPersonalWorkspace } from "./workspace-mode";
 
 export { EMAIL_DARK_HEAD, EMAIL_PICTURES, type EmailArt, type EmailLocale } from "./email/layout";
 
-const { users, organizations, organizationInvitations, agents, approvals, channels, orgRoles } = schema;
+const {
+  users,
+  organizations,
+  organizationInvitations,
+  agents,
+  approvals,
+  appGrants,
+  channels,
+  firstAgentProposals,
+  orgRoles,
+} = schema;
 
 /**
  * The sender's name when `EMAIL_FROM` is unset: the name on the logo and in the subjects. The self-host setup
@@ -67,6 +79,19 @@ export const defaultEmailFrom = (publicUrl: string) => `${SENDER_NAME} <ping@${n
 /** A stored or chosen language as an email locale: any registry language ("pt-PT" reads pt-BR), else English. */
 export const emailLocale = (value: unknown): EmailLocale =>
   (typeof value === "string" ? appLocale([value], true) : null) ?? "en";
+
+/** The first agent a `plan_waiting` email speaks of, picked from what a person's own AI proposed (ADR 0264). */
+export interface PlanWaitingPick {
+  /** Its name and role as the AI proposed them: typed words, inert in the body only. */
+  agentName: string;
+  role: string;
+  /** What it delivers on its first day, as proposed (up to 3, typed words too). */
+  today: string[];
+  /** The AI that proposed it, by its app's verified mark ("Claude"); left out when pasted or unknown. */
+  ai?: string;
+  /** The second reminder, on the third day: what hasn't started yet. */
+  later?: true;
+}
 
 /**
  * Transactional emails in pt-BR or English (`locale`, the recipient's; jobs
@@ -321,7 +346,10 @@ export type EmailTemplate =
       url: string;
       personal?: true;
     }
-  /** A team or a kept message waits for the workspace's first plan (ADR 0079 §6), to whoever can pay. */
+  /**
+   * A team or a kept message waits for the workspace's first plan (ADR 0079 §6), to whoever can pay. `picked`: its
+   * first agent came from what a person's own AI proposed (ADR 0264), and the email speaks of it instead of the counts.
+   */
   | {
       kind: "plan_waiting";
       locale: EmailLocale;
@@ -332,6 +360,7 @@ export type EmailTemplate =
       crew?: Look[];
       url: string;
       personal?: true;
+      picked?: PlanWaitingPick;
     }
   /** An AI app or a personal token got access to the person's account in a workspace (ADR 0119), to that person. */
   | { kind: "app_connected"; locale: EmailLocale; appName: string; orgName: string; url: string; personal?: true }
@@ -551,6 +580,38 @@ export const modeStamp = async (db: Executor, orgId: string): Promise<{ personal
 const inMode = <G extends { personal: object }>(group: G, personal: boolean | undefined): G =>
   personal ? deepMerge(group, group.personal) : group;
 
+/** The app's starter names that are feminine without ending in "a". */
+const FEMININE_NAMES = new Set(["iris"]);
+
+/**
+ * An agent's name read as feminine for the words that agree with it ("a Ada", "o Caio"), as the apps read it: names
+ * ending in "a" are (`isFeminineName` in `@agenteschat/client`, which the engine doesn't import).
+ */
+function feminineName(name: string) {
+  const plain = name
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  return plain.endsWith("a") || FEMININE_NAMES.has(plain);
+}
+
+/**
+ * A role inside a sentence ("for billing"): lower case, unless it reads as an acronym ("SEO"). German keeps it as
+ * written: its nouns start with a capital.
+ */
+function roleInSentence(role: string, lang: string) {
+  const r = role.trim();
+  if (lang === "de") return r;
+  const second = r.charAt(1);
+  return second && second === second.toLocaleLowerCase(lang) && second !== second.toLocaleUpperCase(lang)
+    ? r.charAt(0).toLocaleLowerCase(lang) + r.slice(1)
+    : r;
+}
+
+/** A first day's delivery as proposed, shown whole: the engine keeps at most 200 characters (`firstAgentsInput`). */
+const TODAY_SHOWN = 200;
+
 const LINE_BREAKS = new Set(["\n", "\r", "\u2028", "\u2029"]);
 
 /**
@@ -656,6 +717,8 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
             ? [{ note: c.noteFrom(inertText(t.inviterName), inertText(t.note, INVITE_NOTE_SHOWN)) }]
             : []),
           { p: c.what },
+          // A team's invitation only: a personal one says only whose space it is (ADR 0159).
+          ...(t.personal ? [] : [{ p: c.arrive }]),
           { button: c.button, url: t.url },
           { small: c.small },
           fallback(t.url),
@@ -1183,13 +1246,50 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
     case "plan_waiting": {
       const c = inMode(w.planWaiting, t.personal);
       const org = inertText(t.orgName);
+      const scene = { crew: crewOr(t.crew) };
+      const p = t.picked;
+      if (p?.agentName) {
+        // The agent's name, its role and its first day are typed words: only in the body, made inert (ADR 0069).
+        const agent = inertText(p.agentName);
+        const feminine = feminineName(p.agentName);
+        const today = p.today
+          .map((item) => inertText(item, TODAY_SHOWN))
+          .filter(Boolean)
+          .slice(0, 3);
+        if (p.later) {
+          const l = inMode(c.picked.later, t.personal);
+          return doc(
+            l.subject(today.length),
+            l.preheader,
+            l.headline(today.length),
+            [
+              { p: l.body(agent, feminine, today.length, org) },
+              ...(today.length > 0 ? [{ steps: today.map((item): [string, string] => [item, ""]) }] : []),
+              { p: l.start(agent, feminine) },
+              { button: l.button, url: t.url },
+            ],
+            c.why(org),
+            scene,
+          );
+        }
+        const f = inMode(c.picked.first, t.personal);
+        const role = inertText(roleInSentence(p.role, lang));
+        return doc(
+          f.subject,
+          f.preheader,
+          f.headline,
+          [{ p: f.body(p.ai ?? null, agent, feminine, role, today.length) }, { button: f.button, url: t.url }],
+          c.why(org),
+          scene,
+        );
+      }
       return doc(
         c.subject,
         c.preheader,
         c.headline,
         [{ p: c.body(t.agents, t.channels, t.routines) }, { button: c.button, url: t.url }],
         c.why(org),
-        { crew: crewOr(t.crew) },
+        scene,
       );
     }
     case "account_deleting": {
@@ -1352,10 +1452,46 @@ export async function queuePlanWaiting(db: Executor, orgId: string) {
   }
 }
 
+/** The AI a first agent's proposal came from, by its app's verified mark: the assistants people ask, not an editor. */
+const AI_OF_MARK: Record<string, string> = { claude: "Claude", openai: "ChatGPT" };
+
+/**
+ * The workspace's first agent, when it was picked from what a person's own AI proposed (ADR 0264): the option's name,
+ * role and first day, and the AI that proposed it when its app is one we know. Null when the first agent came another
+ * way (made by hand, imported) or there is none.
+ */
+async function pickedFirstAgent(db: Database, orgId: string): Promise<PlanWaitingPick | null> {
+  const [first] = await db
+    .select({ id: agents.id })
+    .from(agents)
+    .where(and(eq(agents.orgId, orgId), isNull(agents.archivedAt), isNull(agents.builtin)))
+    .orderBy(asc(agents.createdAt), asc(agents.id))
+    .limit(1);
+  if (!first) return null;
+  const [row] = await db
+    .select({ options: firstAgentProposals.options, picked: firstAgentProposals.picked, mark: appGrants.brand })
+    .from(firstAgentProposals)
+    .leftJoin(appGrants, eq(appGrants.id, firstAgentProposals.grantId))
+    .where(and(eq(firstAgentProposals.orgId, orgId), eq(firstAgentProposals.agentId, first.id)))
+    .orderBy(desc(firstAgentProposals.createdAt))
+    .limit(1);
+  if (!row || row.picked === null) return null;
+  const option = (row.options as unknown as Partial<FirstAgentOption>[])[row.picked];
+  if (!option?.name) return null;
+  const ai = row.mark ? AI_OF_MARK[row.mark] : undefined;
+  return {
+    agentName: option.name,
+    role: option.role ?? "",
+    today: (option.today ?? []).slice(0, 3),
+    ...(ai ? { ai } : {}),
+  };
+}
+
 /**
  * Job `plan.waiting`: while the workspace still waits for its first plan, what is ready for it, to whoever can pay at
  * a confirmed address. The link is the billing page, which no phone app claims: a phone opens the website, the one
- * place it can pay (ADR 0079 §6).
+ * place it can pay (ADR 0079 §6). A first agent picked from what a person's own AI proposed (ADR 0264) is what the two
+ * speak of: the first says it is ready, the one on the third day lists its first day's deliveries.
  */
 export async function sendPlanWaitingEmail(db: Database, publicUrl: string, orgId: string, step: unknown) {
   if ((await billingHold(db, orgId)) !== "payment") return;
@@ -1368,7 +1504,7 @@ export async function sendPlanWaitingEmail(db: Database, publicUrl: string, orgI
     .from(users)
     .where(and(inArray(users.id, payers), eq(users.emailVerified, true)));
   const count = sql<number>`count(*)::int`;
-  const [[agentCount], [channelCount], [routineCount], crew] = await Promise.all([
+  const [[agentCount], [channelCount], [routineCount], crew, picked] = await Promise.all([
     db
       .select({ n: count })
       .from(agents)
@@ -1384,12 +1520,14 @@ export async function sendPlanWaitingEmail(db: Database, publicUrl: string, orgI
       .from(schema.routines)
       .where(and(eq(schema.routines.orgId, orgId), isNull(schema.routines.deletedAt))),
     emailCrew(db, orgId),
+    pickedFirstAgent(db, orgId),
   ]);
   const mode = await modeStamp(db, orgId);
   const groups = emailsByLocale(
     people.map((p) => ({ email: p.email, locale: emailLocale(p.locale) })),
     `plan-waiting:${orgId}:${String(step)}`,
   );
+  const later = Number(step) > 0;
   for (const group of groups) {
     await queueEmail(db, {
       orgId,
@@ -1404,6 +1542,7 @@ export async function sendPlanWaitingEmail(db: Database, publicUrl: string, orgI
         routines: routineCount?.n ?? 0,
         crew,
         url: `${publicUrl.replace(/\/$/, "")}/org/${orgId}/settings/billing`,
+        ...(picked ? { picked: later ? { ...picked, later: true as const } : picked } : {}),
         ...mode,
       },
     });

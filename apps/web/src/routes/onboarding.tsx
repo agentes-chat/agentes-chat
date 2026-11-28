@@ -2,19 +2,25 @@ import { meQuery, useMe } from "@agenteschat/client";
 import { type PaidReturn, paidSearch } from "@agenteschat/client/lib/billing";
 import { joinInstead, settingUp } from "@agenteschat/client/lib/guards";
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { requireUser } from "@/app/guards";
 import { ConfirmEmailScreen } from "@/components/ConfirmEmail";
 import { useServerLocale } from "@/i18n";
 import { ARRIVAL_PARAM } from "@/lib/arrival";
+import { type ConnectReturn, connectReturnOf } from "@/lib/connect-return";
 import { OnboardingPage } from "@/pages/OnboardingPage";
 
 export const Route = createFileRoute("/onboarding")({
   // `?resume=<orgId>`: back from that workspace's plan (`/org/$orgId/onboarding`, ADR 0079), `paid` after paying, with
-  // what was bought; `?delete=1`: its dialog that deletes the workspace.
-  validateSearch: (search: Record<string, unknown>): { resume?: string; paid?: true; delete?: 1 } & PaidReturn => ({
+  // what was bought; `?delete=1`: its dialog that deletes the workspace; `?connected=`/`?mail=`: back from an app's
+  // sign-in on the agent step (ADR 0264).
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { resume?: string; paid?: true; delete?: 1 } & PaidReturn & ConnectReturn => ({
     ...(typeof search.resume === "string" ? { resume: search.resume } : {}),
     ...paidSearch(search),
     ...(search.delete === undefined ? {} : { delete: 1 as const }),
+    ...connectReturnOf(search),
   }),
   // An invitation waiting for someone with no workspace set up opens instead of making one; back from billing or
   // deleting the one they started, the onboarding stays.
@@ -44,9 +50,18 @@ export const Route = createFileRoute("/onboarding")({
   },
   component: function Onboarding() {
     const user = useMe().data?.user;
+    const search = Route.useSearch();
+    // Read once: the address is cleared below, and the agent step keeps what came back.
+    const [returned] = useState(() => {
+      const back = connectReturnOf(search);
+      return Object.keys(back).length > 0 ? back : null;
+    });
+    useEffect(() => {
+      if (returned) window.history.replaceState(null, "", window.location.pathname);
+    }, [returned]);
     useServerLocale(user);
     // A new account makes its first workspace once its address is confirmed (ADR 0006, addendum 2026-11-22).
     if (user?.emailConfirmation === "required") return <ConfirmEmailScreen email={user.email} />;
-    return <OnboardingPage />;
+    return <OnboardingPage returned={returned} />;
   },
 });

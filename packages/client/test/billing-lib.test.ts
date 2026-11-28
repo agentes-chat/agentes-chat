@@ -93,6 +93,14 @@ describe("the plan the onboarding offers (the billing service's plan list)", () 
     expect(planOfferOf(list([{ key: "team", name: "Equipe", price: "" }]))).toEqual({ key: "team", name: "Equipe" });
   });
 
+  test("the people a plan includes, only when the list says so as a whole number", () => {
+    const withPeople = (people: unknown) => planOfferOf(list([{ key: "team", name: "Equipe", price: "$49", people }]));
+    expect(withPeople(5)).toEqual({ key: "team", name: "Equipe", price: "$49", people: 5 });
+    expect(withPeople(10_000)?.people).toBe(10_000);
+    for (const odd of [0, -1, 2.5, 10_001, "5", null, undefined])
+      expect({ odd, offer: withPeople(odd) }).toEqual({ odd, offer: { key: "team", name: "Equipe", price: "$49" } });
+  });
+
   test("anything else names no plan", () => {
     expect(planOfferOf(null)).toBeNull();
     expect(planOfferOf("plans")).toBeNull();

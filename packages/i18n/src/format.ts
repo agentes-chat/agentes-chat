@@ -204,8 +204,11 @@ export const formatPhone = (value: string) => printPhone(value, false);
  */
 export const maskPhone = (value: string) => printPhone(value, true);
 
-/** The app's own starter names (`newAgent.roles.*.agent`) that are feminine without ending in "a". */
-const FEMININE = new Set(["iris"]);
+/**
+ * The app's own starter names (`newAgent.roles.*.agent`, the onboarding's work agents) that are feminine without ending
+ * in "a".
+ */
+const FEMININE = new Set(["iris", "gabi"]);
 
 /**
  * A name's grammatical gender, for the languages whose sentences agree with it ("a Ada", "o Theo", she/he): one

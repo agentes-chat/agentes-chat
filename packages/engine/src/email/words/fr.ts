@@ -51,6 +51,8 @@ export const words: EmailWords = {
       ),
     more: (n) => `${n} autres`,
     what: "agentes.chat, c’est l’endroit où les personnes et les agents IA travaillent ensemble.",
+    arrive:
+      "En rejoignant l’espace, vous créez votre propre agent : votre IA trouve la tâche qui vous prend le plus de temps et propose un agent pour s’en charger.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter} : ` : "Son message : " }, `« ${note} »`],
     button: "Accepter l’invitation",
     small: "L’invitation est valable 7 jours. Acceptez-la avec cette adresse e-mail.",
@@ -621,6 +623,57 @@ export const words: EmailWords = {
       },
       why: () =>
         "Vous recevez cet e-mail parce que cet espace de travail sur agentes.chat est le vôtre. Nous n’envoyons que deux rappels comme celui-ci.",
+    },
+    picked: {
+      first: {
+        subject: "Votre premier agent est prêt et vous attend",
+        preheader: "Votre IA a trouvé par où commencer. Il ne reste plus qu’à recruter.",
+        headline: "Votre premier agent est prêt",
+        body: (ai, agent, _feminine, role, today) => [
+          ai ? `Votre ${ai} a trouvé par où commencer : ` : "Votre IA a trouvé par où commencer : ",
+          { b: agent },
+          ...(role ? [` (${role})`] : []),
+          ...(today > 0
+            ? [
+                plural("fr", today, {
+                  one: ", avec 1 livrable prêt pour aujourd’hui",
+                  other: `, avec ${today} livrables prêts pour aujourd’hui`,
+                }),
+              ]
+            : []),
+          ". Il ne reste plus qu’à recruter.",
+        ],
+        button: "Recruter l’équipe",
+        personal: { subject: "Votre premier agent est prêt et vous attend", button: "Recruter vos agents" },
+      },
+      later: {
+        subject: (today) =>
+          today > 1
+            ? `Les ${today} premiers livrables ne sont pas encore lancés`
+            : today === 1
+              ? "Le premier livrable n’est pas encore lancé"
+              : "Votre premier agent n’a pas encore commencé",
+        preheader: "Recrutez aujourd’hui, le travail commence aujourd’hui.",
+        headline: (today) =>
+          today > 1
+            ? `Les ${today} premiers livrables ne sont pas encore lancés`
+            : today === 1
+              ? "Le premier livrable n’est pas encore lancé"
+              : "Votre premier agent n’a pas encore commencé",
+        body: (agent, _feminine, today, org) =>
+          today > 0
+            ? ["Ce que ", { b: agent }, " livre dès le premier jour chez ", { b: org }, " :"]
+            : [{ b: agent }, " attend toujours l’abonnement de ", { b: org }, " pour commencer."],
+        start: (agent) => ["Recrutez aujourd’hui, et ", { b: agent }, " commence aujourd’hui."],
+        button: "Recruter l’équipe",
+        personal: {
+          body: (agent, _feminine, today) =>
+            today > 0
+              ? ["Ce que ", { b: agent }, " livre dès le premier jour :"]
+              : [{ b: agent }, " attend toujours votre abonnement pour commencer."],
+          button: "Recruter vos agents",
+        },
+      },
     },
   },
   surface: {
