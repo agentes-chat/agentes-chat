@@ -420,11 +420,23 @@ describe("working line", () => {
     expect(lines).toContain("bar: { width: 3, height: 12, borderRadius: 1.5, opacity: 0.7 },");
   });
 
-  test("opening a DM with an agent or a thread tells the server, as the web does: its agent gets ready", async () => {
+  test("opening any conversation tells the server, as the web does: its agent gets ready", async () => {
     const data = (await source("features/chat/screen/useChatData.ts")).replace(/\s+/g, " ");
-    expect(data).toContain(
-      "if (focused && readable && (dmAgentId || isThread)) connection?.sendOpen(channelId, threadId);",
-    );
+    expect(data).toContain("if (focused && readable) connection?.sendOpen(channelId, threadId);");
+  });
+
+  test("the field focused and an agent picked after @ tell the server, as the web does: its computer may wake", async () => {
+    const data = (await source("features/chat/screen/useChatData.ts")).replace(/\s+/g, " ");
+    expect(data).toContain("connection?.sendIntent(channelId, threadId, signal, agentId)");
+    const send = (await source("features/chat/screen/useChatSend.tsx")).replace(/\s+/g, " ");
+    expect(send).toContain('onAgent={(agentId) => sendIntent("mention", agentId)}');
+    expect(send).toContain('const onFocusField = useCallback(() => sendIntent("focus"), [sendIntent]);');
+    const dock = (await source("features/chat/screen/ChatDock.tsx")).replace(/\s+/g, " ");
+    expect(dock).toContain("onFocusField={onFocusField}");
+    const picker = (await source("features/chat/MentionPicker.tsx")).replace(/\s+/g, " ");
+    expect(picker).toContain('if (o.type === "agent") onAgent?.(o.id); pick(o.handle);');
+    const field = (await source("ui/Composer.tsx")).replace(/\s+/g, " ");
+    expect(field).toContain("setFocused(true); onFocusField?.();");
   });
 
   test("the phone tells the conversation while it records (held or hands free, not paused) and while the take uploads", async () => {

@@ -86,7 +86,7 @@ async function machinesWhere(db: Database, where: SQL | undefined) {
     managed: m.kind === "managed",
     online: machineOnline(m),
     standby: inStandby({ kind: m.kind, standbyAt }),
-    ...(activity && m.id === managed?.id ? activity : { busy: false, lastUsedAt: null }),
+    ...(activity && m.id === managed?.id ? activity : { busy: false, lastUsedAt: null, workedAt: null }),
     executors: executorsOf(executors),
     accounts: accounts.flatMap(({ machineId, ...account }) => (machineId === m.id ? [account] : [])),
   }));

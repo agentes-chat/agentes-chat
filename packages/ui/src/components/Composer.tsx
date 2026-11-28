@@ -186,6 +186,8 @@ export interface ComposerProps {
   textareaRef?: React.Ref<HTMLTextAreaElement>;
   /** Esc in the box means something here (stopping an agent): a panel beside it doesn't close on it. */
   keepsEsc?: boolean;
+  /** The text box took the focus. */
+  onFocus?: () => void;
   /** "@" autocomplete (combobox pattern on the text box). */
   mentions?: ComposerMentions;
   /** "/" at the start of the box opens these commands (same combobox). */
@@ -608,6 +610,7 @@ export function Composer({
   className,
   textareaRef,
   keepsEsc,
+  onFocus,
   mentions,
   commands,
   links,
@@ -1094,6 +1097,7 @@ export function Composer({
       }}
       onFocus={(e) => {
         setInField(true);
+        onFocus?.();
         notePicked(e.currentTarget.selectionStart ?? 0, e.currentTarget.selectionEnd ?? 0);
       }}
       // To the formatting bar (the Tab key): the selection is still what it formats.

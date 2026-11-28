@@ -357,6 +357,22 @@ export class RealtimeConnection {
     else this.opening.set(channelId, frame);
   }
 
+  /**
+   * A sign that a message to an agent comes soon, in a channel this socket reads: the composer focused (`focus`), or an
+   * agent picked after `@` (`mention`, with its id). The server may wake the agents' computer for it. Older servers
+   * answer `bad_frame`, which nothing reads.
+   */
+  sendIntent(channelId: string, threadId: string | null | undefined, signal: "focus" | "mention", agentId?: string) {
+    if (!this.confirmed.has(channelId)) return;
+    this.send({
+      type: "intent",
+      channelId,
+      ...(threadId ? { threadId } : {}),
+      signal,
+      ...(agentId ? { agentId } : {}),
+    });
+  }
+
   onStatus(listener: (status: ConnectionStatus) => void) {
     this.statusListeners.add(listener);
     return () => {

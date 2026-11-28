@@ -120,7 +120,8 @@ export async function warmWhileTyping(deps: EngineDeps, where: TypingWhere, now 
       if (plan.unavailable?.code === "machine_offline" && machineId) {
         const status = await deps.machines?.status(machineId).catch(() => null);
         if (status?.standby) {
-          await deps.machines?.wake?.(machineId, "run");
+          // A guess, as every sign before the send is (`wake-intent.ts`): it never keeps the computer awake.
+          await deps.machines?.wake?.(machineId, "intent");
           // Awake soon: a later frame warms its CLI.
           warmedAt.delete(key);
         }

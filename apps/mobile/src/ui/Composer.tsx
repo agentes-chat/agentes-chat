@@ -136,6 +136,8 @@ export interface ComposerProps {
   onLongAsFile?: (text: string) => void;
   /** Each change that leaves text in the field ("está digitando…" for the others; the screen throttles it). */
   onType?: (text: string) => void;
+  /** The field took the focus. */
+  onFocusField?: () => void;
   /**
    * Where the words wait when the person leaves before sending (a conversation, a thread): they are back in the field
    * when the person returns, until sent or erased. Kept while the app runs.
@@ -321,6 +323,7 @@ export function Composer({
   sendEmpty = false,
   onLongAsFile,
   onType,
+  onFocusField,
   draftKey,
   media,
   voice,
@@ -656,7 +659,10 @@ export function Composer({
                 if (selection) setSelection(undefined);
               }}
               multiline
-              onFocus={() => setFocused(true)}
+              onFocus={() => {
+                setFocused(true);
+                onFocusField?.();
+              }}
               onBlur={() => setFocused(false)}
               accessibilityLabel={placeholder}
               style={[inputText, styles.inputFill, { color: colors.ink }, text ? null : emptyCap]}

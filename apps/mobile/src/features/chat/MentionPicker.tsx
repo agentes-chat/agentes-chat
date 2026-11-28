@@ -34,9 +34,12 @@ export function MentionPicker({
   channelId,
   members,
   everyone = false,
+  onAgent,
 }: {
   query: string;
   pick: (handle: string) => void;
+  /** An agent picked: its id. */
+  onAgent?: (agentId: string) => void;
   channelId: string;
   /** The channel's members; null = no sections and no "Adicionar" (a DM). */
   members: ReadonlySet<string> | null;
@@ -119,7 +122,10 @@ export function MentionPicker({
               </Text>
             ) : null}
             <RowPressable
-              onPress={() => pick(o.handle)}
+              onPress={() => {
+                if (o.type === "agent") onAgent?.(o.id);
+                pick(o.handle);
+              }}
               accessibilityRole="button"
               accessibilityLabel={`${o.name}, @${o.handle}`}
               style={styles.row}

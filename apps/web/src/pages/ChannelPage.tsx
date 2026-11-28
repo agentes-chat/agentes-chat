@@ -454,6 +454,7 @@ import { useValueStore } from "@/lib/value-store";
 import {
   useChannelRealtime,
   useDismissRun,
+  useIntentSender,
   useLive,
   useLiveStore,
   useOpenedConversation,
@@ -948,7 +949,8 @@ function ChannelView({
   const arrival = useArrival(channel);
   const arriving = arrival.show && !thread;
   const sendTyping = useTypingSender(channel.id, thread?.id);
-  useOpenedConversation(channel.id, thread?.id, Boolean(chrome?.dmAgentId || thread));
+  useOpenedConversation(channel.id, thread?.id);
+  const sendIntent = useIntentSender(channel.id, thread?.id);
   // ⌘K "Pedir a um agente" leaves the text for this DM's composer.
   const draftKey = chrome?.dmAgentId ? `agent:${chrome.dmAgentId}` : null;
   // What I typed and didn't send stays in this browser: switching conversations or reloading keeps it. Only the box
@@ -3200,6 +3202,7 @@ function ChannelView({
                                 onTyped={(v) => {
                                   if (v.trim()) sendTyping(v);
                                 }}
+                                onFocus={() => sendIntent("focus")}
                                 header={
                                   quote ? (
                                     <>
@@ -3296,6 +3299,7 @@ function ChannelView({
                                   search: mentionSearch,
                                   listLabel: t("mentions.list"),
                                   onPick: (item) => {
+                                    if (item.key.startsWith("agent:")) sendIntent("mention", item.key.slice(6));
                                     // Only a channel's list carries the note (a DM takes no new member).
                                     if (item.note && item.key.startsWith("agent:")) setOffer(item.key.slice(6));
                                   },

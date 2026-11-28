@@ -13,8 +13,17 @@ const { machines, agents, agentRuns, machineTasks, machineHolds, browserHandoffs
  * the standby (`machine-hub.ts`).
  */
 
-/** What wants the computer: a run (its turn, or its wait for the computer), a person's view of it, a request to it. */
-export type WakeWhy = "run" | "view" | "call";
+/**
+ * What wants the computer: a run (its turn, or its wait for the computer), a person's view of it, a request to it, or a
+ * guess that a run comes soon (`intent`, `wake-intent.ts`).
+ */
+export type WakeWhy = "run" | "view" | "call" | "intent";
+
+/** A computer is woken on a guess at most once this often, and at most `INTENT_WAKES_PER_HOUR` times an hour. */
+export const INTENT_WAKE_EVERY_MS = 2 * 60_000;
+export const INTENT_WAKES_PER_HOUR = 10;
+// ponytail: per process; a workspace's people may sit on two replicas, each with its own count.
+const intentWakes = new Map<string, number[]>();
 
 /** `wanted_at` is written at most this often per computer and server process. */
 export const WANTED_WRITE_MS = 30_000;
@@ -34,6 +43,7 @@ const managedRow = (machineId: string) =>
  * operator to wake it (`machine.wake_wanted`). Any other computer: nothing.
  */
 export async function wantMachine(db: Database, machineId: string, why: WakeWhy, now = Date.now()) {
+  if (why === "intent") return guessWake(db, machineId, now);
   const last = wantedWrites.get(machineId);
   const write = last === undefined || now - last >= WANTED_WRITE_MS;
   if (write) {
@@ -58,6 +68,28 @@ export async function wantMachine(db: Database, machineId: string, why: WakeWhy,
     .returning({ id: machines.id });
   if (first) await checkWakeLater(db, row.orgId, machineId, new Date(now));
 }
+
+/**
+ * A guess that a run comes soon: one in standby, and not waking already, is asked back (`machine.wake_wanted` with
+ * `why: intent`). Nothing else is written: no `wanted_at`, so the guess never counts as use and never keeps it awake,
+ * and no wake's clock, so a guess that fails never shows the computer down.
+ */
+async function guessWake(db: Database, machineId: string, now: number) {
+  const recent = (intentWakes.get(machineId) ?? []).filter((at) => now - at < 60 * 60_000);
+  const last = recent.at(-1);
+  if ((last !== undefined && now - last < INTENT_WAKE_EVERY_MS) || recent.length >= INTENT_WAKES_PER_HOUR) return;
+  const [row] = await db
+    .select({ orgId: machines.orgId, standbyAt: machines.standbyAt, wakeWantedAt: machines.wakeWantedAt })
+    .from(machines)
+    .where(managedRow(machineId));
+  if (!row?.standbyAt || row.wakeWantedAt) return;
+  if (intentWakes.size >= 10_000) intentWakes.clear();
+  intentWakes.set(machineId, [...recent, now]);
+  await recordWakeWanted(db, { orgId: row.orgId, machineId, why: "intent" }, now);
+}
+
+/** Tests: forgets the guesses' wakes. */
+export const resetIntentWakes = () => intentWakes.clear();
 
 /** One `machine.wake_overdue` per wake's clock: it is due when the clock runs out. */
 const checkWakeLater = (db: Database, orgId: string, machineId: string, wakeWantedAt: Date) =>
@@ -123,13 +155,13 @@ export async function setMachineStandby(
  * running on it, something an agent keeps running on it (a live hold, ADR 0176), someone in control of one of its
  * agents' screens, or someone wanting it in the last `WANTED_BUSY_MS`.
  * Last used: the latest of the workspace's runs and this computer's tasks (of the last 7 days), `wanted_at`, and its
- * people's last visit. One query.
+ * people's last visit; last worked (`workedAt`): the same without the visit. One query.
  */
 export async function machineActivity(
   db: Database,
   machine: Pick<MachineRow, "id" | "orgId">,
   now = new Date(),
-): Promise<{ busy: boolean; lastUsedAt: Date | null }> {
+): Promise<{ busy: boolean; lastUsedAt: Date | null; workedAt: Date | null }> {
   const { id, orgId } = machine;
   const since = sql`${new Date(now.getTime() - ACTIVITY_WINDOW_MS).toISOString()}::timestamptz`;
   const nowAt = sql`${now.toISOString()}::timestamptz`;
@@ -162,11 +194,15 @@ export async function machineActivity(
     })
     .from(machines)
     .where(eq(machines.id, id));
-  if (!row) return { busy: false, lastUsedAt: null };
+  if (!row) return { busy: false, lastUsedAt: null, workedAt: null };
   const wanted = row.wantedAt !== null && now.getTime() - row.wantedAt.getTime() < WANTED_BUSY_MS;
-  const times = [row.runAt, row.taskAt, row.wantedAt, row.seenAt].filter((d): d is Date => d !== null);
+  const latest = (...ds: (Date | null)[]) => {
+    const times = ds.filter((d): d is Date => d !== null).map((d) => d.getTime());
+    return times.length ? new Date(Math.max(...times)) : null;
+  };
   return {
     busy: row.working || wanted,
-    lastUsedAt: times.length ? new Date(Math.max(...times.map((d) => d.getTime()))) : null,
+    lastUsedAt: latest(row.runAt, row.taskAt, row.wantedAt, row.seenAt),
+    workedAt: latest(row.runAt, row.taskAt, row.wantedAt),
   };
 }

@@ -223,10 +223,12 @@ export async function recordWakeWanted(
   now = Date.now(),
 ) {
   if (!enabled) return;
-  const last = wakeWantedAt.get(wake.machineId);
+  // A guess's ask has its own count: it never takes the place of a run's, which control wakes harder for.
+  const key = wake.why === "intent" ? `${wake.machineId}:intent` : wake.machineId;
+  const last = wakeWantedAt.get(key);
   if (last !== undefined && now - last < WAKE_WANTED_EVERY_MS) return;
   if (wakeWantedAt.size >= 10_000) wakeWantedAt.clear();
-  wakeWantedAt.set(wake.machineId, now);
+  wakeWantedAt.set(key, now);
   const { orgId, ...data } = wake;
   await recordOperatorEvent(db, { type: "machine.wake_wanted", orgId, data });
 }

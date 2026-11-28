@@ -86,10 +86,29 @@ describe("Canal", () => {
     expect(socket.sent.filter((f) => (f as { type?: string }).type === "open")).toEqual([
       { type: "open", channelId: dm },
     ]);
-    // A channel's own timeline says nothing: nobody in particular answers there.
+    // A channel's own timeline too: its agents' computer may wake for what is written there next.
     const channel = await open();
     await act(async () => channel.socket.push({ type: "subscribed", channelId: ENG_ID }));
-    expect(channel.socket.sent.some((f) => (f as { type?: string }).type === "open")).toBe(false);
+    expect(channel.socket.sent.filter((f) => (f as { type?: string }).type === "open")).toEqual([
+      { type: "open", channelId: ENG_ID },
+    ]);
+  });
+
+  test("the composer focused and an agent picked after @ tell the server: its computer may wake before the send", async () => {
+    const { socket } = await open();
+    await act(async () => socket.push({ type: "subscribed", channelId: ENG_ID }));
+    const box = screen().getByRole("combobox", { name: "Mensagem para #eng" });
+    await act(async () => fireEvent.focus(box));
+    expect(socket.sent).toContainEqual({ type: "intent", channelId: ENG_ID, signal: "focus" });
+    await act(async () => fireEvent.change(box, { target: { value: "@atl", selectionStart: 4 } }));
+    await settle();
+    const option = screen()
+      .getAllByRole("option")
+      .find((o) => o.textContent?.includes("@atlas"));
+    if (!option) throw new Error("no @atlas option");
+    await act(async () => fireEvent.mouseDown(option));
+    await act(async () => fireEvent.click(option));
+    expect(socket.sent).toContainEqual({ type: "intent", channelId: ENG_ID, signal: "mention", agentId: ATLAS_ID });
   });
 
   test("the composer posts with Enter and the message appears once (HTTP + event)", async () => {

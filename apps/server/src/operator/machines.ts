@@ -144,6 +144,10 @@ const Machine = z
       description:
         "When the workspace's computer was last used: the latest of the workspace's runs and this computer's tasks of the last 7 days, the last time something wanted it, and its people's last visit. Null for every other computer, or when nothing says.",
     }),
+    workedAt: z.string().nullable().openapi({
+      description:
+        "`lastUsedAt` without its people's visit: the latest of the workspace's runs and this computer's tasks of the last 7 days and the last time something wanted it. A wake on a guess (`machine.wake_wanted` with `why: intent`) not followed by any of these is no use of it. Null for every other computer, or when nothing says.",
+    }),
     orgId: z.uuid(),
     executors: z.array(z.object({ name: z.string(), version: z.string().nullable() })).openapi({
       description:
@@ -177,6 +181,7 @@ const machineJson = (m: NonNullable<Awaited<ReturnType<typeof operatorMachine>>>
   ...m,
   lastSeenAt: iso(m.lastSeenAt),
   lastUsedAt: iso(m.lastUsedAt),
+  workedAt: iso(m.workedAt),
   deletedAt: iso(m.deletedAt),
   accounts: m.accounts.map((a) => ({
     ...a,
@@ -283,7 +288,7 @@ export function registerOperatorMachines(api: OpenAPIHono, { db, config, pubsub,
       tags,
       summary: "Say the workspace's computer is in standby, or no longer",
       description:
-        "Say it when you put the computer to sleep (`true`), or that it no longer is (`false`; its first hello clears it too). In standby nothing is wrong to its people: it opens as it wakes, and it is never listed as disconnected. Whatever wants it meanwhile (a run, a person opening it, a request to it) records `machine.wake_wanted` in the events feed, at most every 10 seconds per computer: wake it then. A run waits up to a minute for it before it tells its people the computer isn't answering. `true` again keeps the first time it was said. 404 when the workspace has no such managed computer.",
+        "Say it when you put the computer to sleep (`true`), or that it no longer is (`false`; its first hello clears it too). In standby nothing is wrong to its people: it opens as it wakes, and it is never listed as disconnected. Whatever wants it meanwhile (a run, a person opening it, a request to it) records `machine.wake_wanted` in the events feed, at most every 10 seconds per computer: wake it then. `why: intent` is a guess that a run comes soon (a person opened a conversation with its agents, or is writing to them): wake it as you can, but don't make room for it nor page when it fails, and it may sleep again sooner when no work follows (`workedAt`). A run waits up to a minute for it before it tells its people the computer isn't answering. `true` again keeps the first time it was said. 404 when the workspace has no such managed computer.",
       request: { params: MachineParams, body: body(z.object({ standby: z.boolean() })) },
       responses: { 200: json(z.object({ standby: z.boolean() }).openapi("OperatorStandby")), ...errors },
     }),

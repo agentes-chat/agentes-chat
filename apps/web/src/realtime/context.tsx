@@ -1054,12 +1054,19 @@ export function useTypingSender(channelId: string, threadId?: string) {
   };
 }
 
-/** A DM or a thread open on screen (`on`): the agent that answers there gets ready before anything is typed. */
-export function useOpenedConversation(channelId: string, threadId: string | undefined, on: boolean) {
+/** The composer focused, or an agent picked after `@`, in a channel or one of its threads (`sendIntent`). */
+export function useIntentSender(channelId: string, threadId?: string) {
+  const { connection } = useRealtime();
+  return (signal: "focus" | "mention", agentId?: string) =>
+    connection?.sendIntent(channelId, threadId, signal, agentId);
+}
+
+/** A conversation open on screen: the agent that answers there gets ready before anything is typed. */
+export function useOpenedConversation(channelId: string, threadId: string | undefined) {
   const { connection } = useRealtime();
   useEffect(() => {
-    if (on) connection?.sendOpen(channelId, threadId);
-  }, [connection, channelId, threadId, on]);
+    connection?.sendOpen(channelId, threadId);
+  }, [connection, channelId, threadId]);
 }
 
 export function useDismissRun() {

@@ -733,6 +733,7 @@ async function boot(
     streams: createStreamSockets({ db: database.db, auth, config, broker: engine.streams }),
     live: liveSockets,
     onTyping: engine.warmWhileTyping,
+    onIntent: engine.noteWakeIntent,
   });
   const publicUrl = new URL(config.PUBLIC_URL);
   const ownHosts = ownHostsOnly
