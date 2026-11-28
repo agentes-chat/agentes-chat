@@ -270,6 +270,37 @@ describe("viewer", () => {
     expect(src("features/files/ZoomPicture.tsx")).toContain("transition={pictureFade(cacheKey)}");
   });
 
+  test("a message's picture or video opens with the system's zoom on iOS 18 and later, its swipe down shrinking it back", () => {
+    const link = src("features/files/MediaLink.tsx");
+    expect(link).toContain(
+      'export const NATIVE_ZOOM = Platform.OS === "ios" && Number.parseFloat(String(Platform.Version)) >= 18;',
+    );
+    // A link that takes the press where the zoom is; the tile's own press everywhere else.
+    expect(link).toContain("if (!NATIVE_ZOOM) return children(() => openFile(file, siblings));");
+    expect(link).toContain("<Link href={href} asChild>");
+    // The source only inside such a link (`Link.AppleZoom` needs the link's identity).
+    expect(link).toContain("return NATIVE_ZOOM && inLink ? <Link.AppleZoom>{children}</Link.AppleZoom> : children;");
+    const message = src("features/files/MessageFiles.tsx");
+    expect(message).toContain("<MediaLink file={opens} siblings={siblings}>");
+    expect(message).toContain("<ZoomSource>");
+    const player = src("features/files/VideoPlayer.tsx");
+    expect(player).toContain("<MediaLink file={opens.file} siblings={opens.siblings}>");
+    // The link hands its press to the tile's `onPress`; the still alone grows (not the play key).
+    expect(player).toContain("onPress={press}");
+    expect(player).toMatch(
+      /<ZoomSource>\s*<View style=\{StyleSheet\.absoluteFill\} collapsable=\{false\}>\s*\{still\?\.frame/,
+    );
+    const viewer = src("features/files/ImageViewer.tsx");
+    expect(viewer).toContain("<ZoomTarget on={zoom}>");
+    // The system's swipe down waits while a picture is zoomed in; the viewer's own pull only without the zoom.
+    expect(viewer).toContain(
+      "usePreventZoomTransitionDismissal(zoomed ? { unstable_dismissalBoundsRect: { maxX: 0, maxY: 0 } } : undefined);",
+    );
+    expect(viewer).toContain("enabled: ownPull && active && !zoomed && !paging,");
+    expect(viewer).toContain("ownPull={!zoom}");
+    expect(src("../app/(app)/(main)/images.tsx")).toContain('zoom={zoom === "1"}');
+  });
+
   test("‹ › go one picture at a time and never round past the first or the last", () => {
     expect(pageStep(1, 1, 4)).toBe(2);
     expect(pageStep(1, -1, 4)).toBe(0);
@@ -526,7 +557,8 @@ describe("viewer", () => {
     expect(viewer).toContain("if (leaving.value) return;");
     expect(viewer).toContain("if (closed.current) return;");
     // Only the picture in sight, at 1×, while the pages are still.
-    expect(viewer).toContain("enabled: active && !zoomed && !paging,");
+    // (Without the system's zoom: opened with it, its swipe down closes the viewer, `ownPull` off.)
+    expect(viewer).toContain("enabled: ownPull && active && !zoomed && !paging,");
     // It shrinks around the spot the finger took, from rest; caught mid-spring, around the one before.
     expect(viewer).toContain("if (resting)");
     expect(viewer).toContain("pulledPlacement(pullX.value, pullY.value, screen, grab.value)");

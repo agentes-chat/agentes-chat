@@ -15,7 +15,8 @@ import { CHROME_MAX_SCALE, Icon, PressScale } from "@/ui";
 import { useMessageCardCorners } from "../chat/look";
 import { useColors } from "../shared/hooks";
 import { onVoiceStarts, stopPlayback } from "../voice/playback";
-import { stillAt, videoClock, videoHeight } from "./logic";
+import { type FileRef, stillAt, videoClock, videoHeight } from "./logic";
+import { MediaLink, ZoomSource } from "./MediaLink";
 
 /**
  * Android draws a video on a SurfaceView by default, a window of its own that ignores the rounded corners it sits in
@@ -193,8 +194,8 @@ export interface VideoPlayerProps {
   width?: number;
   /** Its height there: 16:9 for `width` unless the caller knows the video's own shape (`videoBox`). */
   height?: number;
-  /** An inline video's tap: opens it in the picture viewer, where it plays. */
-  onOpen?: () => void;
+  /** What a tap opens in the picture viewer, where it plays, among the message's pictures and videos. */
+  opens?: { file: FileRef; siblings: readonly FileRef[] } | undefined;
   /** It can't play on this device (a format it lacks): the caller shows the file's card instead. */
   onFailed?: () => void;
 }
@@ -205,17 +206,25 @@ export interface VideoPlayerProps {
  * plays it at once with the platform's controls (play, the timeline to drag, full screen and back out of it, AirPlay),
  * so it feels like every other video on the phone, with no controls of ours to get stuck behind.
  */
-export function VideoPlayer({ source, stillKey, name, width = 300, height, onOpen, onFailed }: VideoPlayerProps) {
-  return (
+export function VideoPlayer({ source, stillKey, name, width = 300, height, opens, onFailed }: VideoPlayerProps) {
+  const tile = (press: (() => void) | undefined) => (
     <InlineVideo
       source={source}
       stillKey={stillKey}
       name={name}
       width={width}
       height={height ?? videoHeight(width)}
-      onOpen={onOpen}
+      onPress={press}
       onFailed={onFailed}
     />
+  );
+  // Opened with the system's zoom where there is one: the still grows into the viewer (`MediaLink`).
+  return opens ? (
+    <MediaLink file={opens.file} siblings={opens.siblings}>
+      {tile}
+    </MediaLink>
+  ) : (
+    tile(undefined)
   );
 }
 
@@ -226,7 +235,7 @@ function InlineVideo({
   name,
   width,
   height,
-  onOpen,
+  onPress,
   onFailed,
 }: {
   source: VideoPlayerProps["source"];
@@ -234,7 +243,8 @@ function InlineVideo({
   name: string;
   width: number;
   height: number;
-  onOpen?: (() => void) | undefined;
+  /** Opens it in the viewer: the tile's own, or the zoom's link's (`MediaLink` hands its press to this prop). */
+  onPress?: (() => void) | undefined;
   onFailed?: (() => void) | undefined;
 }) {
   const { t } = useTranslation();
@@ -255,21 +265,26 @@ function InlineVideo({
     // Opening it is navigation, as opening a picture: the press shows it, no tap.
     <PressScale
       haptic={false}
-      onPress={onOpen}
-      disabled={!onOpen}
+      onPress={onPress}
+      disabled={!onPress}
       accessibilityRole="button"
       accessibilityLabel={`${t("mobile.files.video.play")}: ${name}${length ? `, ${length}` : ""}`}
       style={[styles.inline, { width, height, backgroundColor: c.sunken, borderColor: c.line2 }, cardCorners]}
     >
-      {still?.frame ? (
-        <Image
-          source={still.frame}
-          contentFit="contain"
-          transition={0}
-          accessible={false}
-          style={StyleSheet.absoluteFill}
-        />
-      ) : null}
+      {/* The still alone grows into the viewer (the play key and the length stay in the message). */}
+      <ZoomSource>
+        <View style={StyleSheet.absoluteFill} collapsable={false}>
+          {still?.frame ? (
+            <Image
+              source={still.frame}
+              contentFit="contain"
+              transition={0}
+              accessible={false}
+              style={StyleSheet.absoluteFill}
+            />
+          ) : null}
+        </View>
+      </ZoomSource>
       <View style={styles.center} pointerEvents="none">
         <View style={[styles.big, { backgroundColor: c.raised }]}>
           <Icon name="play" size={24} color={c.ink} />

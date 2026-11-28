@@ -31,6 +31,7 @@ import {
   videoBox,
   videoClock,
 } from "./logic";
+import { MediaLink, ZoomSource } from "./MediaLink";
 import { openFile } from "./open";
 import { LocalPdfPage } from "./pdf-preview";
 import {
@@ -143,11 +144,6 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
     return detail && kind && talk && talk.count > 0 ? [{ file, detail, kind, talk }] : [];
   });
   // Opening a file or a picture is plain navigation: the press shows it, with no haptic.
-  const openOnly = () => {
-    if (only)
-      openFile({ id: only.file.id, version: only.file.version, title: only.file.title, detail: only.detail }, media);
-  };
-
   return (
     <View onLayout={onWidth} style={[styles.wrap, align === "end" && styles.end]}>
       {pictures.length > 1 ? <ImageStack images={pictures} width={blockWidth} siblings={media} /> : null}
@@ -157,7 +153,8 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
             file={only.file}
             box={onlyBox}
             label={only.detail?.title || only.file.title}
-            onPress={openOnly}
+            opens={{ id: only.file.id, version: only.file.version, title: only.file.title, detail: only.detail }}
+            siblings={media}
           />
         </View>
       ) : null}
@@ -271,12 +268,15 @@ function InlineImage({
   file,
   box: { width, height },
   label,
-  onPress,
+  opens,
+  siblings,
 }: {
   file: MessageFile;
   box: { width: number; height: number };
   label: string;
-  onPress: () => void;
+  /** What it opens in the viewer, among the message's pictures and videos. */
+  opens: FileRef;
+  siblings: readonly FileRef[];
 }) {
   const cardCorners = useMessageCardCorners();
   const { t } = useTranslation();
@@ -287,33 +287,42 @@ function InlineImage({
   const picture = usePicture(orgId, file.id, file.version);
   const { key, source, failed } = picture;
   return (
-    <PressScale
-      haptic={false}
-      onPress={onPress}
-      accessibilityRole="imagebutton"
-      accessibilityLabel={label || t("mobile.files.openImage")}
-      accessibilityHint={t("mobile.files.openImage")}
-      style={[styles.shot, { width, height, backgroundColor: c.sunken, borderColor: c.line2 }, cardCorners]}
-    >
-      {source && !failed ? (
-        <Image
-          source={source}
-          recyclingKey={key}
-          cachePolicy="memory-disk"
-          contentFit="contain"
-          transition={pictureFade(key)}
-          onLoad={() => pictureDrawn(key)}
-          style={StyleSheet.absoluteFill}
-          onError={picture.onError}
-          accessible={false}
-        />
-      ) : null}
-      {failed ? (
-        <View style={styles.center}>
-          <Icon name="image" size={22} color={c.faint} />
-        </View>
-      ) : null}
-    </PressScale>
+    // Opened with the system's zoom where there is one: the picture grows into the viewer (`MediaLink`).
+    <MediaLink file={opens} siblings={siblings}>
+      {(press) => (
+        <PressScale
+          haptic={false}
+          onPress={press}
+          accessibilityRole="imagebutton"
+          accessibilityLabel={label || t("mobile.files.openImage")}
+          accessibilityHint={t("mobile.files.openImage")}
+          style={[styles.shot, { width, height, backgroundColor: c.sunken, borderColor: c.line2 }, cardCorners]}
+        >
+          <ZoomSource>
+            <View style={StyleSheet.absoluteFill} collapsable={false}>
+              {source && !failed ? (
+                <Image
+                  source={source}
+                  recyclingKey={key}
+                  cachePolicy="memory-disk"
+                  contentFit="contain"
+                  transition={pictureFade(key)}
+                  onLoad={() => pictureDrawn(key)}
+                  style={StyleSheet.absoluteFill}
+                  onError={picture.onError}
+                  accessible={false}
+                />
+              ) : null}
+              {failed ? (
+                <View style={styles.center}>
+                  <Icon name="image" size={22} color={c.faint} />
+                </View>
+              ) : null}
+            </View>
+          </ZoomSource>
+        </PressScale>
+      )}
+    </MediaLink>
   );
 }
 
@@ -347,10 +356,6 @@ function InlineVideo({
   if (failed || link.isError)
     return <AttachmentTile file={file} detail={detail} width={width} single siblings={siblings} />;
   const info = detail ? fileInfo(detail) : null;
-  // In the same viewer as the pictures: one place where media opens.
-  const open = () => {
-    if (detail) openFile({ id: file.id, version: file.version, title: file.title, detail }, siblings);
-  };
   return (
     <View>
       {source ? (
@@ -361,7 +366,10 @@ function InlineVideo({
           name={info?.name || file.title}
           width={box.width}
           height={box.height}
-          onOpen={detail ? open : undefined}
+          // In the same viewer as the pictures: one place where media opens.
+          opens={
+            detail ? { file: { id: file.id, version: file.version, title: file.title, detail }, siblings } : undefined
+          }
           onFailed={() => setFailed(true)}
         />
       ) : (

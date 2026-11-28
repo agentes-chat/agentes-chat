@@ -3,7 +3,7 @@ import { mediaKindOfArtifact } from "@agenteschat/client/lib/files";
 import { keepWhole } from "@agenteschat/client/lib/format";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { useNavigation } from "expo-router";
+import { useNavigation, usePreventZoomTransitionDismissal } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import type { VideoPlayer as Player } from "expo-video";
 import { type MutableRefObject, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -42,6 +42,7 @@ import { useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import { goBack } from "../shared/parts";
 import { savedAt, useFileActions, useSavedWhen } from "./actions";
 import { decodeFileList, fileInfo, type MediaView, pageStep } from "./logic";
+import { ZoomTarget } from "./MediaLink";
 import { pictureKey, usePicture, useRemoteFile } from "./source";
 import { keptStill, ViewerVideo } from "./VideoPlayer";
 import { tellViewerPlace } from "./viewer-place";
@@ -72,19 +73,28 @@ export function ImageViewer({
   at,
   from,
   focusId = null,
+  zoom = false,
 }: {
   files: string | string[] | undefined;
   at: string | undefined;
   /** The stack it opened from, told where the person stops. */
   from?: string | undefined;
   focusId?: string | null;
+  /**
+   * Opened with the system's zoom (`MediaLink`, iOS 18 and later): the tile grew into it, and a swipe down is the
+   * system's, shrinking it back into the tile, in place of the viewer's own pull.
+   */
+  zoom?: boolean;
 }) {
   return (
-    // Gestures get their own root in the modal (the app's sits under it). Toasts need none: the app's draw above any
-    // screen, a modal included.
-    <GestureHandlerRootView style={styles.screen}>
-      <Viewer rawFiles={rawFiles} at={at} from={from} focusId={focusId} />
-    </GestureHandlerRootView>
+    // The zoom's target: the system fits the tile's shape in the screen, where the picture is drawn.
+    <ZoomTarget on={zoom}>
+      {/* Gestures get their own root in the modal (the app's sits under it). Toasts need none: the app's draw above
+          any screen, a modal included. */}
+      <GestureHandlerRootView style={styles.screen}>
+        <Viewer rawFiles={rawFiles} at={at} from={from} focusId={focusId} zoom={zoom} />
+      </GestureHandlerRootView>
+    </ZoomTarget>
   );
 }
 
@@ -114,11 +124,13 @@ function Viewer({
   at,
   from,
   focusId,
+  zoom,
 }: {
   rawFiles: string | string[] | undefined;
   at: string | undefined;
   from: string | undefined;
   focusId: string | null;
+  zoom: boolean;
 }) {
   const { t } = useTranslation();
   const orgId = useOrgId();
@@ -137,6 +149,8 @@ function Viewer({
   const [index, setIndex] = useState(first);
   const [zoomed, setZoomed] = useState(false);
   const [paging, setPaging] = useState(false);
+  // The system's swipe down (opened with its zoom) waits while a picture is zoomed in: that drag pans the picture.
+  usePreventZoomTransitionDismissal(zoomed ? { unstable_dismissalBoundsRect: { maxX: 0, maxY: 0 } } : undefined);
   const [chrome, setChrome] = useState(true);
   // How tall the bars are: a video sits between them, its own controls clear of ours.
   const [bars, setBars] = useState({ top: 0, bottom: 0 });
@@ -265,6 +279,7 @@ function Viewer({
                 leaving={leaving}
                 draft={i === index ? draft : null}
                 videoClock={videoClock}
+                ownPull={!zoom}
                 onTap={onTap}
                 onZoom={onZoom}
                 onVideo={showChrome}
@@ -377,6 +392,7 @@ function Page({
   leaving,
   draft,
   videoClock,
+  ownPull,
   onTap,
   onZoom,
   onVideo,
@@ -400,6 +416,8 @@ function Page({
   draft: MediaPin | null;
   /** Where the page in sight tells the moment its video is at. */
   videoClock: MutableRefObject<(() => number) | null>;
+  /** The viewer's own pull to close; off when the system's swipe down closes it (opened with its zoom). */
+  ownPull: boolean;
   onTap: () => void;
   onZoom: (zoomed: boolean) => void;
   onVideo: () => void;
@@ -460,7 +478,7 @@ function Page({
   const grab = useSharedValue({ x: 0, y: 0 });
   const shown = useSharedValue(1);
   const pull = usePanGesture({
-    enabled: active && !zoomed && !paging,
+    enabled: ownPull && active && !zoomed && !paging,
     activeOffsetY: [-10, 10],
     failOffsetX: [-10, 10],
     maxPointers: 1,
