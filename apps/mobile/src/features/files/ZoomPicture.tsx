@@ -25,6 +25,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { Button, Icon, type IconName, Text, useReducedMotion } from "@/ui";
+import { pictureDrawn, pictureFade } from "./source";
 import {
   clamp,
   dragWithin,
@@ -61,6 +62,8 @@ export interface ZoomPictureProps {
   onZoom: (zoomed: boolean) => void;
   /** "Try again" on a picture that couldn't load: its link is read again. */
   onRetry: () => void;
+  /** It didn't draw: true when another source is on its way (a copy on the phone gone: the link), so it waits. */
+  onSourceError?: (() => boolean) | undefined;
   /**
    * Drawn over the picture, in its box, zooming with it (a file's comments, ADR 0208), once the picture's shape is
    * known; `zoom` is the picture's zoom now, for what keeps the screen's own size.
@@ -88,6 +91,7 @@ export function ZoomPicture({
   onLongPress,
   onZoom,
   onRetry,
+  onSourceError,
   overlay,
 }: ZoomPictureProps) {
   const reduced = useReducedMotion();
@@ -112,6 +116,17 @@ export function ZoomPicture({
     setTries((n) => n + 1);
     onRetry();
   };
+  // The spinner only for a picture that keeps it waiting: one on the phone draws before it would flash.
+  const waiting = !pixels && !failed;
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (!waiting) {
+      setSlow(false);
+      return;
+    }
+    const timer = setTimeout(() => setSlow(true), WAIT_SHOWN_MS);
+    return () => clearTimeout(timer);
+  }, [waiting]);
   const picture = fitted(pixels ? pixels.width / pixels.height : null, screen);
   const max = maxZoom(pixels?.width, screen.width);
   const image = (
@@ -121,11 +136,15 @@ export function ZoomPicture({
       recyclingKey={cacheKey}
       contentFit="contain"
       allowDownscaling={!(active && sharp)}
-      transition={160}
+      // Drawn already (in its message, or before in this run): there at once, no fade.
+      transition={pictureFade(cacheKey)}
       onLoad={(e) => {
+        pictureDrawn(cacheKey);
         if (e.source.width > 0 && e.source.height > 0) setPixels({ width: e.source.width, height: e.source.height });
       }}
-      onError={() => setFailed(true)}
+      onError={() => {
+        if (!onSourceError?.()) setFailed(true);
+      }}
       style={StyleSheet.absoluteFill}
       accessible={false}
     />
@@ -146,13 +165,15 @@ export function ZoomPicture({
   return (
     <View style={screen}>
       {Platform.OS === "ios" ? <SystemZoom {...zoom} /> : <OwnZoom {...zoom} />}
-      {pixels ? null : <PageWait failed={failed} onRetry={retry} />}
+      {pixels || !(failed || slow) ? null : <PageWait failed={failed} onRetry={retry} />}
     </View>
   );
 }
 
 const WHITE = "#fff";
 const DIM = "rgba(255,255,255,0.6)";
+/** A picture still loading after this long shows the spinner. */
+const WAIT_SHOWN_MS = 350;
 /** A double tap's zoom, in or out, and a pinch springing back inside its limits: settles without overshooting. */
 const ZOOM_SPRING = { dampingRatio: 1, duration: 360 };
 

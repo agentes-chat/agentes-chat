@@ -338,8 +338,41 @@ export function pageStep(index: number, by: -1 | 1, count: number): number | nul
 }
 
 /** `id@version` pairs for the picture viewer's route (`?files=a@2,b@1`), and back. */
-export function encodeFileList(files: { id: string; version?: number | undefined }[]): string {
-  return files.map((f) => (f.version ? `${f.id}@${f.version}` : f.id)).join(",");
+/** A picture or a video, when the place a viewer opened from knew which (`mediaViewOf`). */
+export type MediaView = "image" | "video";
+
+/**
+ * The files a viewer pages through, in its link: `id@version`, and `~v` or `~i` when the place knew a video or a
+ * picture, so its page draws it at once instead of waiting for the file's details.
+ */
+export function encodeFileList(
+  files: { id: string; version?: number | undefined; view?: MediaView | undefined }[],
+): string {
+  return files
+    .map((f) => `${f.version ? `${f.id}@${f.version}` : f.id}${f.view ? `~${f.view === "video" ? "v" : "i"}` : ""}`)
+    .join(",");
+}
+
+/** A file's picture or video, by its details or else its name; undefined when neither says. */
+export function mediaViewOf(ref: FileRef): MediaView | undefined {
+  if (ref.detail) {
+    const view = fileInfo(ref.detail).view;
+    return view === "image" || view === "video" ? view : undefined;
+  }
+  const ext = extensionOf(ref.title ?? "");
+  return IMAGE_EXT.has(ext) ? "image" : VIDEO_EXT.has(ext) ? "video" : undefined;
+}
+
+/** A video's cover, a fifth of the way in, never further than this (seconds). */
+const STILL_MAX_S = 2;
+const STILL_SHARE = 0.2;
+
+/**
+ * Where a video's cover is taken (seconds): a moment into it, not its first frame, which is often black (a fade in,
+ * a recording's first instant); 0 when its length isn't known.
+ */
+export function stillAt(duration: number): number {
+  return duration > 0 ? Math.min(STILL_MAX_S, duration * STILL_SHARE) : 0;
 }
 
 /** A file as it's opened from where it shows: what's known of it before (or once) its details load. */
@@ -400,20 +433,26 @@ export function fileRoute(ref: FileRef, siblings?: readonly FileRef[], from?: st
   return {
     pathname: "/images",
     params: {
-      files: encodeFileList(pages.map((f) => ({ id: f.id, version: f.detail?.shownVersion ?? f.version }))),
+      files: encodeFileList(
+        pages.map((f) => ({ id: f.id, version: f.detail?.shownVersion ?? f.version, view: mediaViewOf(f) })),
+      ),
       at: String(Math.max(at, 0)),
       ...(from ? { from } : {}),
     },
   };
 }
 
-export function decodeFileList(raw: string | string[] | undefined): { id: string; version?: number }[] {
+export function decodeFileList(
+  raw: string | string[] | undefined,
+): { id: string; version?: number; view?: MediaView }[] {
   const s = Array.isArray(raw) ? raw.join(",") : (raw ?? "");
   return s.split(",").flatMap((part) => {
-    const [id = "", v] = part.trim().split("@");
+    const [head = "", mark] = part.trim().split("~");
+    const [id = "", v] = head.split("@");
     if (!/^[\w-]{1,64}$/.test(id)) return [];
     const n = v ? Number(v) : Number.NaN;
-    return [Number.isInteger(n) && n > 0 ? { id, version: n } : { id }];
+    const view: MediaView | undefined = mark === "v" ? "video" : mark === "i" ? "image" : undefined;
+    return [{ id, ...(Number.isInteger(n) && n > 0 ? { version: n } : {}), ...(view ? { view } : {}) }];
   });
 }
 

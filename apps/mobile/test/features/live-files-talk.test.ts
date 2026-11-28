@@ -401,7 +401,7 @@ describe("a picture's, a video's and a PDF's conversation (ADR 0208)", () => {
     expect(viewer).toContain("openTalk({ selection: commentSelection(pins, where, talkFile.shownVersion) });");
     expect(viewer).toContain("<PicturePins pins={shownPins} zoom={zoom} draft={draft} />");
     expect(viewer).toContain('const about = useTalkAbout(talkFile?.conversation?.channelId ?? "");');
-    expect(viewer).toMatch(/<ZoomPicture\s+source=\{link\.data\}\s+cacheKey=\{key\}\s+screen=\{screen\}/);
+    expect(viewer).toMatch(/<ZoomPicture\s+source=\{picture\.source\}\s+cacheKey=\{key\}\s+screen=\{screen\}/);
     // The held touch races the pull and the taps: a finger that moves first is the pull.
     const zoom = src("features/files/ZoomPicture.tsx");
     expect(zoom).toContain("const gesture = useCompetingGestures(hold, taps);");

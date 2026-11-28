@@ -10,12 +10,12 @@ import {
 } from "expo-video";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { PixelRatio, Text as RNText, StyleSheet, View } from "react-native";
+import { ActivityIndicator, PixelRatio, Text as RNText, StyleSheet, View } from "react-native";
 import { CHROME_MAX_SCALE, Icon, PressScale } from "@/ui";
 import { useMessageCardCorners } from "../chat/look";
 import { useColors } from "../shared/hooks";
 import { onVoiceStarts, stopPlayback } from "../voice/playback";
-import { videoClock, videoHeight } from "./logic";
+import { stillAt, videoClock, videoHeight } from "./logic";
 
 /**
  * Android draws a video on a SurfaceView by default, a window of its own that ignores the rounded corners it sits in
@@ -97,7 +97,8 @@ function readOnce(source: StillSource): Promise<Still & { kept: boolean }> {
     const subscriptions = [
       player.addListener("sourceLoad", ({ duration }) => {
         loaded = true;
-        player.generateThumbnailsAsync([0], { maxWidth: STILL_PIXELS }).then(
+        // A moment into it (`stillAt`): its first frame is often black.
+        player.generateThumbnailsAsync([stillAt(duration)], { maxWidth: STILL_PIXELS }).then(
           ([frame]) => finish({ frame: frame ?? null, duration, failed: false, kept: true }),
           () => finish({ frame: null, duration, failed: false, kept: true }),
         );
@@ -137,6 +138,9 @@ function readStill(key: string, source: StillSource): Promise<Still> {
   reading.set(key, run);
   return run;
 }
+
+/** The cover a message showed for a video (`stills`), for the viewer to open on: null when none was read yet. */
+export const keptStill = (key: string): VideoThumbnail | null => stills.get(key)?.frame ?? null;
 
 /** A video's still by its key (`stills`), read once; undefined while it is read. */
 function useStill(key: string, source: StillSource): Still | undefined {
@@ -299,6 +303,7 @@ export function ViewerVideo({
   onFailed,
   startAt,
   onPlayer,
+  poster,
 }: {
   source: VideoPlayerProps["source"];
   name: string;
@@ -306,7 +311,10 @@ export function ViewerVideo({
   onFailed: () => void;
   startAt?: number | undefined;
   onPlayer?: ((player: Player | null) => void) | undefined;
+  /** The cover the message showed (`keptStill`): over the player, with a spinner, until its first frame is drawn. */
+  poster?: VideoThumbnail | null | undefined;
 }) {
+  const [drawn, setDrawn] = useState(false);
   const player = useVideoPlayer({ ...source, metadata: { title: name } }, (p) => {
     p.loop = false;
     p.staysActiveInBackground = true;
@@ -349,16 +357,34 @@ export function ViewerVideo({
     [player],
   );
   return (
-    <VideoView
-      player={player}
-      nativeControls
-      contentFit="contain"
-      fullscreenOptions={{ enable: true }}
-      allowsPictureInPicture={false}
-      surfaceType={SURFACE}
-      accessibilityLabel={name}
-      style={StyleSheet.absoluteFill}
-    />
+    <>
+      <VideoView
+        player={player}
+        nativeControls
+        contentFit="contain"
+        fullscreenOptions={{ enable: true }}
+        allowsPictureInPicture={false}
+        surfaceType={SURFACE}
+        accessibilityLabel={name}
+        style={StyleSheet.absoluteFill}
+        onFirstFrameRender={() => setDrawn(true)}
+      />
+      {drawn ? null : (
+        // Opening on the cover it had in the message, never on black, until the player draws.
+        <View style={[StyleSheet.absoluteFill, styles.center]} pointerEvents="none">
+          {poster ? (
+            <Image
+              source={poster}
+              contentFit="contain"
+              transition={0}
+              accessible={false}
+              style={StyleSheet.absoluteFill}
+            />
+          ) : null}
+          <ActivityIndicator color="#fff" />
+        </View>
+      )}
+    </>
   );
 }
 

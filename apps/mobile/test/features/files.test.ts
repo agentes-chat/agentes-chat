@@ -13,12 +13,14 @@ import {
   fileInfo,
   fileRoute,
   isMediaFile,
+  mediaViewOf,
   pageStep,
   resolveDownloadUrl,
   safeFileName,
   shareSource,
   singleImageBox,
   singleImageHeight,
+  stillAt,
   utf8Bytes,
   videoBox,
   videoClock,
@@ -234,8 +236,38 @@ describe("viewer", () => {
   test("the route's file list round-trips and drops junk", () => {
     const list = [{ id: "a-1", version: 2 }, { id: "b_2" }];
     expect(decodeFileList(encodeFileList(list))).toEqual(list);
+    // A picture or a video, when the place knew: the page draws it before its details load.
+    const known = [
+      { id: "a-1", version: 2, view: "video" as const },
+      { id: "b_2", view: "image" as const },
+    ];
+    expect(encodeFileList(known)).toBe("a-1@2~v,b_2~i");
+    expect(decodeFileList(encodeFileList(known))).toEqual(known);
+    expect(decodeFileList("a@2~x,b~v")).toEqual([
+      { id: "a", version: 2 },
+      { id: "b", view: "video" },
+    ]);
     expect(decodeFileList("a@0,../x,b@x,c@3")).toEqual([{ id: "a" }, { id: "b" }, { id: "c", version: 3 }]);
     expect(decodeFileList(undefined)).toEqual([]);
+  });
+
+  test("a video's cover is a moment into it, never its first frame (often black), and opens the viewer on it", () => {
+    expect([stillAt(0), stillAt(10), stillAt(600)]).toEqual([0, 2, 2]);
+    expect(stillAt(3)).toBeCloseTo(0.6, 9);
+    expect(mediaViewOf({ id: "a", title: "clip.MOV" })).toBe("video");
+    expect(mediaViewOf({ id: "a", title: "foto.heic" })).toBe("image");
+    expect(mediaViewOf({ id: "a", title: "Plano" })).toBeUndefined();
+    const viewer = src("features/files/ImageViewer.tsx");
+    // A picture from the copy already on the phone (no link to wait for); a video on the cover its message showed.
+    expect(viewer).toContain("const picture = usePicture(orgId, video ? null : id, version);");
+    expect(viewer).toContain("const poster = keptStill(pictureKey(id, version));");
+    expect(viewer).toContain(
+      'const video = info ? info.view === "video" : view ? view === "video" : artifact.isError ? false : null;',
+    );
+    const player = src("features/files/VideoPlayer.tsx");
+    expect(player).toContain("onFirstFrameRender={() => setDrawn(true)}");
+    // Drawn already in its message: no fade in the viewer.
+    expect(src("features/files/ZoomPicture.tsx")).toContain("transition={pictureFade(cacheKey)}");
   });
 
   test("‹ › go one picture at a time and never round past the first or the last", () => {
@@ -363,12 +395,13 @@ describe("viewer", () => {
     ];
     expect(fileRoute(media[2] ?? { id: "" }, media, "deck")).toEqual({
       pathname: "/images",
-      params: { files: "p1@1,p2@3,v1@2", at: "2", from: "deck" },
+      // Each says what it is, by its details or its name: its page draws it at once.
+      params: { files: "p1@1~i,p2@3~i,v1@2~v", at: "2", from: "deck" },
     });
     // Alone (or not among the neighbours given), it opens by itself; a file that isn't one goes to the file screen.
     expect(fileRoute({ id: "x", title: "y.jpg" }, media)).toEqual({
       pathname: "/images",
-      params: { files: "x", at: "0" },
+      params: { files: "x~i", at: "0" },
     });
     expect(fileRoute({ id: "d", title: "Plano", kind: "document" }, media)).toEqual({
       pathname: "/document/[id]",
@@ -572,7 +605,9 @@ describe("viewer", () => {
     );
     // Only the button takes a touch: the rest of the page keeps the pull.
     expect(zoom).toContain('pointerEvents="box-none"');
-    expect(zoom).toContain("{pixels ? null : <PageWait failed={failed} onRetry={retry} />}");
+    // The spinner only once a picture keeps it waiting (one on the phone draws before it would flash).
+    expect(zoom).toContain("{pixels || !(failed || slow) ? null : <PageWait failed={failed} onRetry={retry} />}");
+    expect(zoom).toContain("const WAIT_SHOWN_MS = 350;");
   });
 
   test("a video and a PDF read their file once: the app coming back or a new link never starts them over", () => {
@@ -612,7 +647,7 @@ describe("viewer", () => {
     expect(player.match(/useVideoPlayer\(/g)?.length).toBe(1);
     expect(player.match(/<VideoView\b/g)?.length).toBe(1);
     expect(player).toContain("createVideoPlayer(source)");
-    expect(player).toContain("player.generateThumbnailsAsync([0], { maxWidth: STILL_PIXELS })");
+    expect(player).toContain("player.generateThumbnailsAsync([stillAt(duration)], { maxWidth: STILL_PIXELS })");
     expect(player).toContain("player.release();");
     expect(player).toContain("const STILLS_AT_ONCE = 2;");
     // Read once per file version, whatever link it came from.

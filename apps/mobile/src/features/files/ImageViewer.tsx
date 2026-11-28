@@ -1,6 +1,7 @@
 import { useArtifact } from "@agenteschat/client";
 import { mediaKindOfArtifact } from "@agenteschat/client/lib/files";
 import { keepWhole } from "@agenteschat/client/lib/format";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -40,9 +41,9 @@ import { FileTalkLine } from "../live-files/talk/TalkLine";
 import { useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import { goBack } from "../shared/parts";
 import { savedAt, useFileActions, useSavedWhen } from "./actions";
-import { decodeFileList, fileInfo, pageStep } from "./logic";
-import { useRemoteFile } from "./source";
-import { ViewerVideo } from "./VideoPlayer";
+import { decodeFileList, fileInfo, type MediaView, pageStep } from "./logic";
+import { pictureKey, usePicture, useRemoteFile } from "./source";
+import { keptStill, ViewerVideo } from "./VideoPlayer";
 import { tellViewerPlace } from "./viewer-place";
 import { PageWait, ZoomPicture } from "./ZoomPicture";
 import { awaySpeed, type PictureTap, pullCloses, pullDirection, pulledPlacement, type Size } from "./zoom";
@@ -253,6 +254,7 @@ function Viewer({
               <Page
                 id={f.id}
                 {...(f.version !== undefined ? { version: f.version } : {})}
+                {...(f.view ? { view: f.view } : {})}
                 screen={screen}
                 bars={bars}
                 active={i === index}
@@ -364,6 +366,7 @@ function Viewer({
 function Page({
   id,
   version,
+  view,
   screen,
   bars,
   active,
@@ -383,6 +386,8 @@ function Page({
 }: {
   id: string;
   version?: number;
+  /** A picture or a video, when the place it opened from knew: drawn at once, before its details load. */
+  view?: MediaView;
   screen: Size;
   bars: { top: number; bottom: number };
   active: boolean;
@@ -406,10 +411,11 @@ function Page({
   const { reducedMotion } = useTheme();
   const artifact = useArtifact(orgId, id, version);
   const info = artifact.data ? fileInfo(artifact.data) : null;
-  // Known once its details load (a picture when they can't).
-  const video = info ? info.view === "video" : artifact.isError ? false : null;
-  // A picture's link is the one the message or the Drive already holds, so it shows at once; a video reads its own.
-  const link = useRemoteFile(orgId, video ? null : id, version);
+  // Known from where it opened, else once its details load (a picture when they can't).
+  const video = info ? info.view === "video" : view ? view === "video" : artifact.isError ? false : null;
+  // A picture as its message drew it: the copy already on the phone, with no link to wait for, else the link the
+  // message or the Drive holds. A video reads its own (`PageVideo`).
+  const picture = usePicture(orgId, video ? null : id, version);
   const [zoomed, setZoomed] = useState(false);
   useEffect(() => {
     if (active && video) onVideo();
@@ -525,9 +531,9 @@ function Page({
             />
           </View>
         </GestureDetector>
-      ) : video === false && link.data ? (
+      ) : video === false && picture.source ? (
         <ZoomPicture
-          source={link.data}
+          source={picture.source}
           cacheKey={key}
           screen={screen}
           pull={pull}
@@ -536,7 +542,8 @@ function Page({
           onTap={tapped}
           onLongPress={active ? held : undefined}
           onZoom={zoomChanged}
-          onRetry={() => void link.refetch()}
+          onRetry={picture.retry}
+          onSourceError={picture.onError}
           overlay={
             shownPins.length > 0 || draft
               ? (zoom) => <PicturePins pins={shownPins} zoom={zoom} draft={draft} />
@@ -547,10 +554,10 @@ function Page({
         <GestureDetector gesture={pull}>
           <View style={screen} collapsable={false}>
             <PageWait
-              failed={link.isError}
-              retrying={link.isFetching}
+              failed={picture.failed}
+              retrying={picture.retrying}
               onRetry={() => {
-                void link.refetch();
+                picture.retry();
                 if (artifact.isError) void artifact.refetch();
               }}
             />
@@ -611,6 +618,8 @@ function PageVideo({
   }, [active, videoClock]);
   const [unplayable, setUnplayable] = useState(false);
   const source = useMemo(() => (link.data ? { uri: link.data.uri, headers: link.data.headers } : null), [link.data]);
+  // The cover its message showed: it opens on it, never on black, while the link and the player get ready.
+  const poster = keptStill(pictureKey(id, version));
   return (
     <View style={[styles.videoFrame, { top: bars.top, bottom: bars.bottom }]}>
       {unplayable ? (
@@ -629,9 +638,21 @@ function PageVideo({
           onFailed={() => setUnplayable(true)}
           startAt={startAt}
           onPlayer={ownPlayer}
+          poster={poster}
         />
       ) : (
-        <PageWait icon="play" failed={link.isError} retrying={link.isFetching} onRetry={() => void link.refetch()} />
+        <>
+          {poster && !link.isError ? (
+            <Image
+              source={poster}
+              contentFit="contain"
+              transition={0}
+              accessible={false}
+              style={StyleSheet.absoluteFill}
+            />
+          ) : null}
+          <PageWait icon="play" failed={link.isError} retrying={link.isFetching} onRetry={() => void link.refetch()} />
+        </>
       )}
     </View>
   );

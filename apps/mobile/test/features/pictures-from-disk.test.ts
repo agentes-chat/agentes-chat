@@ -5,11 +5,13 @@ const src = (f: string) => readFileSync(new URL(`../../src/${f}`, import.meta.ur
 
 test("a picture already in the phone's image cache is drawn from there, with no request for a link", () => {
   const source = src("features/files/source.ts");
-  expect(source).toContain("const askServer = local || fromServer || (disk.isFetched && !disk.data);");
+  expect(source).toContain("const askServer = Boolean(id) && (local || fromServer || (disk.isFetched && !disk.data));");
   expect(source).toContain("const link = useRemoteFile(orgId, askServer ? id : null, version);");
   expect(source).toContain("await Image.getCachePathAsync(key)");
-  // A copy the system removed meanwhile: the link, as before.
-  expect(source).toContain("onError: () => (cached ? setFromServer(true) : setFailed(true)),");
+  // A copy the system removed meanwhile: the link, as before (true: the viewer waits for it instead of failing).
+  expect(source).toContain(
+    "onError: () => { if (cached) { setFromServer(true); return true; } setFailed(true); return false; },",
+  );
 });
 
 test("every picture tile reads its picture that way, under one cache key per version", () => {
