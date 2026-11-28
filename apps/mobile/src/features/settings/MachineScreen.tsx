@@ -47,6 +47,7 @@ import {
   commandInReason,
   computerKind,
   computerState,
+  egressOfflineText,
   egressViaText,
   folderName,
   hostDescKey,
@@ -281,6 +282,7 @@ function MachinePage({ machineId }: { machineId: string }) {
     // System mode: each agent works in its own home, never in the folder the computer was connected from.
     m.mode === "system" && !managed && m.kind !== "host" ? t("machines.agentUsers") : null,
     managed && m.online && m.egressWaiting ? t("machines.egress.waiting") : null,
+    egressOfflineText(t, m),
     egressViaText(t, m),
     managed && m.networkTransition
       ? t(m.networkTransition.state === "draining" ? "machines.egress.draining" : "machines.egress.restart", {

@@ -9,6 +9,7 @@ import { ownTyped } from "../message-origin";
 import type { Message } from "../messages";
 import { cheapModelForOrg } from "../router";
 import { createLlmScheduleReader, type ScheduleReader } from "../schedule-reader";
+import type { ToolLabelWriter } from "../tool-label-words";
 import { neutralizeUntrusted } from "../untrusted";
 import { isPersonalWorkspace } from "../workspace-mode";
 import { type ContextItem, insertContextItem, type MemoryJudging, supersede } from "./items";
@@ -33,6 +34,8 @@ export interface ContextDeps {
   schedules?: ScheduleReader;
   /** The working line's first words at a run's start (`intent-line.ts`); absent: none. */
   intents?: IntentWriter;
+  /** Connector tools' names in a person's language (`tool-label-words.ts`); default: the org's cheap model. */
+  toolLabels?: ToolLabelWriter;
   /** Where learning's failures are reported (ADR 0104, `reportLearnFailure`); absent: not reported. */
   errors?: ErrorReporter;
 }

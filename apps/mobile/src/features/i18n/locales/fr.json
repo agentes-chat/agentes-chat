@@ -4,12 +4,17 @@
     "send": "Envoyer"
   },
   "categories": {
-    "where": "Où #{{channel}} apparaît",
-    "whereHelp": "Change pour tout le monde. Les participants du canal restent les mêmes.",
-    "order": "Place dans la liste",
     "up": "Monter",
     "down": "Descendre",
     "channelPosition": "{{at}} sur {{count}}."
+  },
+  "sections": {
+    "title": "Section",
+    "where": "Où #{{channel}} se trouve pour vous",
+    "whereHelp": "Seule votre liste change. Chacun range ses propres sections.",
+    "none": "Aucune section",
+    "order": "Place dans la section",
+    "tooLong": "40 caractères maximum."
   },
   "blocks": {
     "send": "Envoyer",
@@ -195,11 +200,11 @@
       "text": "Il est peut-être hors service ou en dehors de votre réseau. Vos discussions s'afficheront d'elles-mêmes dès son retour.",
       "kept": "Affichage de ce qui était déjà dans l'app."
     },
-    "pinned": "Épinglés",
+    "favorites": "Favoris",
     "recent": "Récents",
     "view": {
       "title": "Afficher les conversations",
-      "sectors": "Secteurs",
+      "sections": "Sections",
       "dms": "Messages directs",
       "channels": "Canaux"
     },

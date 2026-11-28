@@ -2,8 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { VOICE_MAX_MS } from "@agenteschat/client/lib/voice";
+import { playedBars, VOICE_BAR, VOICE_BAR_GAP, VOICE_HANDLE } from "@agenteschat/ui/voice/bars";
 import { hidesBody } from "../../src/features/chat/logic";
 import {
+  BAR_HANDLE,
   handleAt,
   hasWords,
   levelOf,
@@ -129,6 +131,29 @@ describe("voice gestures and wave", () => {
     expect(bars).toContain("const spread = tail ? null : playedColumns(width);");
     expect(bars).toContain("handleAt(progress.value, width) + HANDLE / 2");
     expect(bars).toContain("const handleX = useDerivedValue(() => at.value - HANDLE / 2);");
+  });
+  test("a voice message's wave is the web's: its bars, its round handle and where a finger falls on it", () => {
+    for (const width of [180, 183, 233.5, 300]) {
+      const { count, start } = playedBars(width);
+      const end = start + count * (VOICE_BAR + VOICE_BAR_GAP) - VOICE_BAR_GAP;
+      // Never under the handle: 2 or more between it and the first bar at 0:00, and the last bar and it at the end.
+      expect(start - BAR_HANDLE).toBeGreaterThanOrEqual(2);
+      expect(handleAt(1, width, BAR_HANDLE) - end).toBeGreaterThanOrEqual(2);
+      expect(waveAt(handleAt(0.5, width, BAR_HANDLE) + BAR_HANDLE / 2, width, BAR_HANDLE)).toBeCloseTo(0.5, 9);
+    }
+    expect(BAR_HANDLE).toBe(2 * VOICE_HANDLE);
+    const player = readFileSync(join(import.meta.dir, "../../src/features/voice/VoiceMessage.tsx"), "utf8");
+    expect(player).toContain("wave.value = barWave(peaks, width, BAR_WAVE_H);");
+    expect(player).toContain("<BarWave");
+    expect(player).not.toContain("<PixelWave");
+    const bars = readFileSync(join(import.meta.dir, "../../src/features/voice/VoiceBars.tsx"), "utf8");
+    expect(bars).toContain("resamplePeaks(peaks, count).forEach(");
+    expect(bars).toContain("<Circle cx={at} cy={height / 2} r={BAR_HANDLE / 2} color={on} />");
+  });
+  test("the speed chip keeps one width as the speed goes round, as the web's", () => {
+    const player = readFileSync(join(import.meta.dir, "../../src/features/voice/VoiceMessage.tsx"), "utf8");
+    expect(player).toContain("speed: { width: SPEED_W, height: SPEED_H, borderRadius: 6 },");
+    expect(player).toContain("const SPEED_W = 36;");
   });
 });
 

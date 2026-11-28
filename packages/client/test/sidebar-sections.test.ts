@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { dmList } from "../src/lib/recent";
 import {
   addSection,
   favoritesOf,
@@ -64,4 +65,25 @@ test("sections rename, reorder and go; their channels reorder inside them", () =
   expect(moveSectionBy(b.sections, b.id, -1).map((s) => s.name)).toEqual(["B", "A"]);
   expect(moveChannelBy(b.sections, "3", -1)[0]?.channelIds).toEqual(["1", "3", "2"]);
   expect(removeSection(b.sections, a.id).map((s) => s.name)).toEqual(["B"]);
+});
+
+test("Mensagens diretas: the right hand first, then the latest DM, then everyone else by name; recent keeps who I talked to", () => {
+  const now = Date.parse("2026-11-27T12:00:00Z");
+  const listed = [
+    { kind: "person" as const, id: "u-bia", name: "Bia" },
+    { kind: "agent" as const, id: "a-ada", name: "Ada" },
+    { kind: "person" as const, id: "u-caio", name: "Caio" },
+    { kind: "agent" as const, id: "a-lodi", name: "Lodi" },
+    { kind: "person" as const, id: "u-ana", name: "Ana" },
+  ];
+  const dm = (type: "person" | "agent", id: string, at: string | null, unread = 0) => ({
+    with: { type, id, name: "", handle: null },
+    lastMessage: at ? { id: "m", body: "", createdAt: at, authorType: type } : null,
+    openedAt: "2026-11-01T00:00:00Z",
+    unread,
+  });
+  const dms = [dm("person", "u-caio", "2026-11-27T11:00:00Z"), dm("agent", "a-ada", "2026-11-27T11:30:00Z")];
+  const names = (show: "all" | "recent") => dmList(listed, dms, { show, first: "a-lodi", now }).map((l) => l.name);
+  expect(names("all")).toEqual(["Lodi", "Ada", "Caio", "Ana", "Bia"]);
+  expect(names("recent")).toEqual(["Lodi", "Ada", "Caio"]);
 });

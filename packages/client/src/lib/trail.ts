@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next";
 import { useEffect, useRef, useState } from "react";
 import type { LiveRun } from "../realtime/streams";
-import { toolItemsLive, toolPhrase } from "./work";
+import { hintWords, toolItemsLive, toolPhrase } from "./work";
 
 /**
  * The live work trail under an agent at work (web `WorkingTail`, phone `WorkingLine`): what it did so far, newest last,
@@ -35,14 +35,17 @@ export function workTrail(t: TFunction, run: Pick<LiveRun, "work" | "step">, loc
   items.forEach((item, i) => {
     if (item.kind !== "call") return;
     const l = item.line;
-    // The call running now is what the line above says.
-    if (i === items.length - 1 && l.state === "run") return;
+    // The call running now is what the line above says. Folded into calls of its kind already done, the line stays as
+    // those: dropped while each runs and back when it ends, the trail would lose and gain a row at every call.
+    const running = i === items.length - 1 && l.state === "run";
+    if (running && l.count === 1) return;
+    const done = running ? { ...l, state: "done" as const, count: l.count - 1 } : l;
     const words = said.get(l.key);
     if (words && words !== now)
       lines.push({ key: `${l.key}:said`, text: t("chat.wait.said", { text: words }), said: true });
-    const count = l.count > 1 ? ` ${t("chat.work.times", { count: l.count })}` : "";
-    const hint = l.hint ? ` · ${l.hint}` : "";
-    lines.push({ key: l.key, text: `${toolPhrase(t, l, locale)}${hint}${count}`, said: false });
+    const count = done.count > 1 ? ` ${t("chat.work.times", { count: done.count })}` : "";
+    const hint = hintWords(t, l);
+    lines.push({ key: l.key, text: `${toolPhrase(t, done, locale)}${hint ? ` · ${hint}` : ""}${count}`, said: false });
   });
   return lines;
 }

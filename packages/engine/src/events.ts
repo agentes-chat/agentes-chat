@@ -864,7 +864,10 @@ export function activityLine(message: MessageView): ActivityLine | null {
   return Buffer.byteLength(JSON.stringify(line)) <= ACTIVITY_LINE_LIMIT ? line : null;
 }
 
-export async function publishMessageCreated(pubsub: PubSub, message: MessageView) {
+export async function publishMessageCreated(pubsub: PubSub, posted: MessageView) {
+  // The parts of a long agent text written ahead of this one go out first, each as the message it is.
+  const { before, ...message } = posted;
+  for (const part of before ?? []) await publishMessageCreated(pubsub, part);
   const inline = Buffer.byteLength(JSON.stringify(message)) <= INLINE_LIMIT;
   const authorUserId = message.author.type === "person" ? message.author.id : null;
   await publishChannelEvent(pubsub, {

@@ -2205,13 +2205,34 @@ function ChannelView({
       toBottom();
       toast.show(text, "error");
     };
-    // A thread view holds all it can show; a page read around it that still doesn't show it: deleted or not visible.
-    if (thread || (around?.id === focusTarget && around.done)) {
+    // A page read around it that still doesn't show it: deleted or not visible.
+    if (around?.id === focusTarget && around.done) {
       // A cached page refreshing may still bring it.
       if (!messages.isFetching) missing();
       return;
     }
     if (around?.id === focusTarget) return;
+    // A thread view holds all of its thread: a message of the conversation outside it (a long work's report, posted
+    // where it was asked) opens in the conversation, at it, and only one there is nowhere says it is gone.
+    if (thread) {
+      if (messages.isFetching) return;
+      setAround({ id: focusTarget, done: false });
+      api.chat
+        .messages(org.id, channel.id, { around: focusTarget, limit: 1 })
+        .then((page) => {
+          setAround({ id: focusTarget, done: true });
+          if (!page.some((m) => m.id === focusTarget)) return missing();
+          setFocusDone(true);
+          jumping.current = false;
+          void navigateTo({
+            to: "/org/$orgId/c/$channelId",
+            params: { orgId: org.id, channelId: channel.id },
+            search: { m: focusTarget },
+          });
+        })
+        .catch(missing);
+      return;
+    }
     setAround({ id: focusTarget, done: false });
     api.chat
       .messages(org.id, channel.id, { around: focusTarget, limit: FOCUS_PAGE, onCards: cardsInto(qc, org.id) })
@@ -4528,7 +4549,7 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
             <span className="ac-typing__text" title={consultTip}>
               {step !== null && lead ? <BarStep name={lead.name} step={step} /> : <BarPhrase entries={entries} />}
             </span>
-            {/* Its time and its stop right after its words; who types beside it after them. */}
+            {/* Its time and its stop right after its words. */}
             {solo && step !== null && <RunTail run={solo} />}
             {solo && code && (
               <>
@@ -4545,7 +4566,6 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
             )}
             <ConsultClock entries={entries} now={now} />
             {consultTime && <span className="ac-typing__elapsed ac-num">{consultTime}</span>}
-            {step !== null && <BarAlsoTyping entries={entries} />}
           </span>
           {openBrowser && (
             <Button
@@ -4566,6 +4586,12 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
                 {t("run.strip.see")}
               </button>
             </>
+          )}
+          {/* Who types beside its step: a row of its own, so the step keeps the line. */}
+          {step !== null && (
+            <span className="working-tail__also">
+              <BarAlsoTyping entries={entries} />
+            </span>
           )}
         </div>
         {trail.lines.length > 0 && (

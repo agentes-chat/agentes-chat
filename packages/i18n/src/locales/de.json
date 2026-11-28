@@ -2388,48 +2388,69 @@
     "deleteText": "Ihre Agenten kommen zurück zu Agenten.",
     "deleteChannels": "Ihre Kanäle kommen zurück zu Kanäle.",
     "dropHere": "Agenten hierher ziehen",
-    "dropHereAll": "Agenten oder Kanäle hierher ziehen",
     "moved": "{{name}} ist jetzt in {{group}}",
     "movedOut": "{{name}} hat {{group}} verlassen",
     "undo": "Rückgängig"
   },
   "sidebarAgents": {
-    "options": "Optionen für Agenten",
-    "add": "Neuer Agent oder neue Abteilung",
-    "order": "Reihenfolge",
-    "sort": {
-      "workspace": "Wie im Workspace",
-      "mine": "Meine zuerst",
-      "working": "Arbeitende zuerst"
-    },
     "showAll": "Agenten zeigen, die nicht mit mir sprechen",
-    "collapseAll": "Alle einklappen",
-    "expandAll": "Alle ausklappen",
-    "organize": "Abteilungen im Team ordnen",
     "more_one": "1 weiterer Agent in Team",
     "more_other": "{{count}} weitere Agenten in Team",
     "newAgent": "Neuer Agent",
-    "working_one": "{{count}} arbeitet",
-    "working_other": "{{count}} arbeiten",
     "count_one": "{{count}} Agent",
     "count_other": "{{count}} Agenten",
     "workingIn": "arbeitet in #{{channel}}",
     "talksOnly": "spricht nur mit {{name}}",
     "talksOnlyMore_one": "spricht nur mit {{name}} und {{count}} weiteren",
-    "talksOnlyMore_other": "spricht nur mit {{name}} und {{count}} weiteren",
-    "changeGroup": "In Abteilung verschieben",
-    "newGroupWith": "Neue Abteilung mit {{name}}",
-    "dmsEmpty": "Deine Unterhaltungen mit Personen erscheinen hier."
+    "talksOnlyMore_other": "spricht nur mit {{name}} und {{count}} weiteren"
   },
-  "sidebarPins": {
-    "pin": "Oben anheften",
-    "unpin": "Lösen",
-    "pinned": "Oben angeheftet",
-    "full": {
-      "agents": "Du hast schon 5 Agenten angeheftet. Löse einen, um diesen anzuheften.",
-      "channels": "Du hast schon 5 Kanäle angeheftet. Löse einen, um diesen anzuheften.",
-      "people": "Du hast schon 5 Personen angeheftet. Löse eine, um diese anzuheften."
-    }
+  "sidebarFavorites": {
+    "title": "Favoriten",
+    "add": "Zu Favoriten hinzufügen",
+    "remove": "Aus Favoriten entfernen",
+    "marked": "Favorit",
+    "full": "Favoriten enthält schon 50. Entferne einen, um diesen hinzuzufügen."
+  },
+  "sidebarSections": {
+    "new": "Neuer Abschnitt",
+    "newName": "Neuer Abschnitt",
+    "moveTo": "In Abschnitt verschieben",
+    "takeOut": "Aus Abschnitt entfernen",
+    "rename": "Abschnitt umbenennen",
+    "delete": "Abschnitt löschen",
+    "nameLabel": "Name des Abschnitts"
+  },
+  "sidebarDms": {
+    "options": "Optionen für Direktnachrichten",
+    "show": "Anzeigen",
+    "shows": {
+      "all": "Alle im Workspace",
+      "recent": "Nur letzte Unterhaltungen"
+    },
+    "invite": "Personen einladen",
+    "invited": "Einladung gesendet",
+    "invitedTip": "{{email}} hat die Einladung noch nicht angenommen",
+    "agentTag": "KI",
+    "agentTip": "KI-Agent"
+  },
+  "sidebarColumn": {
+    "label": "Werkzeuge",
+    "unread": "{{name}}, etwas Ungelesenes",
+    "you": "{{name}}, etwas für dich"
+  },
+  "unreads": {
+    "title": "Ungelesen",
+    "forYou": "Für dich",
+    "conversations": "Unterhaltungen",
+    "markAll": "Alles als gelesen markieren",
+    "markRead": "Als gelesen markieren",
+    "open": "Öffnen",
+    "seeInbox": "Alles im Posteingang ansehen",
+    "more_one": "{{count}} weitere Nachricht",
+    "more_other": "{{count}} weitere Nachrichten",
+    "emptyTitle": "Alles erledigt",
+    "emptyText": "Neue Nachrichten und was auf dich wartet, erscheinen hier.",
+    "markedAll": "Alles als gelesen markiert"
   },
   "appsDownload": {
     "computer": "Rechner",
@@ -6807,6 +6828,7 @@
     "undoneBy": "Von {{name}} rückgängig gemacht",
     "undoneByYou": "Von dir rückgängig gemacht",
     "undo": "Rückgängig",
+    "applyAnyway": "Trotzdem anwenden",
     "appliedSome": "{{done}} von {{total}} angewendet",
     "waitingAdmin": "Wartet auf einen Admin",
     "stale": "Veraltet",
@@ -16545,6 +16567,7 @@
       "spillOwnerOnly": "Nur die Person, die diesen Computer verbunden hat, kann seine Hilfe einschalten. Du kannst sie ausschalten.",
       "shareOwnerOnly": "Nur die Person, die diesen Computer verbunden hat, kann Agenten seine Internetverbindung nutzen lassen. Du kannst es ausschalten.",
       "shareConnectedOnly": "Nur ein Computer, den jemand verbunden hat, kann seine Internetverbindung mit den Agenten teilen.",
+      "shareOff": "Schalte zuerst „Agenten nutzen die Internetverbindung dieses Computers“ ein und wähle dann, nur sein Internet zu nutzen.",
       "tasksOwnerOnly": "Nur wer diesen Computer verbunden hat, kann ändern, wie viele Aufgaben er gleichzeitig ausführt.",
       "tasksCloud": "Die Cloud bemisst den Platz dieses Computers für Aufgaben selbst.",
       "notHome": "Agenten leben auf dem Computer des Workspace und nutzen diesen, wenn sie ihn beim Namen nennen."
@@ -16710,7 +16733,8 @@
       "hint": "Die Adresse, die Websites sehen, wenn die Agenten surfen. Sie ändert sich, wenn sich das Netzwerk des Computers ändert.",
       "waiting": "Die Internetverbindung der Agenten wird wiederhergestellt. Ihre Verbindungen warten, bis sie zurück ist.",
       "via": "Agenten nutzen die Internetverbindung von {{name}}",
-      "viaHint": "Websites sehen den Standort dieses Computers. Wer ihn verbunden hat, kann das auf seiner Seite ausschalten."
+      "viaHint": "Websites sehen den Standort dieses Computers. Wer ihn verbunden hat, kann das auf seiner Seite ausschalten.",
+      "offline": "Agenten haben kein Internet: {{name}} ist offline"
     },
     "maintenance": {
       "short": {
@@ -17107,11 +17131,14 @@
     "helpWorkspace": "Computer helfen, wenn der des Teams voll oder weg ist",
     "helpWorkspaceHint": "Jeder Computer hilft nur, wenn sein Besitzer es erlaubt. Aus: Keiner hilft, egal was sein Besitzer gewählt hat.",
     "shareInternet": "Agenten nutzen die Internetverbindung dieses Computers",
-    "shareInternetHint": "Websites, die die Agenten öffnen, laufen über die Verbindung dieses Computers und sehen deshalb deinen Standort. Nur Websites und nie etwas in deinem eigenen Netzwerk. Solange dieser Computer offline ist, nutzen die Agenten ihre übliche Verbindung.",
+    "shareInternetHint": "Die Verbindungen der Agenten laufen über das Internet dieses Computers, deshalb sehen Websites und Server deinen Standort: Websites, git, SSH, Datenbanken und andere TCP-Verbindungen. Nie etwas in deinem eigenen Netzwerk und keine E-Mails über Port 25. Die KI der Agenten, Namensabfragen, Anrufe und anderer UDP-Verkehr nutzen die übliche Verbindung, ebenso alles, solange dieser Computer offline ist.",
+    "shareInternetHintProxy": "Der Browser der Agenten und die Programme, die Proxy-Einstellungen befolgen (git über HTTPS, curl, die meisten Kommandozeilen-Tools), laufen über das Internet dieses Computers, deshalb sehen Websites deinen Standort. SSH, Datenbank-Clients und andere Programme, die Proxy-Einstellungen ignorieren, nutzen die übliche Verbindung, ebenso die KI der Agenten, Namensabfragen und UDP-Verkehr. Nie etwas in deinem eigenen Netzwerk und keine E-Mails über Port 25. Solange dieser Computer offline ist, nutzt alles die übliche Verbindung.",
+    "shareInternetOnly": "Nur das Internet dieses Computers nutzen",
+    "shareInternetOnlyHint": "Die Agenten nutzen nur das Internet dieses Computers, auch für ihre KI, und nie die übliche Verbindung. Solange er offline ist, haben sie kein Internet, bis er zurück ist.",
     "shareInternetInUse": "Gerade in Benutzung",
     "shareInternetOther": "Agenten nutzen gerade {{name}}",
     "shareInternetPick": "Diesen nutzen",
-    "shareInternetJoin": "Die Agenten öffnen Websites auch über die Internetverbindung dieses Computers, daher sehen Websites deinen Standort. Du kannst das auf seiner Seite ausschalten.",
+    "shareInternetJoin": "Die Agenten gehen auch über das Internet dieses Computers online, deshalb sehen Websites und Server deinen Standort. Du kannst das auf seiner Seite ausschalten.",
     "connectedBy": "Verbunden von {{name}}",
     "downloadFor": "Für {{system}} herunterladen",
     "downloadApp": "App herunterladen",
@@ -17653,7 +17680,7 @@
       "folderOnComputer": "Auf dem Computer erlauben",
       "folderShown": "Auf {{deviceName}} geöffnet. Erlaube es dort.",
       "internetShared": "Agenten öffnen Websites jetzt über die Internetverbindung von <b>{{deviceName}}</b>",
-      "internetSharedLine": "Nur die Agenten dieses Workspace, nur Websites, nie etwas im eigenen Netzwerk des Computers. Solange er offline ist, nutzen sie ihre übliche Verbindung.",
+      "internetSharedLine": "Nur die Agenten dieses Workspace, nie etwas im eigenen Netzwerk des Computers, nie E-Mails über Port 25. Solange er offline ist, nutzen sie ihre übliche Verbindung.",
       "internetOff": "Ausschalten",
       "internetOffDone": "Agenten nutzen die Internetverbindung von {{deviceName}} nicht mehr.",
       "once": "Einmal erlauben",
@@ -19670,6 +19697,7 @@
       "brain_unavailable_outdated": "Das Programm auf meinem Computer braucht ein Update, bevor {{brain}} antworten kann. Ich antworte, sobald es aktualisiert ist.",
       "brain_unavailable_plan_owner": "{{brain}} würde mit einem Abo denken, das nicht meinem Besitzer gehört, deshalb nutze ich es nicht. Verbinde das Konto meines Besitzers auf meiner Seite.",
       "brain_unavailable_shared_login": "Mein Computer kann Claudes Anmeldung für alle Agenten gerade nicht nutzen. Ich antworte, sobald es geht. Wenn es weiter fehlschlägt, verbinde Claude in KI-Konten neu.",
+      "brain_unavailable_lent_offline": "Ich habe gerade kein Internet: {{computer}} ist offline, und die Agenten dieses Workspace nutzen nur sein Internet. Ich antworte, sobald er zurück ist oder sobald „Nur das Internet dieses Computers nutzen“ auf seiner Seite aus ist.",
       "provider_unavailable": "Mein KI-Anbieter antwortet gerade nicht. Ich antworte, sobald er wieder da ist.",
       "provider_wait_rate_limit": "{{provider}} begrenzt gerade die Anfragen dieses Schlüssels. Ich antworte, sobald es wieder geht.",
       "provider_wait_down": "{{provider}} ist gerade ausgefallen oder überlastet. Ich antworte, sobald es wieder da ist.",
@@ -19680,7 +19708,9 @@
       "provider_back": "Meine KI ist wieder da.",
       "confidential_removed": "Entfernt: Vertraulicher Text wird {{days}} Tage aufbewahrt.",
       "brain_queued": "Ich stehe noch in der Warteschlange. Ich antworte, sobald ich dran bin.",
-      "brain_interrupted": "{{brain}} hat aufgehört, bevor es fertig war. Schon erledigt, wird nicht wiederholt: {{tools}}.",
+      "brain_interrupted": "{{brain}} hat aufgehört, bevor es fertig war. Frag noch einmal, um weiterzumachen.",
+      "brain_interrupted_timeout": "{{brain}} hat sein Zeitlimit überschritten und aufgehört, bevor es fertig war. Frag noch einmal, um weiterzumachen.",
+      "brain_interrupted_computer": "Der Computer hat {{brain}} gestoppt, bevor es fertig war. Frag noch einmal, um weiterzumachen.",
       "plan_limit_cut": "Ich habe am Limit des {{plan}}-Abos aufgehört. Ich mache {{when}} weiter, wo ich war, wenn es sich zurücksetzt.",
       "plan_limit_cut_unknown": "Ich habe am Limit des {{plan}}-Abos aufgehört. Ich mache dort weiter, wo ich war, sobald es sich zurücksetzt.",
       "plan_limit_wait": "Das {{plan}}-Abo hat sein Limit erreicht. Ich antworte {{when}}, wenn es sich zurücksetzt. Wird es in {{plan}} früher freigegeben, merke ich das und antworte sofort.",

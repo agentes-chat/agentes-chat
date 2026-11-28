@@ -267,3 +267,20 @@ export function threadStatus(t: Pick<ThreadInfo, "state" | "working" | "needsYou
  */
 export const threadMessageCount = (t: Pick<ThreadInfo, "replyCount" | "context">) =>
   !t.context ? t.replyCount + 1 : t.context.moved ? t.replyCount : t.context.count + t.replyCount;
+
+/**
+ * Where a thread opens: a channel's or a DM's in its conversation, at its root, with the thread in the panel beside
+ * it; a mission's (its plan on top), a task's and a file's on a screen of their own.
+ */
+export const opensInConversation = (t: Pick<ThreadInfo, "channelKind" | "mission">) =>
+  (t.channelKind === "channel" || t.channelKind === "dm") && !t.mission;
+
+/**
+ * The message a thread's conversation opens at, beside the thread: its root, or the first message of its range while
+ * the range is still there; none for an archived one, which the conversation no longer shows.
+ */
+export function threadAnchor(t: Pick<ThreadInfo, "id" | "channelId" | "state" | "context">): string | null {
+  if (t.state === "archived") return null;
+  const ctx = t.context;
+  return ctx && !ctx.moved && ctx.channelId === t.channelId ? ctx.firstMessageId : t.id;
+}

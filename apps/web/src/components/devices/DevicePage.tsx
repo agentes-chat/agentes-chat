@@ -6,7 +6,7 @@ import type {
   PermissionNeed,
   PhoneDevice,
 } from "@agenteschat/client";
-import { useMachinePause, useMachines } from "@agenteschat/client";
+import { useAuthConfig, useMachinePause, useMachines } from "@agenteschat/client";
 import {
   deviceName,
   doctorShown,
@@ -24,6 +24,7 @@ import {
   RUNNER_DOCTOR_COMMAND,
   RUNNER_UPDATE_COMMAND,
   SPILL_USES,
+  shareInternetHint,
   shareInternetText,
   spillOfUse,
   spillUseOf,
@@ -346,6 +347,7 @@ function ComputerPage({ machineId }: { machineId: string }) {
   const toast = useToast();
   const devices = useDevices(org.id);
   const machines = useMachines(org.id);
+  const auth = useAuthConfig();
   const update = useUpdateComputer(org.id);
   const back = useBackToList();
   const [renaming, setRenaming] = useState<DeviceTarget | null>(null);
@@ -608,7 +610,7 @@ function ComputerPage({ machineId }: { machineId: string }) {
               id="dv-pc-internet"
               icon="globe"
               label={t("devices.shareInternet")}
-              hint={t("devices.shareInternetHint")}
+              hint={shareInternetHint(t, auth.data)}
               status={shareInternetText(t, d, lending)}
               {...(mayPick
                 ? {
@@ -637,6 +639,24 @@ function ComputerPage({ machineId }: { machineId: string }) {
                       />
                     ),
                   })}
+            />
+          )}
+          {/* Under the switch while it lends: nothing of the agents' goes their usual way, AI calls included. Its
+              owner's to turn on, as the switch is; an admin may only turn it off. */}
+          {internet?.on && internet.only !== undefined && (d.mayManage || internet.only) && (
+            <PrefRow
+              id="dv-pc-internet-only"
+              nested
+              label={t("devices.shareInternetOnly")}
+              hint={t("devices.shareInternetOnlyHint")}
+              control={
+                <Switch
+                  id="dv-pc-internet-only-switch"
+                  checked={internet.only}
+                  disabled={!d.mayManage || (!owner && !internet.only)}
+                  onCheckedChange={(on) => save({ id: d.id, internetOnly: on })}
+                />
+              }
             />
           )}
           {admin && d.machineKind === "connected" && (

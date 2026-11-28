@@ -162,7 +162,7 @@ const busctl = (args: string[]) =>
 export interface WorkerState {
   privateNetwork?: boolean;
   /** ADR 0237: the computer's loopback proxy its agents use now (`setEgressProxy`); null or absent: none. */
-  egressProxy?: { port: number; direct: string[] } | null;
+  egressProxy?: { port: number; direct: string[]; only?: boolean } | null;
   /** The server's host: an agent's commit email without one in its checkout is `<handle>@agents.<host>`. */
   commitHost?: string;
   access: RunnerAccess;

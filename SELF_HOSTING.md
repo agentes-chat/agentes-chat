@@ -253,9 +253,12 @@ traffic ("In use now" on its page).
 
 The borrowing computer's page then says "Agents use the internet of Ana's laptop (Ana)".
 
-**What goes through it.** Only connections to ports 80 and 443, of agents' programs (the commands they run, their
-coding CLIs and tasks) and browsers started after it began: the runner hands them `HTTPS_PROXY`, `ALL_PROXY`
-and `NODE_USE_ENV_PROXY=1` toward a proxy of its own on `127.0.0.1`, and Chrome its `--proxy-server` flag. Never
+**What goes through it.** TCP connections to any port but 25 (mail servers), of agents' browsers and of their
+programs (the commands they run, their coding CLIs and tasks) that use proxy settings, started after it began: the
+runner hands them `HTTPS_PROXY`, `ALL_PROXY` and `NODE_USE_ENV_PROXY=1` toward a proxy of its own on `127.0.0.1`,
+and Chrome its `--proxy-server` flag. Browsers, git over HTTPS, curl and most CLIs follow them; OpenSSH (an SSH
+`git push`), database clients and other programs that ignore them go out the usual way, and so do name lookups and
+all UDP. A lending computer on an app older than this carries ports 80 and 443 alone. Never
 this server's own calls (the database, email, model providers, MCP servers and connectors, updates), never the AI
 CLIs' model and sign-in services (`NO_PROXY`), never private, local or this computer's addresses, and never the
 search service you set (Brave, SearXNG). The lending computer resolves each name itself and refuses non-public
@@ -264,6 +267,12 @@ refusal or a lending computer that doesn't answer, connections go out the usual 
 minute before asking again). A runner that runs with a proxy of its own (`HTTPS_PROXY` in its environment), or
 whose agents run in a network of their own (a `networkLauncher` or `networkMark`), keeps it, and its agents get
 nothing from this.
+
+**Use only this computer's internet.** Under the switch, while it lends, its owner may turn this on (an admin may turn
+it off). Then only that computer carries the workspace's agents' connections, the AI CLIs' services included, and
+nothing goes the usual way: while it is offline the proxy fails every connection, the agents have no internet, their
+coding CLIs can't reach their AI (the run waits for that computer and says why), and `web_fetch` says so. Programs
+that ignore proxy settings still go out their own way: on a self-hosted server it is a preference, not a fence.
 
 **Good to know.**
 

@@ -143,6 +143,7 @@ import {
   setEgressProxy,
   startEgressProxy,
   startEgressRelay,
+  writeEgressPolicy,
 } from "./egress-relay";
 import { EgressShare } from "./egress-share";
 import { NetworkChangingError, RUNNER_VERSION, RunnerError } from "./errors";
@@ -533,6 +534,8 @@ export class RunnerDaemon implements RequestObserver {
   private egressProxy: Promise<{ port: number; close(): void }> | null = null;
   private egressPort: number | null = null;
   private egressLent = false;
+  /** ADR 0237 (amendment 2026-11-27 c): the workspace uses only the lending computer's internet. */
+  private egressOnly = false;
   private refusedNetworkKey: string | null = null;
   private networkWriteFailed = false;
   private egressGeneration = 0;
@@ -1907,6 +1910,7 @@ export class RunnerDaemon implements RequestObserver {
       reportParts: () => this.reportParts(),
       egressShare: this.egressShare,
       egressProxy: (on) => this.borrowEgress(on),
+      egressOnly: (on) => this.useOnlyLent(on),
       streamStarting: (streamId) => void this.send({ type: "stream.starting", streamId }),
     };
     // `hello` lists the accounts it already knows; a fresh look (each runs its CLI) never delays connecting:
@@ -1972,6 +1976,7 @@ export class RunnerDaemon implements RequestObserver {
         if (welcome.name && this.stored && this.stored.name !== welcome.name)
           this.write({ ...this.stored, name: welcome.name });
         this.observeEgress = welcome.observeEgress;
+        this.egressOnly = welcome.egressOnly === true;
         this.egressRelay?.close();
         this.egressRelay = welcome.egressRelay
           ? startEgressRelay({
@@ -1979,6 +1984,7 @@ export class RunnerDaemon implements RequestObserver {
               dial: (streamId, target) => streams.dial(streamId, "egress", undefined, target),
             })
           : null;
+        if (this.egressRelay) this.writeEgressPolicy();
         void this.borrowEgress(welcome.egressProxy);
         this.sentNetworkTransition = "";
         this.observeNetwork();
@@ -2296,6 +2302,7 @@ export class RunnerDaemon implements RequestObserver {
             ? this.session.streams.dial(streamId, "egress", undefined, target)
             : Promise.reject(new Error("offline")),
         lent: () => this.egressLent,
+        only: () => this.egressOnly,
       });
       const proxy = await this.egressProxy.catch((error: unknown) => {
         this.opts.log(`The web proxy for agents didn't start: ${String(error)}`);
@@ -2304,13 +2311,34 @@ export class RunnerDaemon implements RequestObserver {
       });
       this.egressPort = proxy?.port ?? null;
       this.egressLent = proxy !== null;
-      setEgressProxy(proxy ? { port: proxy.port, direct: [new URL(server).hostname] } : null);
+      setEgressProxy(
+        proxy
+          ? { port: proxy.port, direct: [new URL(server).hostname], ...(this.egressOnly ? { only: true } : {}) }
+          : null,
+      );
     } else {
       this.egressLent = false;
       setEgressProxy(null);
     }
     this.session?.supervisor?.stateChanged();
     return this.egressLent;
+  }
+
+  /** The guard's file next to the relay socket (`EGRESS_RELAY_POLICY`): a failed write keeps the last one. */
+  private writeEgressPolicy() {
+    try {
+      writeEgressPolicy(this.opts.home, this.egressOnly);
+    } catch (error) {
+      this.opts.log(`Could not write the network guard's lent-internet policy: ${String(error)}`);
+    }
+  }
+
+  /** `egress.only`: the workspace now uses only the lending computer's internet, or no longer. */
+  private async useOnlyLent(on: boolean): Promise<boolean> {
+    this.egressOnly = on;
+    if (this.egressRelay) this.writeEgressPolicy();
+    if (this.egressLent) await this.borrowEgress(true);
+    return on;
   }
 
   private async closeSession(s: Session) {

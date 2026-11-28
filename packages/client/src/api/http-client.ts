@@ -1248,6 +1248,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
     },
     connectors: {
       catalog: () => request<ConnectorCatalog>("/api/app/connectors/catalog"),
+      toolLabels: async (orgId, locale, keys) =>
+        (await request<{ labels: Record<string, string> }>(`${org(orgId)}/tool-labels`, { json: { locale, keys } }))
+          .labels,
       list: async (orgId, options) =>
         (await request<{ connections: Connection[] }>(`${org(orgId)}/connectors${othersQuery(options)}`)).connections,
       connectWithKey: (orgId, input) => request<Connection>(`${org(orgId)}/connectors`, { json: input }),

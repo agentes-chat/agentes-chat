@@ -2866,6 +2866,8 @@ export interface Proposal {
   reviewed: boolean;
   /** Applied, and the viewer may put it back (`proposals.undo`). */
   undoable: boolean;
+  /** Left out by the review, and the viewer may apply it themselves (`proposals.accept`); older servers: absent. */
+  applicable?: boolean;
   undoneBy: { userId: string; name: string } | null;
   undoneAt: string | null;
   decidedAt: string | null;
@@ -5487,6 +5489,11 @@ export interface Machine {
    * way out.
    */
   egressVia?: { machineId: string; name: string; userName: string | null } | null;
+  /**
+   * ADR 0237 amendment 2026-11-27 c, the workspace's own computer: its agents use only this person's computer's
+   * internet, and it is offline, so they have none now. Null or absent: they have internet.
+   */
+  egressOffline?: { machineId: string; name: string; userName: string | null } | null;
   /**
    * The workspace's own computer, online, has its agents waiting for their way out: none of the proxies its network
    * requires works now, so their connections are refused for a while. Absent from an older server: they don't wait.
@@ -9292,10 +9299,11 @@ export interface ComputerDevice {
    */
   spill: { own: boolean; first?: boolean };
   /**
-   * ADR 0237: whether its owner lends its internet, and whether it carried agents' web traffic lately. Null (or absent
+   * ADR 0237: whether its owner lends its internet, and whether it carried agents' web traffic lately. `only`: the
+   * workspace's agents use only its internet (absent from an older server, which has no such choice). Null (or absent
    * from an older server): nothing to lend to.
    */
-  shareInternet?: { on: boolean; inUse: boolean } | null;
+  shareInternet?: { on: boolean; inUse: boolean; only?: boolean } | null;
   /** What we do to the workspace's own computer now, away (`status` says it too) or while it works, maybe slower. */
   maintenance?: ComputerMaintenance | null;
   systemMode: boolean;
@@ -9448,6 +9456,8 @@ export interface ComputerDeviceInput {
   pushHarder?: boolean;
   /** ADR 0237: lend its internet to the workspace's own computer (its owner); on again picks it first. */
   shareInternet?: boolean;
+  /** ADR 0237: with `shareInternet` on, the workspace's agents use only its internet (its owner's to turn on). */
+  internetOnly?: boolean;
   spill?: { own?: boolean; first?: boolean };
 }
 

@@ -3,6 +3,8 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
 
+import type { ComputerDevice } from "@agenteschat/client";
+import { CLOUD_SERVER } from "@agenteschat/client/lib/server";
 import { act, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
@@ -13,6 +15,7 @@ import type { UpdateCheck } from "../src/hooks";
 import { createFakeHost, type FakeHost, type HereOptions, type Scenario } from "../src/host/fake";
 import { createDesktopI18n } from "../src/i18n";
 import { ToastProvider } from "../src/ui/Toast";
+import { InternetRow } from "../src/windows/InternetRow";
 import { Prefs } from "../src/windows/Prefs";
 import { Advanced } from "../src/windows/prefs/Advanced";
 import { Folders } from "../src/windows/prefs/Folders";
@@ -933,5 +936,51 @@ describe("Preferences › General: Compatibility mode (Linux)", () => {
           expect(compatRow(el)).toBeUndefined();
         },
       );
+  });
+});
+
+describe("Agents use this computer's internet: what goes through it, by server", () => {
+  const computer = {
+    id: "m-desk",
+    mayManage: true,
+    shareInternet: { on: true, inUse: false },
+  } as unknown as ComputerDevice;
+  test("all TCP on agentes.chat; what follows proxy settings on a self-hosted server", async () => {
+    for (const [server, has] of [
+      [CLOUD_SERVER, "websites, git, SSH, databases and other TCP connections"],
+      ["https://agents.example.com", "ignore proxy settings use their usual connection"],
+    ] as const)
+      await pane(
+        "selfhost",
+        <InternetRow server={server} orgId="o-1" computer={computer} />,
+        (el) => row(el, "Agents use this computer's internet"),
+        (el) => {
+          expect(row(el, "Agents use this computer's internet")?.hint).toContain(has);
+          expect(row(el, "Agents use this computer's internet")?.hint).toContain("port 25");
+        },
+      );
+  });
+
+  test("use only this computer's internet: nested under the switch while it lends, none from an older server", async () => {
+    const lent = { ...computer, shareInternet: { on: true, inUse: false, only: false } } as ComputerDevice;
+    await pane(
+      "selfhost",
+      <InternetRow server={CLOUD_SERVER} orgId="o-1" computer={lent} />,
+      (el) => row(el, "Use only this computer's internet"),
+      (el) => {
+        const only = row(el, "Use only this computer's internet");
+        expect(only?.hint).toContain("their AI included");
+        const line = el.querySelector("#internet-m-desk-only")?.closest(".dk-crow");
+        expect(line?.getAttribute("data-nested")).toBe("true");
+      },
+    );
+    await pane(
+      "selfhost",
+      <InternetRow server={CLOUD_SERVER} orgId="o-1" computer={computer} />,
+      (el) => row(el, "Agents use this computer's internet"),
+      (el) => {
+        expect(row(el, "Use only this computer's internet")).toBeUndefined();
+      },
+    );
   });
 });
