@@ -11,6 +11,7 @@ import {
 import { type RefObject, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, PixelRatio, Text as RNText, StyleSheet, View, type ViewInstance } from "react-native";
+import { reportError } from "@/lib/error-reports";
 import { CHROME_MAX_SCALE, Icon, PressScale } from "@/ui";
 import { useMessageCardCorners } from "../chat/look";
 import { useColors } from "../shared/hooks";
@@ -48,6 +49,8 @@ const stills = new BoundedMap<string, Still>(24);
 const reading = new Map<string, Promise<Still>>();
 /** A still's frame, in pixels across: a message's widest picture (300 points) on this screen. */
 const STILL_PIXELS = Math.round(300 * Math.min(PixelRatio.get(), 3));
+/** Playing this long with no first frame announced, the cover goes anyway (and it is reported). */
+const COVER_MAX_MS = 1500;
 /** A video that hasn't said its length by then shows its play key alone; the next time its row comes it's read again. */
 const STILL_WAIT_MS = 20_000;
 /** Two read at a time: a conversation of videos never opens a decoder per video at once. */
@@ -246,9 +249,12 @@ export function VideoPlayer({
   );
   // Opened with the system's zoom where there is one: the still grows into the viewer (`MediaLink`).
   return opens ? (
+    // Never the system's zoom for a video: under it the player drew no picture (its sound played on black). Its cover
+    // grows out of the tile on the layer instead, and the viewer is a plain screen under it (`grow.tsx`).
     <MediaLink
       file={opens.file}
       siblings={opens.siblings}
+      zoom={false}
       grow={growKey ? { key: growKey, picture: shownFrame, aspect: width / tileHeight, corners: null } : undefined}
     >
       {tile}
@@ -378,6 +384,8 @@ export function ViewerVideo({
   poster?: VideoThumbnail | null | undefined;
 }) {
   const [drawn, setDrawn] = useState(false);
+  // Playing (its sound running): the cover goes a moment later at the latest.
+  const [playing, setPlaying] = useState(false);
   const player = useVideoPlayer({ ...source, metadata: { title: name } }, (p) => {
     p.loop = false;
     p.staysActiveInBackground = true;
@@ -409,7 +417,18 @@ export function ViewerVideo({
   }, [active, player]);
   useEventListener(player, "playingChange", ({ isPlaying }) => {
     if (isPlaying) claim(player);
+    if (isPlaying) setPlaying(true);
   });
+  // The cover never stays over a video that plays: it goes on the first frame, or a moment after playing starts (a
+  // first frame the player never announced). A video that plays with no frame by then is reported.
+  useEffect(() => {
+    if (!playing || drawn) return;
+    const timer = setTimeout(() => {
+      setDrawn(true);
+      reportError(new Error("A video played with no frame drawn"), { where: "video.noFrame" });
+    }, COVER_MAX_MS);
+    return () => clearTimeout(timer);
+  }, [playing, drawn]);
   useEventListener(player, "statusChange", ({ status }) => {
     if (status === "error") onFailed();
   });

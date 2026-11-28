@@ -88,3 +88,12 @@ describe("the wiring", () => {
     expect(layer).toContain("setLifted(null);\n      layer?.clear();");
   });
 });
+
+test("a video never opens with the system's zoom (its player drew no picture under it), and its cover never stays over it", () => {
+  const player = src("features/files/VideoPlayer.tsx");
+  expect(player).toMatch(/<MediaLink\s+file=\{opens\.file\}\s+siblings=\{opens\.siblings\}\s+zoom=\{false\}/);
+  expect(src("features/files/MediaLink.tsx")).toContain("if (!NATIVE_ZOOM || !zoom) {");
+  // The cover goes on the first frame, or a moment after playing starts, and a video playing with no frame is reported.
+  expect(player).toContain("const COVER_MAX_MS = 1500;");
+  expect(player).toContain('reportError(new Error("A video played with no frame drawn"), { where: "video.noFrame" });');
+});

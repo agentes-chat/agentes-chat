@@ -33,6 +33,7 @@ export function MediaLink({
   file,
   siblings,
   grow,
+  zoom = true,
   children,
 }: {
   file: FileRef;
@@ -42,10 +43,15 @@ export function MediaLink({
    * tile registered under `key` (`useGrowTile`), the picture it shows and that picture's shape.
    */
   grow?: { key: string; picture: GrowPicture | null; aspect: number | null; corners: Corners | null } | undefined;
+  /**
+   * False: never the system's zoom, the layer's growing instead (a video: under the system's zoom its player drew no
+   * picture, only its sound played).
+   */
+  zoom?: boolean;
   children: (press: (() => void) | undefined) => ReactElement;
 }) {
   const reduced = useReducedMotion();
-  if (!NATIVE_ZOOM) {
+  if (!NATIVE_ZOOM || !zoom) {
     const plain = () => openFile(file, siblings);
     return children(
       grow ? () => growOpen({ ...grow, open: () => openFile(file, siblings, { grow: true }), reduced }, plain) : plain,
