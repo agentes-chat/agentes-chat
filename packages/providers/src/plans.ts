@@ -150,6 +150,7 @@ export const CODING_PLANS = {
       tokenEnv: "ANTHROPIC_AUTH_TOKEN",
       models: [{ id: "MiniMax-M3.1-Flash[1m]", label: "MiniMax M3.1 Flash", alias: "sonnet" }],
     },
+    usage: { url: "https://api.minimax.io/v1/token_plan/remains", auth: "bearer" },
   },
   opencode: {
     label: "OpenCode Go",

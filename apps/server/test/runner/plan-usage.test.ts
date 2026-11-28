@@ -451,10 +451,53 @@ test("coding plans: each provider's endpoint, the key only in Authorization, no 
     ["monthly", 33],
   ]);
 
+  const minimax = scripted(200, {
+    base_resp: { status_code: 0, status_msg: "success" },
+    model_remains: [
+      { model_name: "video", current_interval_status: 2 },
+      {
+        model_name: "MiniMax-M3.1-Flash",
+        current_interval_status: 1,
+        current_interval_remaining_percent: 65,
+        end_time: 1893510000000,
+        current_weekly_status: 1,
+        current_weekly_usage_count: 750,
+        current_weekly_total_count: 1000,
+        weekly_end_time: 1893900000000,
+      },
+    ],
+  });
+  expect(((await fetchPlanKeyUsage("minimax", KEY, { fetch: minimax.fetch, now: NOW })) as PlanUsage).windows).toEqual([
+    { kind: "five_hour", usedPercent: 35, resetsAt: new Date(1893510000000).toISOString() },
+    { kind: "seven_day", usedPercent: 25, resetsAt: new Date(1893900000000).toISOString() },
+  ]);
+  // Exhausted (status 2) and unused (status 3) fallback, plus error envelopes.
+  expect(
+    (
+      (await fetchPlanKeyUsage("minimax", KEY, {
+        fetch: scripted(200, {
+          base_resp: { status_code: 0 },
+          model_remains: [{ model_name: "general", current_interval_status: 2, current_weekly_status: 3 }],
+        }).fetch,
+        now: NOW,
+      })) as PlanUsage
+    ).windows,
+  ).toEqual([
+    { kind: "five_hour", usedPercent: 100 },
+    { kind: "seven_day", usedPercent: 0 },
+  ]);
+  expect(
+    await fetchPlanKeyUsage("minimax", KEY, {
+      fetch: scripted(200, { base_resp: { status_code: 1004 }, model_remains: [{ model_name: "general" }] }).fetch,
+    }),
+  ).toBeNull();
+  expect(await fetchPlanKeyUsage("minimax", KEY, { fetch: scripted(200, { model_remains: [] }).fetch })).toBeNull();
+
   // Z.ai takes the raw key; the others a bearer. Never in the URL, and no redirect may carry it elsewhere.
   for (const [s, url, auth] of [
     [zai, "https://api.z.ai/api/monitor/usage/quota/limit", KEY],
     [kimi, "https://api.kimi.com/coding/v1/usages", `Bearer ${KEY}`],
+    [minimax, "https://api.minimax.io/v1/token_plan/remains", `Bearer ${KEY}`],
     [opencode, "https://opencode.ai/zen/go/v1/usage", `Bearer ${KEY}`],
   ] as const) {
     expect(s.calls).toHaveLength(1);
@@ -472,9 +515,9 @@ test("coding plans: each provider's endpoint, the key only in Authorization, no 
     throw new Error(`refused ${KEY}`);
   }) as unknown as typeof fetch;
   expect(await fetchPlanKeyUsage("zai", KEY, { fetch: thrown })).toBeNull();
-  // A plan with no endpoint, or a key that would split a header: nothing is asked.
+  // An unknown plan, or a key that would split a header: nothing is asked.
   const none = scripted(200, {});
-  expect(await fetchPlanKeyUsage("minimax", KEY, { fetch: none.fetch })).toBeNull();
+  expect(await fetchPlanKeyUsage("unknown", KEY, { fetch: none.fetch })).toBeNull();
   expect(await fetchPlanKeyUsage("zai", "a\nb", { fetch: none.fetch })).toBeNull();
   expect(await fetchPlanKeyUsage("__proto__", KEY, { fetch: none.fetch })).toBeNull();
   expect(none.calls).toHaveLength(0);
