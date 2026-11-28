@@ -421,4 +421,8 @@ amendment above.
   page blurred under a near-solid tone of the sky with a still pixel dither (the kit Dialog's `scrimClassName`).
 - **Ten new workspaces a day count only the ones made**: a refused create, or the one being set up answered again,
   gives its take back.
+- **"Not now" on the plan is kept** (2026-11-28): confirmed, it stores `ai` (past the plan and the AI steps, which a
+  workspace waiting for its plan skips), so a reload stays on the photo with the plan to do. The name and zone dialog of
+  the work step says why with a toast when its save fails. Once the first delivery is armed, the work and the agent's
+  steps are never offered again (ADR 0264, addendum of 2026-11-28).
 

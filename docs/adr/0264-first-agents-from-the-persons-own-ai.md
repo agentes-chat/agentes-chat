@@ -193,3 +193,41 @@ work.
 - **Already able to work.** Where the plan and an AI are already there (a member joining a paying workspace, a
   self-hosted server with a key), it fires as soon as the person leaves the agent's step, with the apps they connected
   there; an app they didn't connect is one the brief tells the agent to say it couldn't reach.
+
+## Addendum (2026-11-28): one first agent, whatever the way in
+
+A review of the first run through the onboarding found ways to leave two first agents, a delivery that could fire as
+the wrong agent, and a member with no way into the workspace. Amends the addendum above.
+
+- **One first agent, kept.** While a person keeps a first agent of the onboarding (`keptFirstAgent`: their
+  `first_deliveries` row with its agent still in the team), a start, a pick or an arm only takes its place: `replace`
+  must name it, and it must be one the onboarding may take back (made by it, the person's own, its delivery not gone).
+  Anything else is 409 `first_agents.kept`, before anything is made. Another agent that was only armed (no area) is
+  never taken back from the onboarding.
+- **Made first, then taken back.** The new agent is made, then kept in one statement (`takeFirstDelivery`: only over
+  the one it replaces, or one whose agent left the team), and only then is the one before it archived, so a failure on
+  the way leaves the person with the one they had. Two requests at once (two tabs, a retry): the one that loses the
+  keep is taken back and answers `first_agents.kept`.
+- **Taken back cleanly.** The agent taken back is archived as the right hand's Undo archives it, and its team card is
+  settled (`retireTeamCardOf`): the channel made for it is archived while only it and the person are in it, and the
+  card reads as undone, with no Undo left. The right hand's weekly check made with the first card stays. Archiving
+  keeps the handle taken, as for any archived agent.
+- **Brought from another app.** Once an import from the work step brought agents, the onboarding makes the oldest one
+  it made the person's first agent (`POST …/first-agents/adopt`, `adoptFirstAgent`, area `import`), in the place of
+  the one made a moment ago; picking an area afterwards takes it back in its turn. An import that brings several agents
+  keeps them all: the first is the onboarding's.
+- **Past the work step for good.** Once the delivery is armed or gone, the owner's onboarding never offers the work or
+  the agent's step again (a Continue whose save didn't land moves on all the same), and a member's welcome page opens
+  their DM, or the AI step while none answers for their agent.
+- **Firing.** The claim also checks the row is still that agent's and armed, so a new agent that took its place a
+  moment ago never fires as the one before. A delivery whose task and routine came from the person's own AI (area
+  `ask`) roots its run as the person, relayed (ADR 0250): it answers for them, but what it read teaches and grants
+  nothing. Each delivery fires in its own try: one that fails is logged and waits for the next look.
+- **Where the AI may propose.** `propose_first_agents` is offered, named in the instructions and kept open on the first
+  plan's wait only while the person may still pick one (`firstAgentsOpen`: an owner while the onboarding is open,
+  anyone else who may create agents on their welcome page, until their first agent's delivery is armed); its answer
+  links to the onboarding or the welcome page. Called after that, it keeps nothing and says there is nothing to pick.
+- **The greeting** counts any first agent the onboarding kept for a member (a `first_deliveries` row), not only a pick
+  from their AI: hello with nothing to tap, and the new-member prompt stays out.
+- **A member's "Not now".** Beside the logo, the way into the workspace with no agent of theirs yet, on the welcome
+  wizard alone.
