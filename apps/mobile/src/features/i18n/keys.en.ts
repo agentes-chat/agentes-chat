@@ -362,6 +362,10 @@ export const featureKeysEn = {
     send: "Send",
     /** Under a voice message's first line of words, when there is more. */
     seeAll: "See all",
+    /** Under the speaker's name on the Lock Screen and in the media notification while a voice message plays. */
+    nowPlaying: "Voice message",
+    /** The same for an audio file, under its name. */
+    nowPlayingFile: "Audio",
   },
   chat: {
     /** The system alert before cancelling an agent's scheduled return (`when`: "tomorrow at 9:00 AM"). */
@@ -1646,33 +1650,52 @@ export const featureKeysEn = {
   },
   // Calendário (the web's words are `calendar.*`; these are the phone's own).
   calendar: {
-    /** Days in a row with nothing on them, in one line: "Sunday, Nov 29 · nothing planned". */
-    nothing: "{{days}} · nothing planned",
-    nothingToday: "Nothing planned for today.",
-    /** A reminder, under its words: the agent that posts it, and where. */
-    reminder: "Reminder · {{agent}}",
-    reminderIn: "Reminder · {{agent}} · in {{place}}",
-    /** A task due that day, under its title, and who has it. */
-    deadline: "Task due",
-    deadlineOf: "Task due · {{name}}",
+    /** An agent's proposed time among the day's rows, under its title. */
+    proposalBy: "{{name}}'s proposal",
+    proposalBy_female: "{{name}}'s proposal",
+    /** A proposal's answer that makes it an event and sends the invitations. */
+    confirm: "Confirm",
+    /** A task due that day, in the time's column. */
+    due: "due",
+    /** An all-day event, in the time's column. */
+    allDay: "all day",
+    /** An event on now, under its title: until when it lasts. */
+    until: "until {{time}}",
+    /** A day with nothing on it. */
+    nothingThatDay: "Nothing planned.",
+    /** Over the next thing planned, under a day with nothing. */
+    after: "Later",
+    /** The handle under the month: folds it into its week, or opens it again. */
+    showWeek: "Show only the week",
+    showMonth: "Show the month",
+    /** An event's page: its rows. */
+    day: "Day",
+    time: "Time",
+    repeats: "Repeats",
+    /** Over the reader's answer to an event they're invited to: Going / Not going. */
+    going: "Are you going?",
+    participantsCount: "Participants · {{count}}",
     /** An event's times on its page: "2:00 PM to 3:00 PM". */
     timeRange: "{{from}} to {{to}}",
-    /** An all-day event over several days, on its page. */
+    /** An event over several days, on its page. */
     dayRange: "{{from}} to {{to}}",
     /** An invited person who hasn't answered yet. */
     noAnswer: "no answer yet",
-    /** The reader among an event's participants. */
-    you: "{{name}} (you)",
     /** An agent among an event's participants: what it does with it. */
-    agentPrepares: "Gets the agenda and prepares a summary before",
-    openChannel: "Open #{{name}}",
-    openConversation: "Open the conversation",
+    agentPrepares: "Prepares a summary before",
+    /** The task an event belongs to. */
+    task: "Task",
+    /** The conversation an event was made in. */
+    conversation: "Conversation",
     deleteEvent: "Delete event",
     deleteAsk: "Delete this event?",
-    /** Repetição's value for an event that happens once. */
+    /** New event: when it starts and ends, each with its day and its hour. */
+    starts: "Starts",
+    ends: "Ends",
+    /** The repeat row's value for an event that happens once. */
     noRepeat: "Doesn't repeat",
     /** The participants' last row: opens the picker of people and agents. */
-    add: "Add",
+    addPeople: "Add a person or agent",
   },
   // Código (ADR 0215; the rest of its words are the web's, `codeSessions.*`).
   coding: {
@@ -1718,11 +1741,37 @@ export const featureKeysEn = {
   taskManager: {
     loadFailed: "Couldn't load the tasks.",
     gone: "This task is no longer here.",
-    /** Under the title when nothing runs or waits. */
-    quiet: "Nothing in progress",
-    /** In the line under an agent's tasks: how many it finished today. */
-    doneToday_one: "{{count}} done today",
-    doneToday_other: "{{count}} done today",
+    /** The task manager's title, and the Agentes row that opens it. */
+    title: "In progress",
+    /** The task manager's sections (and an agent's tasks'), by how each task stands. */
+    sections: {
+      you: "Waiting on you",
+      working: "Working",
+      later: "Later",
+    },
+    /** Said once over "Mais tarde": a computer whose line holds some of its tasks (`name`: the computer's own). */
+    computerBusy: "{{name}} is busy.",
+    /** A task's second line while it waits on you: a request (its words follow after " · "), a question. */
+    wantsOk: "Wants your OK",
+    asked: "Asked you a question",
+    /** Before what a routine's run does now: "Routine · writing the summary". */
+    routine: "Routine",
+    /** The group over what it asks of you, on a task's screen. */
+    asks: "What {{name}} asks",
+    asks_female: "What {{name}} asks",
+    /** Under a request's buttons, on a task's screen. */
+    approveNote: "{{name}} goes on as soon as you approve.",
+    approveNote_female: "{{name}} goes on as soon as you approve.",
+    /** A question it asked you: answered where it asked it. */
+    answer: "Answer in the conversation",
+    /** A long work's plan on a task's screen; its value is "9 of 14 done". */
+    progress: "Progress",
+    /** Under a task's last steps: all of them, in place. */
+    allSteps_one: "See the step",
+    allSteps_other: "See all {{count}} steps",
+    /** The red row at the end of an agent's tasks (asked first). */
+    stopAll_one: "Stop the task",
+    stopAll_other: "Stop all {{count}} tasks",
     /** The group over who asked for the task, on its screen. */
     request: "Request",
     /** The system alert before stopping one task from its screen. */

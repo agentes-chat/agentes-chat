@@ -9,7 +9,7 @@ test("an agent's picture opens its profile on the surfaces about it", () => {
     "chat/ChannelMembers.tsx",
     "chat/screen/useConversationActions.tsx",
     "right-hand/Intro.tsx",
-    "task-manager/TaskManagerScreen.tsx",
+    "task-manager/rows.tsx",
     "task-manager/AgentTasksScreen.tsx",
     "task-manager/TaskScreen.tsx",
     "queue/QueueSheet.tsx",

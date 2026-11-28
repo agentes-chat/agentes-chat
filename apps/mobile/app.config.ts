@@ -152,15 +152,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: "#03101f",
     },
     predictiveBackGestureEnabled: false,
-    // Never read the phone's photos or play in the background: the image picker is Android's photo picker, Salvar em
-    // Fotos only adds (MediaStore needs no permission for it) and voice messages stop when the app leaves. Google
-    // Play asks a justification for the media reads and a video for a media-playback foreground service, so keep
-    // them out even if a library's manifest brings them.
+    // Never read the phone's photos: the image picker is Android's photo picker and Salvar em Fotos only adds
+    // (MediaStore needs no permission for it). Google Play asks a justification for the media reads, so keep them out
+    // even if a library's manifest brings them. Playing in the background is wanted (a voice message, an audio file or
+    // a video goes on with the app away, shown in the media notification): its media-playback foreground service
+    // (`expo-audio` and `expo-video` below) is declared in the Play Console's foreground service form, with a video.
     blockedPermissions: [
       "android.permission.READ_MEDIA_IMAGES",
       "android.permission.READ_MEDIA_VIDEO",
       "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
-      "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
     ],
     intentFilters: [
       {
@@ -246,15 +246,19 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       { cameraPermission: CAMERA_USE, microphonePermission: false, recordAudioAndroid: false },
     ],
     [
-      // Mensagens de voz (ADR 0100): the app records only while the person holds or locks the button.
+      // Mensagens de voz (ADR 0100): the app records only while the person holds or locks the button. What plays goes
+      // on in the background, as a messaging app's voice notes (iOS: the audio background mode; Android: the
+      // media-playback service behind the media notification), with the system's controls (`voice/playback.ts`).
       "expo-audio",
-      // No background playback (the plugin's default is on): it would add a media-playback foreground service.
       {
         microphonePermission: "To record voice messages in your conversations.",
         recordAudioAndroid: true,
-        enableBackgroundPlayback: false,
+        enableBackgroundPlayback: true,
       },
     ],
+    // A video in the viewer goes on with the app away, in the system's controls (Now Playing, the media notification);
+    // no picture in picture.
+    ["expo-video", { supportsBackgroundPlayback: true, supportsPictureInPicture: false }],
     // The agents at work in the Dynamic Island and on the Lock Screen (ADR 0210): a widget extension
     // (`<bundle id>.ExpoWidgetsTarget`, in the app group `group.<bundle id>`) for the Live Activity the server starts,
     // updates and ends by push; `frequentUpdates` lets those pushes come as often as an agent moves on.

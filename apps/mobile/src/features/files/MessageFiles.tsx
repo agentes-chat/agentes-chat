@@ -229,6 +229,7 @@ function InlineAudio({
     <View style={[styles.audio, { width }]}>
       <FileVoice
         id={file.id}
+        name={title}
         version={file.version}
         wave={detail?.content.kind === "file" ? detail.content.wave : undefined}
         fallback={

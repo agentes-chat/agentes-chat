@@ -352,6 +352,8 @@ export const featureKeysPtBR = {
     discard: "Apagar",
     send: "Enviar",
     seeAll: "Ver tudo",
+    nowPlaying: "Mensagem de voz",
+    nowPlayingFile: "Áudio",
   },
   chat: {
     /** The system alert before cancelling an agent's scheduled return (`when`: "amanhã às 9:00"). */
@@ -1572,23 +1574,36 @@ export const featureKeysPtBR = {
   },
   // Calendário (the web's words are `calendar.*`; these are the phone's own).
   calendar: {
-    nothing: "{{days}} · nada marcado",
-    nothingToday: "Nada marcado para hoje.",
-    reminder: "Lembrete · {{agent}}",
-    reminderIn: "Lembrete · {{agent}} · em {{place}}",
-    deadline: "Prazo da tarefa",
-    deadlineOf: "Prazo da tarefa · {{name}}",
+    // The chosen day's rows under the month.
+    proposalBy: "Proposta do {{name}}",
+    proposalBy_female: "Proposta da {{name}}",
+    confirm: "Confirmar",
+    due: "prazo",
+    allDay: "dia todo",
+    until: "até {{time}}",
+    nothingThatDay: "Nada marcado.",
+    after: "Depois",
+    showWeek: "Mostrar só a semana",
+    showMonth: "Mostrar o mês",
+    // An event's page.
+    day: "Dia",
+    time: "Horário",
+    repeats: "Repete",
+    going: "Você vai?",
+    participantsCount: "Participantes · {{count}}",
     timeRange: "{{from}} às {{to}}",
     dayRange: "{{from}} a {{to}}",
     noAnswer: "não respondeu",
-    you: "{{name}} (você)",
-    agentPrepares: "Recebe a pauta e prepara um resumo antes",
-    openChannel: "Abrir #{{name}}",
-    openConversation: "Abrir a conversa",
+    agentPrepares: "Prepara um resumo antes",
+    task: "Tarefa",
+    conversation: "Conversa",
     deleteEvent: "Apagar evento",
     deleteAsk: "Apagar este evento?",
+    // Novo evento.
+    starts: "Começa",
+    ends: "Termina",
     noRepeat: "Não repete",
-    add: "Adicionar",
+    addPeople: "Adicionar pessoa ou agente",
   },
   // Código (ADR 0215; the rest of its words are the web's, `codeSessions.*`).
   coding: {
@@ -1623,11 +1638,37 @@ export const featureKeysPtBR = {
   taskManager: {
     loadFailed: "Não deu para carregar as tarefas.",
     gone: "Essa tarefa não está mais aqui.",
-    /** Under the title when nothing runs or waits. */
-    quiet: "Nada em andamento",
-    /** In the line under an agent's tasks: how many it finished today. */
-    doneToday_one: "{{count}} feita hoje",
-    doneToday_other: "{{count}} feitas hoje",
+    /** The task manager's title, and the Agentes row that opens it. */
+    title: "Em andamento",
+    /** The task manager's sections (and an agent's tasks'), by how each task stands. */
+    sections: {
+      you: "Esperando você",
+      working: "Trabalhando",
+      later: "Mais tarde",
+    },
+    /** Said once over "Mais tarde": a computer whose line holds some of its tasks (`name`: the computer's own). */
+    computerBusy: "{{name}} está ocupado.",
+    /** A task's second line while it waits on you: a request (its words follow after " · "), a question. */
+    wantsOk: "Quer seu ok",
+    asked: "Fez uma pergunta para você",
+    /** Before what a routine's run does now: "Rotina · escrevendo o resumo". */
+    routine: "Rotina",
+    /** The group over what it asks of you, on a task's screen. */
+    asks: "O que o {{name}} pede",
+    asks_female: "O que a {{name}} pede",
+    /** Under a request's buttons, on a task's screen. */
+    approveNote: "O {{name}} segue assim que você aprovar.",
+    approveNote_female: "A {{name}} segue assim que você aprovar.",
+    /** A question it asked you: answered where it asked it. */
+    answer: "Responder na conversa",
+    /** A long work's plan on a task's screen; its value is "9 de 14 feitos". */
+    progress: "Andamento",
+    /** Under a task's last steps: all of them, in place. */
+    allSteps_one: "Ver o passo",
+    allSteps_other: "Ver os {{count}} passos",
+    /** The red row at the end of an agent's tasks (asked first). */
+    stopAll_one: "Parar a tarefa",
+    stopAll_other: "Parar as {{count}} tarefas",
     /** The group over who asked for the task, on its screen. */
     request: "Pedido",
     /** The system alert before stopping one task from its screen. */

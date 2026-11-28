@@ -22,6 +22,11 @@ mock.module("../../src/lib/voice-session", () => ({
 // and can hold its seeks until it lets them land.
 const rates: number[] = [];
 const clock = { currentTime: 0, holdSeeks: false, land: null as null | (() => void) };
+// What the player says of itself (the system's controls pause and play it), and what it gave the system to show.
+const status: { didJustFinish: boolean; isLoaded?: boolean; playing?: boolean; isBuffering?: boolean } = {
+  didJustFinish: false,
+};
+const shown: { active: boolean; title?: string; artist?: string }[] = [];
 mock.module("expo-audio", () => ({
   setAudioModeAsync: async () => undefined,
   createAudioPlayer: () => ({
@@ -39,7 +44,12 @@ mock.module("expo-audio", () => ({
       }),
     play: () => undefined,
     pause: () => undefined,
-    currentStatus: { didJustFinish: false },
+    setActiveForLockScreen: (active: boolean, metadata?: { title?: string; artist?: string }) =>
+      void shown.push({ active, ...metadata }),
+    clearLockScreenControls: () => void shown.push({ active: false }),
+    get currentStatus() {
+      return status;
+    },
     get currentTime() {
       return clock.currentTime;
     },
@@ -182,5 +192,59 @@ describe("where a voice message stands lives in the playback module, not in its 
     clock.currentTime = 9;
     await ticks();
     expect([placeOf("clip-f"), playingId(), ended]).toEqual([0, null, 1]);
+  });
+});
+
+describe("what plays is the system's: its controls, who said it, paused there and played again", () => {
+  test("a message's clip goes to the system with who said it; a take heard back stays in the app; a stop takes it away", async () => {
+    clock.currentTime = 0;
+    shown.length = 0;
+    await startPlayback({ ...request("clip-g"), nowPlaying: { title: "Ana Souza", artist: "Mensagem de voz" } });
+    expect(shown).toEqual([{ active: true, title: "Ana Souza", artist: "Mensagem de voz" }]);
+    stopPlayback();
+    expect(shown.at(-1)).toEqual({ active: false });
+    shown.length = 0;
+    await startPlayback(request("voice-take"));
+    expect(shown.filter((s) => s.active)).toEqual([]);
+    stopPlayback();
+  });
+
+  test("paused from the Lock Screen it shows stopped where it is, keeps its controls, and plays on from there", async () => {
+    clock.currentTime = 0;
+    shown.length = 0;
+    await startPlayback({ ...request("clip-h"), nowPlaying: { title: "Bruno Lima" } });
+    clock.currentTime = 3;
+    Object.assign(status, { isLoaded: true, playing: true, isBuffering: false });
+    await ticks();
+    expect(playingId()).toBe("clip-h");
+    // The system paused it: the row shows play, its place kept, the controls still there.
+    status.playing = false;
+    await ticks();
+    expect(playingId()).toBeNull();
+    expect(placeOf("clip-h")).toBeCloseTo(1 / 3, 5);
+    expect(shown.some((s) => !s.active)).toBe(false);
+    // Played again there: it is the clip playing again.
+    status.playing = true;
+    await Bun.sleep(400);
+    expect(playingId()).toBe("clip-h");
+    stopPlayback();
+    expect(shown.at(-1)).toEqual({ active: false });
+    Object.assign(status, { isLoaded: undefined, playing: undefined, isBuffering: undefined });
+  });
+
+  test("the audio mode keeps a playing voice going in the background, never a take", () => {
+    const mode = readFileSync(join(import.meta.dir, "../../src/lib/audio-mode.ts"), "utf8");
+    expect(mode).toContain("shouldPlayInBackground: !recording,");
+    const config = readFileSync(join(import.meta.dir, "../../app.config.ts"), "utf8");
+    expect(config).toContain("enableBackgroundPlayback: true,");
+    expect(config).toContain('["expo-video", { supportsBackgroundPlayback: true, supportsPictureInPicture: false }]');
+    // Android's media-playback service needs its permission: never blocked again.
+    expect(config).not.toContain('"android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",');
+    const video = readFileSync(join(import.meta.dir, "../../src/features/files/VideoPlayer.tsx"), "utf8");
+    expect(video).toContain("p.staysActiveInBackground = true;");
+    expect(video).toContain("p.showNowPlayingNotification = true;");
+    // One thing plays at a time: a video stops a voice, a voice pauses a video.
+    expect(video).toContain("onVoiceStarts(pauseCurrent);");
+    expect(video).toMatch(/current = player;\s*stopPlayback\(\);/);
   });
 });

@@ -6,6 +6,7 @@ import { Text as RNText, StyleSheet, View } from "react-native";
 import { Icon, PressScale } from "@/ui";
 import { useMessageCardCorners } from "../chat/look";
 import { useColors } from "../shared/hooks";
+import { onVoiceStarts, stopPlayback } from "../voice/playback";
 import { videoClock, videoHeight } from "./logic";
 
 /**
@@ -15,18 +16,22 @@ import { videoClock, videoHeight } from "./logic";
  */
 const SURFACE = "textureView";
 
-/** Only one video plays at a time: starting one pauses the one before. */
+/** One thing plays at a time: starting a video pauses the one before and a voice message playing. */
 let current: Player | null = null;
 function claim(player: Player) {
-  if (current && current !== player) {
-    try {
-      current.pause();
-    } catch {
-      // That player was already released with its screen.
-    }
-  }
+  if (current && current !== player) pauseCurrent();
   current = player;
+  stopPlayback();
 }
+function pauseCurrent() {
+  try {
+    current?.pause();
+  } catch {
+    // That player was already released with its screen.
+  }
+}
+// A voice message starting pauses the video playing.
+onVoiceStarts(pauseCurrent);
 
 export interface VideoPlayerProps {
   /** Where it plays from, with the session when the link is ours. */
@@ -130,7 +135,9 @@ function InlineVideo({
  * A video in the picture viewer (`ImageViewer`), among the pictures: the system's player with the platform's controls
  * (the timeline, full screen and back out of it, AirPlay), playing while its page is the one in sight and paused when
  * the person swipes on. `onFailed`: this phone can't play it. `startAt`: the moment it starts from (a comment's, ADR
- * 0208); `onPlayer`: its player, for the viewer to read the moment it is at (null once it goes).
+ * 0208); `onPlayer`: its player, for the viewer to read the moment it is at (null once it goes). It is the system's
+ * while it plays, as any video app's: leaving the app it goes on, with the system's controls and its name (Now Playing
+ * on iOS, the media notification on Android); leaving the viewer ends it with its page.
  */
 export function ViewerVideo({
   source,
@@ -147,8 +154,10 @@ export function ViewerVideo({
   startAt?: number | undefined;
   onPlayer?: ((player: Player | null) => void) | undefined;
 }) {
-  const player = useVideoPlayer(source, (p) => {
+  const player = useVideoPlayer({ ...source, metadata: { title: name } }, (p) => {
     p.loop = false;
+    p.staysActiveInBackground = true;
+    p.showNowPlayingNotification = true;
   });
   useEffect(() => {
     onPlayer?.(player);

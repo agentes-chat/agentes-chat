@@ -190,6 +190,7 @@ export function DocumentViewer({
           <View style={styles.audio}>
             <FileVoice
               id={detail.id}
+              name={info.name}
               version={detail.shownVersion}
               wave={detail.content.kind === "file" ? detail.content.wave : undefined}
               fallback={noPreview}

@@ -5,17 +5,29 @@ import {
   type SeriesScope,
   useCalendarAction,
 } from "@agenteschat/client";
-import { shortDay } from "@agenteschat/client/lib/calendar";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
-import { toYmd, upperFirst } from "@agenteschat/client/lib/format";
+import { formatTime, toYmd } from "@agenteschat/client/lib/format";
 import { browserTimezone } from "@agenteschat/client/lib/routines";
 import { weekdayOfYmd } from "@agenteschat/ui/recurrence";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
-import { EmptyState, GroupedFooter, GroupedHeader, GroupedList, GroupedRow, SkeletonList, useToast } from "@/ui";
+import {
+  EmptyState,
+  GROUPED_ROW,
+  GroupedFooter,
+  GroupedHeader,
+  GroupedList,
+  GroupedRow,
+  PressScale,
+  SkeletonList,
+  Text,
+  useSystemText,
+  useTheme,
+  useToast,
+} from "@/ui";
 import { goBack, router } from "@/ui/navigation";
 import {
   COMMON_RULES,
@@ -28,7 +40,7 @@ import {
   toApiRule,
   withPreset,
 } from "../routines/rule";
-import { chooseAction, Gap, NEXT_FIELD, SettingsPage, useUnsavedGuard } from "../settings/parts";
+import { chooseAction, NEXT_FIELD, SettingsPage, useUnsavedGuard } from "../settings/parts";
 import { Face } from "../shared/Face";
 import { LoadFailed } from "../shared/FirstUse";
 import { useDirectory, useMeId, useOrgId } from "../shared/hooks";
@@ -36,7 +48,7 @@ import { pickOne } from "../shared/PickerSheet";
 import { successHaptic } from "../shared/parts";
 import { overLimit, TextArea } from "../shared/TextArea";
 import { useListedEvent } from "./EventScreen";
-import { dayOfYmd, isSeries, seriesOf } from "./logic";
+import { dayOfYmd, isSeries, repeatWord, seriesOf, shortDate } from "./logic";
 import { closePeoplePick, openPeoplePick } from "./people-pick";
 
 const DESCRIPTION_LIMIT = { max: FIELD_LIMITS.eventDescription };
@@ -71,17 +83,17 @@ const keyed = (list: readonly Actor[]) =>
 const daysBetween = (a: string, b: string) =>
   Math.round(((dayOfYmd(b)?.getTime() ?? 0) - (dayOfYmd(a)?.getTime() ?? 0)) / 86_400_000);
 
-/** "Novo evento", pushed from the calendar's "+" (`?day=`: the day chosen on its strip). */
+/** "Novo evento", pushed from the calendar's "+" (`?day=`: the day chosen under the month). */
 export function NewEventRoute() {
   const { day } = useLocalSearchParams<{ day?: string }>();
   return <EventForm event={null} day={dayOfYmd(day) ?? new Date()} />;
 }
 
-/** "Editar evento", pushed from an event's page: the event read from the list's range (`key`, `w`). */
+/** "Editar evento", pushed from an event's page: the event read from the list's range (`key`, `from`, `to`). */
 export function EditEventRoute() {
   const { t } = useTranslation();
-  const { key, w } = useLocalSearchParams<{ key?: string; w?: string }>();
-  const { range, event } = useListedEvent(key, w);
+  const { key, from, to } = useLocalSearchParams<{ key?: string; from?: string; to?: string }>();
+  const { range, event } = useListedEvent(key, from, to);
   if (event) return <EventForm key={event.id} event={event} day={new Date(event.start)} />;
   return (
     <SettingsPage title={t("calendar.form.editTitle")}>
@@ -98,16 +110,19 @@ export function EditEventRoute() {
 
 /**
  * Novo evento / Editar evento, a pushed screen on the settings' form page (the bar: back, the title, "Criar" or
- * "Salvar"): the title and where (the person taps them: the keyboard never comes up on its own), then when (Dia todo,
- * the day, the start and end times, or the days of an all-day event; each value from the app's list of choices, as a
- * routine's), how it repeats (the routine's common choices; a rule the phone can't say stays as it was), who takes part
- * (picked on its own pushed screen; agents get the agenda and prepare a summary before) and a description. A change to
- * a recurring event asks which occurrences it reaches. Leaving with changes not saved asks first.
+ * "Salvar"): the title and where in one group (the person taps them: the keyboard never comes up on its own), then
+ * when: Dia todo, "Começa" and "Termina" each with its day and its hour as value chips on its line (the end's day only
+ * when it ends on another day; each chip opens the app's list of choices, as a routine's), and how it repeats (the
+ * routine's common choices; a rule the phone can't say stays as it was); who takes part, each with its ×, and "Adicionar
+ * pessoa ou agente" (picked on its own pushed screen; an agent prepares a summary before); and a description. A change
+ * to a recurring event asks which occurrences it reaches. Leaving with changes not saved asks first.
  */
 export function EventForm({ event, day }: { event: CalendarEvent | null; day: Date }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
   const toast = useToast();
+  // The title in the size of a heading (20), the rest in the body's; both grow with the system's text size.
+  const titleText = useSystemText("title3");
   const dir = useDirectory();
   const meId = useMeId();
   const action = useCalendarAction(useOrgId());
@@ -255,7 +270,8 @@ export function EventForm({ event, day }: { event: CalendarEvent | null; day: Da
     }).then((key) => {
       if (key !== null) options[Number(key)]?.onPress();
     });
-  const dayWord = (ymd: string) => upperFirst(shortDay(locale, dayOfYmd(ymd) ?? new Date()), locale);
+  const dayWord = (ymd: string) => shortDate(locale, dayOfYmd(ymd) ?? new Date());
+  const hourWord = (hhmm: string) => formatTime(locale, at(startDay, hhmm).toISOString());
   const dayList = (from: string, current: string) => {
     const today = toYmd(new Date());
     const first = from < today ? from : today;
@@ -287,7 +303,7 @@ export function EventForm({ event, day }: { event: CalendarEvent | null; day: Da
     choose(
       t("calendar.form.startTime"),
       timeList(startTime).map((hhmm) => ({
-        label: hhmm,
+        label: hourWord(hhmm),
         checked: hhmm === startTime,
         onPress: () => {
           // The end keeps the same length, on the same day while it fits in it.
@@ -302,26 +318,18 @@ export function EventForm({ event, day }: { event: CalendarEvent | null; day: Da
   const pickEndTime = () =>
     choose(
       t("calendar.form.endTime"),
-      timeList(endTime).map((hhmm) => ({ label: hhmm, checked: hhmm === endTime, onPress: () => setEndTime(hhmm) })),
+      timeList(endTime).map((hhmm) => ({
+        label: hourWord(hhmm),
+        checked: hhmm === endTime,
+        onPress: () => setEndTime(hhmm),
+      })),
     );
   const preset: RulePreset = presetOf(syncedRule);
-  const presetWord = (p: RulePreset) =>
-    p === "once"
-      ? t("mobile.calendar.noRepeat")
-      : p === "daily"
-        ? t("recurrence.s.daily", { count: 1 })
-        : p === "business"
-          ? t("recurrence.s.businessDays")
-          : p === "weekly"
-            ? t("recurrence.s.weekly", { count: 1 })
-            : p === "monthly"
-              ? t("recurrence.s.monthly", { count: 1 })
-              : t("mobile.routines.when.custom");
   const pickRepeat = () =>
     choose(
-      t("calendar.form.repeat"),
+      t("mobile.calendar.repeats"),
       COMMON_RULES.map((p) => ({
-        label: presetWord(p),
+        label: repeatWord(t, p),
         checked: preset === p,
         onPress: () => setRule(withPreset(syncedRule, p)),
       })),
@@ -334,11 +342,20 @@ export function EventForm({ event, day }: { event: CalendarEvent | null; day: Da
   // Its end on another day than it starts (an all-day event over several days, a night that crosses midnight).
   const endsOtherDay = allDay || endDay !== startDay;
 
+  const startChips: WhenChip[] = [
+    { key: "day", label: dayWord(startDay), onPress: pickStartDay },
+    ...(allDay ? [] : [{ key: "time", label: hourWord(startTime), onPress: pickStartTime }]),
+  ];
+  const endChips: WhenChip[] = [
+    ...(endsOtherDay ? [{ key: "day", label: dayWord(endDay), onPress: pickEndDay }] : []),
+    ...(allDay ? [] : [{ key: "time", label: hourWord(endTime), onPress: pickEndTime }]),
+  ];
+
   return (
     <SettingsPage
       title={event ? t("calendar.form.editTitle") : t("calendar.new")}
       action={{
-        label: event ? t("calendar.form.save") : t("calendar.form.create"),
+        label: event ? t("calendar.form.save") : t("mobile.routines.create"),
         disabled: !ready,
         onPress: submit,
       }}
@@ -346,79 +363,46 @@ export function EventForm({ event, day }: { event: CalendarEvent | null; day: Da
       toolbar
     >
       <View style={styles.fields}>
-        <TextArea
-          value={title}
-          onChangeText={setTitle}
-          placeholder={t("calendar.form.titlePlaceholder")}
-          accessibilityLabel={t("calendar.form.title")}
-          multiline={false}
-          minHeight={50}
-          maxLength={300}
-          {...NEXT_FIELD}
-        />
-        <TextArea
-          value={location}
-          onChangeText={setLocation}
-          placeholder={t("calendar.form.locationPlaceholder")}
-          accessibilityLabel={t("calendar.form.location")}
-          multiline={false}
-          minHeight={50}
-          maxLength={500}
-          {...NEXT_FIELD}
-        />
+        <GroupedList>
+          <TextArea
+            key="title"
+            value={title}
+            onChangeText={setTitle}
+            placeholder={t("calendar.form.title")}
+            accessibilityLabel={t("calendar.form.title")}
+            multiline={false}
+            minHeight={52}
+            maxLength={300}
+            style={[styles.inGroup, titleText]}
+            {...NEXT_FIELD}
+          />
+          <TextArea
+            key="location"
+            value={location}
+            onChangeText={setLocation}
+            placeholder={t("calendar.form.location")}
+            accessibilityLabel={t("calendar.form.location")}
+            multiline={false}
+            minHeight={48}
+            maxLength={500}
+            style={styles.inGroup}
+            {...NEXT_FIELD}
+          />
+        </GroupedList>
         <View>
           <GroupedList>
             <GroupedRow
               key="allDay"
-              icon="sun"
               label={t("calendar.form.allDay")}
-              toggle
-              checked={allDay}
+              toggle={allDay}
               onPress={() => setAllDay((v) => !v)}
             />
-            <GroupedRow
-              key="startDay"
-              icon="calendar"
-              label={t("calendar.form.startDate")}
-              value={dayWord(startDay)}
-              menu
-              onPress={pickStartDay}
-            />
-            {allDay ? null : (
-              <GroupedRow
-                key="startTime"
-                icon="clock"
-                label={t("calendar.form.startTime")}
-                value={startTime}
-                menu
-                onPress={pickStartTime}
-              />
-            )}
-            {endsOtherDay ? (
-              <GroupedRow
-                key="endDay"
-                icon="calendar"
-                label={t("calendar.form.endDate")}
-                value={dayWord(endDay)}
-                menu
-                onPress={pickEndDay}
-              />
-            ) : null}
-            {allDay ? null : (
-              <GroupedRow
-                key="endTime"
-                icon="clock"
-                label={t("calendar.form.endTime")}
-                value={endTime}
-                menu
-                onPress={pickEndTime}
-              />
-            )}
+            <WhenRow key="start" label={t("mobile.calendar.starts")} chips={startChips} />
+            <WhenRow key="end" label={t("mobile.calendar.ends")} chips={endChips} />
             <GroupedRow
               key="repeat"
-              icon="replay"
-              label={t("calendar.form.repeat")}
-              value={presetWord(preset)}
+              label={t("mobile.calendar.repeats")}
+              value={repeatWord(t, preset)}
               menu
               onPress={pickRepeat}
             />
@@ -433,31 +417,86 @@ export function EventForm({ event, day }: { event: CalendarEvent | null; day: Da
                 key={`${p.type}:${p.id}`}
                 leading={<Face who={p} size={FACE} live={false} />}
                 label={nameOf(p)}
+                {...(p.type === "agent" ? { sub: t("mobile.calendar.agentPrepares") } : {})}
                 remove={{
                   label: t("common.removeName", { name: nameOf(p) }),
                   onPress: () => setPeople((list) => list.filter((x) => !(x.type === p.type && x.id === p.id))),
                 }}
               />
             ))}
-            <GroupedRow key="add" icon="plus" label={t("mobile.calendar.add")} chevron onPress={addPeople} />
+            <GroupedRow key="add" accent label={t("mobile.calendar.addPeople")} onPress={addPeople} />
           </GroupedList>
-          <GroupedFooter>{t("calendar.form.participantsHelp")}</GroupedFooter>
         </View>
-        <Gap />
-        <TextArea
-          value={description}
-          onChangeText={setDescription}
-          placeholder={t("calendar.form.description")}
-          accessibilityLabel={t("calendar.form.description")}
-          minHeight={96}
-          limit={DESCRIPTION_LIMIT}
-        />
+        <GroupedList>
+          <TextArea
+            key="description"
+            value={description}
+            onChangeText={setDescription}
+            placeholder={t("calendar.form.description")}
+            accessibilityLabel={t("calendar.form.description")}
+            minHeight={96}
+            limit={DESCRIPTION_LIMIT}
+            style={styles.inGroup}
+          />
+        </GroupedList>
       </View>
     </SettingsPage>
   );
 }
 
+interface WhenChip {
+  key: string;
+  label: string;
+  onPress: () => void;
+}
+
+/**
+ * "Começa" or "Termina" as a row of its group: the label, then its day and its hour as value chips on the plate, as
+ * the system's date rows show them; each chip opens its own list of choices.
+ */
+function WhenRow({ label, chips }: { label: string; chips: readonly WhenChip[] }) {
+  const { colors: c } = useTheme();
+  return (
+    <View style={styles.when}>
+      <Text variant="body" numberOfLines={1} style={styles.whenLabel}>
+        {label}
+      </Text>
+      {chips.map((chip) => (
+        <PressScale
+          key={chip.key}
+          fill={false}
+          haptic={false}
+          onPress={chip.onPress}
+          accessibilityRole="button"
+          accessibilityLabel={`${label}, ${chip.label}`}
+          style={[styles.chip, { backgroundColor: c.plate }]}
+          contentStyle={styles.chipIn}
+        >
+          <Text variant="body" numberOfLines={1} style={styles.digits}>
+            {chip.label}
+          </Text>
+        </PressScale>
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  // Under the page's own 4 pt top: the fields 8 under the bar, 12 apart.
+  // Under the page's own 4 pt top: the groups 8 under the bar, 12 apart.
   fields: { paddingTop: 4, gap: 12 },
+  // A field as a row of its group: the row's own sides, no border, fill or corners of its own.
+  inGroup: { borderRadius: 0, borderWidth: 0, backgroundColor: "transparent", paddingHorizontal: GROUPED_ROW.padX },
+  // A row's height and sides, the chips at its end.
+  when: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    minHeight: GROUPED_ROW.minHeight,
+    paddingHorizontal: GROUPED_ROW.padX,
+    paddingVertical: 8,
+  },
+  whenLabel: { flex: 1, minWidth: 0 },
+  chip: { borderRadius: 8, borderCurve: "continuous" },
+  chipIn: { paddingHorizontal: 11, paddingVertical: 6 },
+  digits: { fontVariant: ["tabular-nums"] },
 });

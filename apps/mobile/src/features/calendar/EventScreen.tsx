@@ -9,66 +9,72 @@ import {
 } from "@agenteschat/client";
 import { addDays, myRsvp, type RsvpStatus } from "@agenteschat/client/lib/calendar";
 import { errorText } from "@agenteschat/client/lib/errors";
-import { dateFormat, formatTime, upperFirst } from "@agenteschat/client/lib/format";
+import { formatTime, toYmd } from "@agenteschat/client/lib/format";
 import { useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
-import {
-  EmptyState,
-  GroupedFooter,
-  GroupedHeader,
-  GroupedList,
-  GroupedRow,
-  Icon,
-  Segmented,
-  SkeletonList,
-  Text,
-  useTheme,
-  useToast,
-} from "@/ui";
+import { EmptyState, GroupedHeader, GroupedList, GroupedRow, Segmented, SkeletonList, Text, useToast } from "@/ui";
 import { goBack, router } from "@/ui/navigation";
 import { chatHref } from "../links/logic";
+import { fromApiRule, presetOf } from "../routines/rule";
 import { chooseAction, SettingsPage } from "../settings/parts";
 import { Face } from "../shared/Face";
 import { LoadFailed } from "../shared/FirstUse";
 import { useDirectory, useMeId, useOrgId } from "../shared/hooks";
-import { agendaRange, dayOfYmd, eventsByKey, isSeries, seriesOf, weekStartOf } from "./logic";
+import {
+  dayOfYmd,
+  eventsByKey,
+  isSeries,
+  monthStartOf,
+  othersIn,
+  readRange,
+  repeatWord,
+  seriesOf,
+  shortDate,
+} from "./logic";
 
 /** A participant's face, in the grouped row's leading column. */
 const FACE = 32;
 const BACK = "/calendar";
 
-/** The event of a list's key, read from the same range the list read (`w`: its week), so both stay one cache. */
-export function useListedEvent(key: string | undefined, w: string | undefined) {
+/**
+ * The event of a list's key, read from the same range the list read (`from`, `to`: the calendar's own read, passed in
+ * the route), so both stay one cache; without them, the range the calendar reads for today.
+ */
+export function useListedEvent(key: string | undefined, from: string | undefined, to: string | undefined) {
   const orgId = useOrgId();
-  const week = weekStartOf(dayOfYmd(w) ?? new Date());
-  const { from, to } = agendaRange(week);
-  const range = useCalendar(orgId, from, to);
+  const today = new Date();
+  const fallback = readRange(monthStartOf(today), today);
+  const range = useCalendar(orgId, from && to ? from : fallback.from, from && to ? to : fallback.to);
   const event = key ? eventsByKey(range.data).get(key) : undefined;
-  return { range, event, week };
+  return { range, event };
 }
 
+/** The route's own words for the list's read: the event's key and the range it came from. */
+export const listedParams = (key: string, from: string, to: string) =>
+  `key=${encodeURIComponent(key)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+
 /**
- * An event, pushed from the calendar's list: its title, the day and its times (and where), whether it repeats; Vou /
- * Não vou for who is invited (their answer saved at once); who takes part with each person's answer and what an agent
- * does with it (gets the agenda and prepares a summary); its description; the task and the conversation it belongs
- * to; and Apagar evento at the end. "Editar" in the bar opens the same form as Novo evento, filled in. A recurring
- * event asks which occurrences a delete reaches (Só este / Este e os próximos / Todos), in the app's own menu.
+ * An event, pushed from the calendar's list: its title alone on top, then its day, its time and where as rows (and how
+ * it repeats); "Você vai?" with Vou / Não vou for who is invited (the answer saved at once); who else takes part, each
+ * person's answer in its color, and what an agent does with it; the description; the task and the conversation it
+ * belongs to; and "Apagar evento" alone in its group, red, asked first. "Editar" in the bar opens the same form as
+ * Novo evento, filled in. A recurring event asks which occurrences a delete reaches (Só este / Este e os próximos /
+ * Todos), in the app's own menu.
  */
 export function EventScreen() {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
-  const { colors: c } = useTheme();
   const toast = useToast();
   const orgId = useOrgId();
   const meId = useMeId();
   const dir = useDirectory();
-  const { key, w } = useLocalSearchParams<{ key?: string; w?: string }>();
-  const { range, event } = useListedEvent(key, w);
+  const { key, from, to } = useLocalSearchParams<{ key?: string; from?: string; to?: string }>();
+  const { range, event } = useListedEvent(key, from, to);
   const action = useCalendarAction(orgId);
 
   const edit = () => {
-    if (key && w) router.push(`/calendar/edit?key=${encodeURIComponent(key)}&w=${w}` as never);
+    if (key && from && to) router.push(`/calendar/edit?${listedParams(key, from, to)}` as never);
   };
   if (!event) {
     return (
@@ -119,44 +125,30 @@ export function EventScreen() {
 
   const { day, time } = whenOf(event, locale, t);
   const answers = new Map(event.rsvp.filter((r) => r.type === "person").map((r) => [r.id, r.status]));
-  const answerWord = (status: RsvpStatus | undefined) =>
-    status === "accepted"
-      ? t("calendar.rsvp.accepted")
-      : status === "declined"
-        ? t("calendar.rsvp.declined")
-        : t("mobile.calendar.noAnswer");
-  const person = (p: Actor) =>
-    p.type === "person" && p.id === meId ? t("mobile.calendar.you", { name: dir.nameOf(p) }) : dir.nameOf(p);
-  // Who takes part: me first, then the people, then the agents.
-  const people = [...event.participants].sort(
-    (a, b) =>
-      Number(b.type === "person" && b.id === meId) - Number(a.type === "person" && a.id === meId) ||
-      Number(a.type === "agent") - Number(b.type === "agent"),
+  // Who else takes part (my own answer is "Você vai?"): the people, then the agents.
+  const others = othersIn(event.participants, meId).sort(
+    (a, b) => Number(a.type === "agent") - Number(b.type === "agent"),
   );
+  const answerOf = (p: Actor) => answerRow(answers.get(p.id), t);
+  const repeats =
+    isSeries(event) && event.rule
+      ? repeatWord(t, presetOf(fromApiRule(event.rule, toYmd(new Date(event.start)))))
+      : null;
   return (
     <SettingsPage title="" action={{ label: t("calendar.edit"), onPress: edit, opens: true }}>
       <View style={styles.page}>
-        <View style={styles.head}>
-          <Text variant="display2">{event.title}</Text>
-          <Text variant="body" tone="ink2">
-            {day}
-          </Text>
-          {time || event.location ? (
-            <Text variant="body" tone="muted">
-              {[time, event.location].filter(Boolean).join(" · ")}
-            </Text>
-          ) : null}
-          {isSeries(event) ? (
-            <View style={styles.repeat}>
-              <Icon name="replay" size={15} color={c.muted} />
-              <Text variant="small" tone="muted">
-                {t("calendar.recurring")}
-              </Text>
-            </View>
-          ) : null}
-        </View>
+        <Text variant="display2" style={styles.title}>
+          {event.title}
+        </Text>
+        <GroupedList>
+          <GroupedRow key="day" label={t("mobile.calendar.day")} value={day} />
+          <GroupedRow key="time" label={t("mobile.calendar.time")} value={time} />
+          {event.location ? <GroupedRow key="location" label={t("calendar.location")} value={event.location} /> : null}
+          {repeats ? <GroupedRow key="repeat" label={t("mobile.calendar.repeats")} value={repeats} /> : null}
+        </GroupedList>
         {mine ? (
           <View>
+            <GroupedHeader>{t("mobile.calendar.going")}</GroupedHeader>
             <Segmented
               wide
               items={[
@@ -166,21 +158,20 @@ export function EventScreen() {
               value={mine === "needs_action" ? "" : mine}
               onChange={respond}
             />
-            <GroupedFooter>{t(`calendar.rsvp.mine.${mine}`)}</GroupedFooter>
           </View>
         ) : null}
-        {people.length > 0 ? (
+        {others.length > 0 ? (
           <View>
-            <GroupedHeader>{t("calendar.form.participants")}</GroupedHeader>
+            <GroupedHeader>
+              {t("mobile.calendar.participantsCount", { count: event.participants.length })}
+            </GroupedHeader>
             <GroupedList>
-              {people.map((p) => (
+              {others.map((p) => (
                 <GroupedRow
                   key={`${p.type}:${p.id}`}
                   leading={<Face who={p} size={FACE} live={false} />}
-                  label={person(p)}
-                  {...(p.type === "agent"
-                    ? { sub: t("mobile.calendar.agentPrepares"), subLines: 2 }
-                    : { value: answerWord(answers.get(p.id)) })}
+                  label={dir.nameOf(p)}
+                  {...(p.type === "agent" ? { sub: t("mobile.calendar.agentPrepares") } : answerOf(p))}
                 />
               ))}
             </GroupedList>
@@ -202,51 +193,47 @@ export function EventScreen() {
           <EventLinks issueId={event.issueId} channelId={event.channelId} />
         ) : event.channelId ? (
           <GroupedList>
-            <ChannelLink key="channel" channelId={event.channelId} />
+            <ChannelRow key="channel" channelId={event.channelId} />
           </GroupedList>
         ) : null}
         <GroupedList>
-          <GroupedRow key="delete" icon="trash" danger label={t("mobile.calendar.deleteEvent")} onPress={remove} />
+          <GroupedRow key="delete" danger centered label={t("mobile.calendar.deleteEvent")} onPress={remove} />
         </GroupedList>
       </View>
     </SettingsPage>
   );
 }
 
-/** "Sexta-feira, 27 de novembro" and "14:00 às 15:00"; an all-day event its days and no time. */
+/** A person's answer as a row's value in its color: "vai" green, "não vai" red, "não respondeu" faint. */
+function answerRow(status: RsvpStatus | undefined, t: ReturnType<typeof useTranslation>["t"]) {
+  if (status === "accepted") return { value: t("calendar.rsvp.accepted"), valueTone: "ok" as const };
+  if (status === "declined") return { value: t("calendar.rsvp.declined"), valueTone: "danger" as const };
+  return { value: t("mobile.calendar.noAnswer") };
+}
+
+/** "sex, 27 de nov" and "14:00 às 15:00"; an all-day event its days and "Dia todo"; one over days both its days. */
 function whenOf(
   e: CalendarEvent,
   locale: string,
   t: ReturnType<typeof useTranslation>["t"],
-): { day: string; time: string | null } {
-  const long = (d: Date) =>
-    upperFirst(dateFormat(locale, { weekday: "long", day: "numeric", month: "long" }).format(d), locale);
+): { day: string; time: string } {
+  const short = (d: Date) => shortDate(locale, d);
+  const days = (first: Date, last: Date) =>
+    toYmd(first) >= toYmd(last) ? short(first) : t("mobile.calendar.dayRange", { from: short(first), to: short(last) });
   if (e.allDay) {
     const first = dayOfYmd(e.startDate) ?? new Date(e.start);
     const last = dayOfYmd(e.endDate) ?? addDays(new Date(e.end), -1);
-    const day =
-      first.getTime() >= last.getTime()
-        ? long(first)
-        : t("mobile.calendar.dayRange", { from: long(first), to: long(last) });
-    return { day, time: t("calendar.allDay") };
+    return { day: days(first, last), time: t("calendar.allDay") };
   }
-  const start = new Date(e.start);
-  const end = new Date(e.end);
-  const sameDate = start.toDateString() === end.toDateString();
   return {
-    day: long(start),
-    time: sameDate
-      ? t("mobile.calendar.timeRange", { from: formatTime(locale, e.start), to: formatTime(locale, e.end) })
-      : t("mobile.calendar.timeRange", {
-          from: formatTime(locale, e.start),
-          to: `${long(end)}, ${formatTime(locale, e.end)}`,
-        }),
+    day: days(new Date(e.start), new Date(e.end)),
+    time: t("mobile.calendar.timeRange", { from: formatTime(locale, e.start), to: formatTime(locale, e.end) }),
   };
 }
 
 /**
- * The task an event belongs to, by its number (read from the tasks' list, only for an event with a task), and the
- * conversation it was made in.
+ * The task an event belongs to, its number and title (read from the tasks' list, only for an event with a task), and
+ * the conversation it was made in: rows that open them.
  */
 function EventLinks({ issueId, channelId }: { issueId: string; channelId: string | null }) {
   const { t } = useTranslation();
@@ -258,26 +245,25 @@ function EventLinks({ issueId, channelId }: { issueId: string; channelId: string
       {issue ? (
         <GroupedRow
           key="issue"
-          icon="issue"
-          label={t("calendar.openIssue")}
-          value={`#${issue.number}`}
+          label={t("mobile.calendar.task")}
+          value={`#${issue.number} ${issue.title}`}
           chevron
           onPress={() => router.push(`/issues/${issue.number}` as never)}
         />
       ) : null}
-      {channelId ? <ChannelLink key="channel" channelId={channelId} /> : null}
+      {channelId ? <ChannelRow key="channel" channelId={channelId} /> : null}
     </GroupedList>
   );
 }
 
-/** The conversation an event was made in: its channel by name, or the conversation itself. */
-function ChannelLink({ channelId }: { channelId: string }) {
+/** The conversation an event was made in, by its channel's name when it has one. */
+function ChannelRow({ channelId }: { channelId: string }) {
   const { t } = useTranslation();
   const name = useChannels(useOrgId()).data?.find((ch) => ch.id === channelId)?.name;
   return (
     <GroupedRow
-      icon="chat"
-      label={name ? t("mobile.calendar.openChannel", { name }) : t("mobile.calendar.openConversation")}
+      label={t("mobile.calendar.conversation")}
+      {...(name ? { value: `#${name}` } : {})}
       chevron
       onPress={() => router.push(chatHref(channelId) as never)}
     />
@@ -287,7 +273,6 @@ function ChannelLink({ channelId }: { channelId: string }) {
 const styles = StyleSheet.create({
   // Under the page's own 4 pt top: the blocks 12 apart, as a form's.
   page: { paddingTop: 4, gap: 12 },
-  head: { gap: 4, paddingHorizontal: 4, paddingBottom: 8 },
-  repeat: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 },
+  title: { paddingHorizontal: 4, paddingBottom: 4 },
   description: { paddingHorizontal: 16, paddingVertical: 12 },
 });

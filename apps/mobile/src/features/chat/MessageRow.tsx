@@ -969,8 +969,10 @@ function RowBody({
       {saying(body)}
     </ClippedMessage>
   ) : null;
-  // The bubble holds its words, the tags of its name line and, at its end, the time; a row with none keeps its line.
-  const inBubble = bubbled && Boolean(body) && !brainWait && !deviceWait && !choiceReply;
+  // The bubble holds its words, the tags of its name line and, at its end, the time; a row with none keeps its line. A
+  // voice message is said in a bubble too: its player (and its words) inside it, under the name, as a message's words.
+  const voiced = bubbled && Boolean(voiceOf(meta)) && !brainWait && !deviceWait && !choiceReply;
+  const inBubble = (bubbled && Boolean(body) && !brainWait && !deviceWait && !choiceReply) || voiced;
   const tagged = Boolean(app || reminder || via || surfaceTag || routine || talker || helping || m.pinned);
   const opener = opened?.said ? <MessageText body={opened.said} selectable={false} accent={accent} /> : null;
   // Outside a bubble the line it opened with is a part of its own, as the web's second text.
@@ -1098,6 +1100,7 @@ function RowBody({
                       {quote ? <QuotePlate reply={quote} onJump={onQuote} /> : null}
                       {opener}
                       {words}
+                      {voiced ? <VoiceMessage message={m} bare /> : null}
                     </View>
                   </>
                 ) : compact && !grouped ? (
@@ -1124,7 +1127,7 @@ function RowBody({
               </View>
             ) : null}
             {media ? <ChatMedia media={media} liveId={m.id} /> : null}
-            {voiceOf(meta) ? <VoiceMessage message={m} /> : null}
+            {voiceOf(meta) && !voiced ? <VoiceMessage message={m} /> : null}
             {isAgent && meta?.speedFallback === true ? <SpeedFallbackLine message={m} /> : null}
             {isAgent && standIn ? <ModelStandInLine message={m} text={standIn} /> : null}
             {spilled ? <SpilledLine text={spilled} /> : null}

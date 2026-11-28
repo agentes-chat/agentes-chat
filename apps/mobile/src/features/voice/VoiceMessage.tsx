@@ -9,12 +9,15 @@ import { GestureDetector, useExclusiveGestures, usePanGesture, useTapGesture } f
 import { useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { appHeaders, authedFetch, lastCookie } from "@/lib/auth";
+import { reportError } from "@/lib/error-reports";
 import { serverUrl } from "@/lib/server";
 import { Icon, PressScale, Text, TOUCH } from "@/ui";
+import { useRowDirectory } from "../chat/row-data";
 import { useColors, useOrgId } from "../shared/hooks";
 import { nextSpeed, spokenWords, waveAt } from "./logic";
 import {
   lengthOf,
+  type NowPlaying,
   placeOf,
   playingId,
   seekPlayback,
@@ -44,10 +47,21 @@ const expired = new Set<string>();
  * A voice message: the audio is the message, with one line of its words under the wave, in the same card, and nowhere
  * else; a tap opens the rest there. A recording the server no longer keeps stays as a dimmed wave with its words.
  */
-export const VoiceMessage = memo(function VoiceMessage({ message }: { message: Message }) {
+export const VoiceMessage = memo(function VoiceMessage({
+  message,
+  bare = false,
+}: {
+  message: Message;
+  /** Inside the message's bubble (a conversation of bubbles): the bubble is its frame, no card of its own. */
+  bare?: boolean;
+}) {
+  const { t } = useTranslation();
   const orgId = useOrgId();
+  const dir = useRowDirectory();
   const voice = voiceOf(message.meta);
   const words = useMemo(() => spokenWords(message), [message]);
+  // On the Lock Screen and in the notification: who said it, as a voice note.
+  const nowPlaying = { title: dir.nameOf(message.author), artist: t("mobile.voice.nowPlaying") };
   if (!voice) return null;
   const url = voiceAudioUrl(orgId, voice.clipId, serverUrl());
   return (
@@ -62,6 +76,8 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
       sending={Boolean(message.local)}
       expiredAtStart={voiceExpired(voice)}
       isGone={() => voiceAudioGone(url, authedFetch as typeof fetch)}
+      bare={bare}
+      nowPlaying={nowPlaying}
     />
   );
 });
@@ -81,6 +97,8 @@ export function VoiceClip({
   expiredAtStart = false,
   isGone,
   onFailed,
+  bare = false,
+  nowPlaying,
 }: {
   /** The playback's id: one sound plays at a time, and each keeps its place. */
   clipId: string;
@@ -97,6 +115,10 @@ export function VoiceClip({
   isGone?: () => Promise<boolean>;
   /** Given: a sound that can't play hands its place back instead of offering to try again. */
   onFailed?: () => void;
+  /** Inside a bubble: no card of its own. */
+  bare?: boolean;
+  /** What the system shows while it plays (the Lock Screen, the notification): who said it, or the file's name. */
+  nowPlaying?: NowPlaying;
 }) {
   const { t, i18n } = useTranslation();
   const c = useColors();
@@ -163,12 +185,28 @@ export function VoiceClip({
     setBroken(false);
     // It plays at once; only a player that failed asks the server why (a player says nothing of it): a recording the
     // server no longer keeps dims, anything else offers to try again (or hands its place back, `onFailed`).
-    const failed = () => {
+    const failed = (reason?: unknown) => {
+      // What the player said (or what threw), kept for a sound that should have played: a phone where clips don't play
+      // says why in the error reports. A recording past its retention is no failure.
+      const report = () =>
+        reportError(
+          new Error(`Voice playback failed: ${reason instanceof Error ? reason.message : String(reason ?? "")}`),
+          {
+            where: "voice.playback",
+          },
+        );
       if (onFailed) {
+        report();
         onFailed();
         return;
       }
-      void (isGone?.() ?? Promise.resolve(false)).then((yes) => (yes ? lose() : setBroken(true)));
+      void (isGone?.() ?? Promise.resolve(false)).then((yes) => {
+        if (yes) lose();
+        else {
+          report();
+          setBroken(true);
+        }
+      });
     };
     void startPlayback({
       id: clipId,
@@ -177,6 +215,7 @@ export function VoiceClip({
       from: placeOf(clipId),
       speed: voiceSpeed(),
       onError: failed,
+      ...(nowPlaying ? { nowPlaying } : {}),
     }).catch(failed);
   };
   const seek = (at: number) => seekPlayback(clipId, at);
@@ -241,7 +280,7 @@ export function VoiceClip({
   const more = words && !open && (words.length > ONE_LINE || words.includes("\n"));
   return (
     <View style={styles.box}>
-      <View style={[styles.card, { backgroundColor: c.raised, borderColor: c.line }]}>
+      <View style={bare ? styles.bare : [styles.card, { backgroundColor: c.raised, borderColor: c.line }]}>
         <View style={styles.player}>
           {gone ? null : (
             <PressScale
@@ -351,16 +390,18 @@ export function VoiceClip({
 
 const styles = StyleSheet.create({
   box: { gap: 6, maxWidth: 320 },
-  // The chat's card (files, tools, media): 14 round, the corner cut at the bottom left.
+  // The chat's card (files, tools, media): 14 round, the conversation's corner cut at the top left.
   card: {
     gap: 4,
     padding: 8,
-    borderTopLeftRadius: 14,
+    borderTopLeftRadius: 6,
     borderTopRightRadius: 14,
     borderBottomRightRadius: 14,
-    borderBottomLeftRadius: 6,
+    borderBottomLeftRadius: 14,
     borderWidth: StyleSheet.hairlineWidth,
   },
+  // In a bubble: the bubble's own room and fill around it.
+  bare: { gap: 4, marginTop: 4 },
   player: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: PLAY },
   play: { width: PLAY, height: PLAY, borderRadius: PLAY / 2 },
   playNudge: { marginLeft: 2 },

@@ -4,18 +4,7 @@ import type { AgentColorName } from "@agenteschat/ui/agent/engine";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
-import {
-  Button,
-  fieldText,
-  Icon,
-  LineIcon,
-  PixelOrbit,
-  PixelStop,
-  PixelStopped,
-  Text,
-  useReducedMotion,
-  weights,
-} from "@/ui";
+import { Button, fieldText, Icon, LineIcon, PixelOrbit, PixelStop, PixelStopped, Text, useReducedMotion } from "@/ui";
 import { useFailed } from "../routines/hooks";
 import { useColors, useDirectory, useOrgId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
@@ -56,25 +45,37 @@ export function useAgentColor(agentId: string): AgentColorName {
 }
 
 /**
- * "Trabalhando · 6:12", "Espera seu ok · 18 min" (amber: it waits on a person), "Parando…"; a wait wraps whole, its
- * mark on its first line's capitals, with what comes next under it ("Volta sáb às 18:00", or when it should start in
- * the computer's line). A task's screen says it so; the lists' rows show only the mark.
+ * "Trabalhando · 6:12", "Quer seu ok · 18 min" (amber: it waits on you), "Parando…" under the agent's name on a task's
+ * screen; a wait wraps whole, its mark on its first line's capitals, with what comes next under it ("Volta sáb às
+ * 18:00", or when it should start in the computer's line). `said`: the words in place of the state's own (what it asks
+ * of you, which its screen's request says next, so nothing more goes under them).
  */
-export function StateLine({ task, state, now }: { task: ManagedTask; state: RowState; now: number }) {
+export function StateLine({
+  task,
+  state,
+  now,
+  said,
+}: {
+  task: ManagedTask;
+  state: RowState;
+  now: number;
+  said?: string | null;
+}) {
   const { t, i18n } = useTranslation();
   const c = useColors();
   const color = useAgentColor(task.agentId);
   const waits = state === "ok" || state === "answer";
-  const words = taskStateWords(t, i18n.language, task, state, now);
+  const own = taskStateWords(t, i18n.language, task, state, now);
+  const words = said ? { state: said, next: null } : own;
   const line = (
     <View style={styles.first}>
-      <LineIcon variant="footnote" size={MARK + 4} mark>
+      <LineIcon variant="small" size={MARK + 4} mark>
         <TaskMark state={state} color={color} />
       </LineIcon>
-      <Text variant="footnote" style={[styles.semibold, styles.shrink, { color: waits ? c.amber : c.ink2 }]}>
+      <Text variant="small" style={[styles.shrink, { color: waits ? c.amber : c.ink2 }]}>
         {words.state}
         {state === "stopping" ? null : (
-          <Text variant="caption" tone="faint" style={[styles.num, styles.regular]}>
+          <Text variant="small" tone="faint" style={styles.num}>
             {` · ${taskTime(t, task, now)}`}
           </Text>
         )}
@@ -85,7 +86,7 @@ export function StateLine({ task, state, now }: { task: ManagedTask; state: RowS
   return (
     <View style={styles.stack}>
       {line}
-      <Text variant="caption" tone="faint" style={styles.starts}>
+      <Text variant="footnote" tone="faint" style={styles.starts}>
         {words.next}
       </Text>
     </View>
@@ -215,8 +216,6 @@ const styles = StyleSheet.create({
   mark: { alignItems: "center", justifyContent: "center", flexShrink: 0 },
   // The mark on the words' first line however many they take (`LineIcon`).
   first: { flexDirection: "row", alignItems: "flex-start", gap: 6, minWidth: 0 },
-  semibold: { fontWeight: weights.semibold },
-  regular: { fontWeight: weights.regular },
   shrink: { flexShrink: 1 },
   num: { fontVariant: ["tabular-nums"], flexShrink: 0 },
   stack: { gap: 2, minWidth: 0 },

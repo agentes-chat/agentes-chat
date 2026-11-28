@@ -782,8 +782,15 @@
   "voice.seeAll": {
     "value": "See all"
   },
+  "voice.nowPlaying": {
+    "value": "Voice message"
+  },
+  "voice.nowPlayingFile": {
+    "value": "Audio"
+  },
   "chat.followUpCancelTitle": {
-    "value": "Cancel {{name}}'s follow-up {{when}}?"
+    "value": "Cancel {{name}}'s follow-up {{when}}?",
+    "female": "Cancel {{name}}'s follow-up {{when}}?"
   },
   "chat.someone": {
     "value": "Someone"
@@ -3750,23 +3757,48 @@
   "routines.when.lastDay": {
     "value": "Last day"
   },
-  "calendar.nothing": {
-    "value": "{{days}} · nothing planned"
+  "calendar.proposalBy": {
+    "value": "{{name}}'s proposal",
+    "female": "{{name}}'s proposal"
   },
-  "calendar.nothingToday": {
-    "value": "Nothing planned for today."
+  "calendar.confirm": {
+    "value": "Confirm"
   },
-  "calendar.reminder": {
-    "value": "Reminder · {{agent}}"
+  "calendar.due": {
+    "value": "due"
   },
-  "calendar.reminderIn": {
-    "value": "Reminder · {{agent}} · in {{place}}"
+  "calendar.allDay": {
+    "value": "all day"
   },
-  "calendar.deadline": {
-    "value": "Task due"
+  "calendar.until": {
+    "value": "until {{time}}"
   },
-  "calendar.deadlineOf": {
-    "value": "Task due · {{name}}"
+  "calendar.nothingThatDay": {
+    "value": "Nothing planned."
+  },
+  "calendar.after": {
+    "value": "Later"
+  },
+  "calendar.showWeek": {
+    "value": "Show only the week"
+  },
+  "calendar.showMonth": {
+    "value": "Show the month"
+  },
+  "calendar.day": {
+    "value": "Day"
+  },
+  "calendar.time": {
+    "value": "Time"
+  },
+  "calendar.repeats": {
+    "value": "Repeats"
+  },
+  "calendar.going": {
+    "value": "Are you going?"
+  },
+  "calendar.participantsCount": {
+    "value": "Participants · {{count}}"
   },
   "calendar.timeRange": {
     "value": "{{from}} to {{to}}"
@@ -3777,17 +3809,14 @@
   "calendar.noAnswer": {
     "value": "no answer yet"
   },
-  "calendar.you": {
-    "value": "{{name}} (you)"
-  },
   "calendar.agentPrepares": {
-    "value": "Gets the agenda and prepares a summary before"
+    "value": "Prepares a summary before"
   },
-  "calendar.openChannel": {
-    "value": "Open #{{name}}"
+  "calendar.task": {
+    "value": "Task"
   },
-  "calendar.openConversation": {
-    "value": "Open the conversation"
+  "calendar.conversation": {
+    "value": "Conversation"
   },
   "calendar.deleteEvent": {
     "value": "Delete event"
@@ -3795,11 +3824,17 @@
   "calendar.deleteAsk": {
     "value": "Delete this event?"
   },
+  "calendar.starts": {
+    "value": "Starts"
+  },
+  "calendar.ends": {
+    "value": "Ends"
+  },
   "calendar.noRepeat": {
     "value": "Doesn't repeat"
   },
-  "calendar.add": {
-    "value": "Add"
+  "calendar.addPeople": {
+    "value": "Add a person or agent"
   },
   "coding.removeTitle": {
     "value": "Take {{name}} out of the session?"
@@ -3864,13 +3899,54 @@
   "taskManager.gone": {
     "value": "This task is no longer here."
   },
-  "taskManager.quiet": {
-    "value": "Nothing in progress"
+  "taskManager.title": {
+    "value": "In progress"
   },
-  "taskManager.doneToday": {
+  "taskManager.sections.you": {
+    "value": "Waiting on you"
+  },
+  "taskManager.sections.working": {
+    "value": "Working"
+  },
+  "taskManager.sections.later": {
+    "value": "Later"
+  },
+  "taskManager.computerBusy": {
+    "value": "{{name}} is busy."
+  },
+  "taskManager.wantsOk": {
+    "value": "Wants your OK"
+  },
+  "taskManager.asked": {
+    "value": "Asked you a question"
+  },
+  "taskManager.routine": {
+    "value": "Routine"
+  },
+  "taskManager.asks": {
+    "value": "What {{name}} asks",
+    "female": "What {{name}} asks"
+  },
+  "taskManager.approveNote": {
+    "value": "{{name}} goes on as soon as you approve.",
+    "female": "{{name}} goes on as soon as you approve."
+  },
+  "taskManager.answer": {
+    "value": "Answer in the conversation"
+  },
+  "taskManager.progress": {
+    "value": "Progress"
+  },
+  "taskManager.allSteps": {
     "value": {
-      "one": "{{count}} done today",
-      "other": "{{count}} done today"
+      "one": "See the step",
+      "other": "See all {{count}} steps"
+    }
+  },
+  "taskManager.stopAll": {
+    "value": {
+      "one": "Stop the task",
+      "other": "Stop all {{count}} tasks"
     }
   },
   "taskManager.request": {

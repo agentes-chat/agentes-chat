@@ -221,6 +221,8 @@ export interface GroupedRowProps {
   leadingSaid?: string;
   /** The value on the right, faint ("Ligadas"). */
   value?: string;
+  /** The value in the color of what it says (an invitation's answer: "vai" green, "não vai" red), not faint. */
+  valueTone?: "ok" | "danger";
   /** A short fact about the value, after it on its line ("Pela API"); a sentence goes in `sub`. */
   valueNote?: string;
   /** Drawn just before the value (a picked agent's face, a format's glyph). */
@@ -245,6 +247,10 @@ export interface GroupedRowProps {
   /** A switch on the right (the whole row toggles). */
   toggle?: boolean;
   danger?: boolean;
+  /** The label alone in the middle of the row: a lone action in its own group ("Apagar evento"), as the system's. */
+  centered?: boolean;
+  /** The label in the accent: a row that adds to the list above it ("Adicionar pessoa ou agente"), as the system's. */
+  accent?: boolean;
   /** The label in faint: something listed that won't count. */
   faint?: boolean;
   disabled?: boolean;
@@ -312,6 +318,7 @@ function Row({
   leading,
   leadingSaid,
   value,
+  valueTone,
   valueNote,
   valueLeading,
   chevron: opensScreen = false,
@@ -321,6 +328,8 @@ function Row({
   checked,
   toggle,
   danger = false,
+  centered = false,
+  accent = false,
   faint = false,
   disabled = false,
   onPress,
@@ -337,7 +346,8 @@ function Row({
   const fontScale = useFontScale();
   // A split's row opens its page beside the list: no chevron, it isn't a screen over this one (ADR 0212).
   const chevron = opensScreen && selected === undefined;
-  const tone = danger ? c.danger : faint ? c.faint : c.ink;
+  const tone = danger ? c.danger : accent ? c.agent : faint ? c.faint : c.ink;
+  const valueColor = valueTone === "ok" ? c.ok : valueTone === "danger" ? c.danger : c.label2;
   // A switch answers the finger as it flips, as `Toggle` does.
   const press =
     toggle !== undefined && onPress
@@ -400,7 +410,7 @@ function Row({
           {labelAfter}
         </View>
       ) : (
-        <Text variant="body" numberOfLines={labelLines} style={{ color: tone }}>
+        <Text variant="body" numberOfLines={labelLines} style={[{ color: tone }, centered ? styles.centered : null]}>
           {labelParts
             ? labelParts.map((part, i) =>
                 part.mark ? (
@@ -450,7 +460,7 @@ function Row({
         >
           {valueLeading}
           {value ? (
-            <Text variant="body" numberOfLines={1} style={[styles.shrink, { color: c.label2 }]}>
+            <Text variant="body" numberOfLines={1} style={[styles.shrink, { color: valueColor }]}>
               {value}
             </Text>
           ) : null}
@@ -462,7 +472,7 @@ function Row({
         </View>
       ) : value ? (
         <View style={[styles.value, line ? { minHeight: line.height, justifyContent: "center" } : null]}>
-          <Text variant="body" numberOfLines={1} style={[styles.shrink, { color: c.label2 }]}>
+          <Text variant="body" numberOfLines={1} style={[styles.shrink, { color: valueColor }]}>
             {value}
           </Text>
         </View>
@@ -822,6 +832,7 @@ const styles = StyleSheet.create({
   },
   stackValue: { marginTop: 4 },
   shrink: { flexShrink: 1, minWidth: 0 },
+  centered: { textAlign: "center" },
   // The row's own 16 at the end stays: a button's 44 overhangs its glyph by 13 on each side, 2 apart. Into the row's
   // padding it takes 7 above and below, so on the line it is a 30-point mark's height and showing it moves no row.
   buttons: { flexDirection: "row", gap: 2, marginVertical: -GROUPED_ROW.padY + 3, marginRight: -13 },

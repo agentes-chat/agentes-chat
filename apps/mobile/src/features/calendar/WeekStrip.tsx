@@ -12,12 +12,11 @@ import {
 } from "react-native";
 import { PressScale, Text, useTheme, weights } from "@/ui";
 import { weekDays } from "./logic";
+import { LETTERS } from "./MonthGrid";
 
-/** The weekday letters, Sunday first (the shared `recurrence.wd.*.short`: "D S T Q Q S S"). */
-const LETTERS = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"] as const;
 /** The number's circle: today filled in ink, the chosen day on the tonal plate. */
-const DAY = 36;
-const MARK = 5;
+const DAY = 34;
+const DOT = 4;
 
 export interface WeekStripProps {
   /** Every week the strip pages through, oldest first (`stripWeeks`). */
@@ -26,8 +25,8 @@ export interface WeekStripProps {
   week: Date;
   today: Date;
   selected: Date;
-  /** Each day's marks on the shown week, by `YYYY-MM-DD`: the agents' colors at work that day, then people's. */
-  marks: ReadonlyMap<string, readonly string[]>;
+  /** The days that have something, by `YYYY-MM-DD`: one quiet dot each, as the month's grid. */
+  busy: ReadonlySet<string>;
   /** A swipe landed on another week (stable). */
   onWeek: (week: Date) => void;
   /** A day tapped (stable). */
@@ -35,12 +34,12 @@ export interface WeekStripProps {
 }
 
 /**
- * The week over the agenda, as the system's calendar draws it: seven columns (the weekday's letter, the day's number,
- * a mark per agent at work that day), today in a filled circle, the chosen day on a plate. A swipe pages to the next
- * or the last week, the system's own paging scroll on the native thread (nothing of ours moves per frame); a tap on a
- * day takes the list to it.
+ * The month folded to its week, as the system's calendar draws it: seven columns (the weekday's letter, the day's
+ * number, one quiet dot under a day that has something), today in a filled circle, the chosen day on a plate. A swipe
+ * pages to the next or the last week, the system's own paging scroll on the native thread (nothing of ours moves per
+ * frame); a tap on a day shows that day.
  */
-export function WeekStrip({ weeks, week, today, selected, marks, onWeek, onDay }: WeekStripProps) {
+export function WeekStrip({ weeks, week, today, selected, busy, onWeek, onDay }: WeekStripProps) {
   const [width, setWidth] = useState(0);
   const list = useRef<FlatList<Date>>(null);
   const shownAt = weeks.findIndex((w) => w.getTime() === week.getTime());
@@ -75,11 +74,11 @@ export function WeekStrip({ weeks, week, today, selected, marks, onWeek, onDay }
         width={width}
         today={today}
         selected={toYmd(item) === shownYmd ? selected : null}
-        marks={toYmd(item) === shownYmd ? marks : NO_MARKS}
+        busy={busy}
         onDay={onDay}
       />
     ),
-    [width, today, selected, marks, shownYmd, onDay],
+    [width, today, selected, busy, shownYmd, onDay],
   );
   return (
     <View onLayout={onLayout} style={styles.strip}>
@@ -107,22 +106,20 @@ export function WeekStrip({ weeks, week, today, selected, marks, onWeek, onDay }
   );
 }
 
-const NO_MARKS: ReadonlyMap<string, readonly string[]> = new Map();
-
-/** One week's seven days. Drawn again only when the chosen day, today or its marks change. */
+/** One week's seven days. Drawn again only when the chosen day, today or its dots change. */
 const WeekPage = memo(function WeekPage({
   start,
   width,
   today,
   selected,
-  marks,
+  busy,
   onDay,
 }: {
   start: Date;
   width: number;
   today: Date;
   selected: Date | null;
-  marks: ReadonlyMap<string, readonly string[]>;
+  busy: ReadonlySet<string>;
   onDay: (day: Date) => void;
 }) {
   return (
@@ -134,7 +131,7 @@ const WeekPage = memo(function WeekPage({
           letter={LETTERS[i] ?? "SU"}
           isToday={sameDay(d, today)}
           chosen={selected !== null && sameDay(d, selected)}
-          marks={marks.get(toYmd(d)) ?? NONE}
+          busy={busy.has(toYmd(d))}
           onDay={onDay}
         />
       ))}
@@ -142,21 +139,19 @@ const WeekPage = memo(function WeekPage({
   );
 });
 
-const NONE: readonly string[] = [];
-
 function DayCell({
   day,
   letter,
   isToday,
   chosen,
-  marks,
+  busy,
   onDay,
 }: {
   day: Date;
   letter: (typeof LETTERS)[number];
   isToday: boolean;
   chosen: boolean;
-  marks: readonly string[];
+  busy: boolean;
   onDay: (day: Date) => void;
 }) {
   const { t, i18n } = useTranslation();
@@ -181,33 +176,27 @@ function DayCell({
           variant="body"
           style={[
             styles.digits,
-            isToday ? { color: c.bg, fontWeight: weights.bold } : chosen ? { fontWeight: weights.semibold } : null,
+            isToday ? { color: c.bg, fontWeight: weights.semibold } : chosen ? { fontWeight: weights.semibold } : null,
           ]}
         >
           {day.getDate()}
         </Text>
       </View>
-      <View style={styles.marks}>
-        {marks.map((color, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: a day's marks, in a fixed order
-          <View key={i} style={[styles.mark, { backgroundColor: color }]} />
-        ))}
-      </View>
+      <View style={[styles.dot, busy ? { backgroundColor: c.label3 } : null]} />
     </PressScale>
   );
 }
 
 const styles = StyleSheet.create({
   // Its height held while its width is measured, so the list under it never jumps.
-  strip: { minHeight: 74 },
-  room: { height: 74 },
+  strip: { minHeight: 70 },
+  room: { height: 70 },
   page: { flexDirection: "row", paddingHorizontal: 8, paddingBottom: 8 },
   cell: { flex: 1 },
   // The column's target, a finger's 44 wide at least (the screen's seventh is wider on every phone).
-  cellIn: { alignItems: "center", gap: 4, minHeight: 66, justifyContent: "flex-start" },
+  cellIn: { alignItems: "center", gap: 2, minHeight: 62, justifyContent: "flex-start" },
   letter: { fontWeight: weights.semibold },
   num: { width: DAY, height: DAY, borderRadius: DAY / 2, alignItems: "center", justifyContent: "center" },
   digits: { fontVariant: ["tabular-nums"] },
-  marks: { height: MARK, flexDirection: "row", gap: 3, justifyContent: "center" },
-  mark: { width: MARK, height: MARK, borderRadius: MARK / 2 },
+  dot: { width: DOT, height: DOT, borderRadius: DOT / 2 },
 });

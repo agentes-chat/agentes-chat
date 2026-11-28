@@ -72,6 +72,8 @@ export const STORED = {
   threadsCollapsed: "threads-collapsed",
   /** Agentes' groups the person collapsed, in every workspace (JSON list of group ids). */
   agentGroupsCollapsed: "agent-groups-collapsed",
+  /** The task manager's folded sections the person opened ("Terminadas hoje" folds by default; JSON list). */
+  taskManagerOpened: "task-manager-opened",
   /** An invitation opened before signing in: dealt with once the person is in (features/auth/invite.ts). */
   invite: "invite",
   /** The request this phone made through a link, with the key that signs in once approved (features/auth/invite.ts). */

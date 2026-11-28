@@ -99,7 +99,8 @@ describe("the system's lists", () => {
     expect(grouped.match(/\{headerWords\(children\)\}/g)?.length).toBe(2);
     expect(grouped).toContain("backgroundColor: c.separator,");
     expect(grouped).toContain("<IconTile icon={icon} danger={danger} mark={mark ?? null} />");
-    expect(grouped).toContain('<Text variant="body" numberOfLines={1} style={[styles.shrink, { color: c.label2 }]}>');
+    // A value in the system's secondary color, or its tone (an answer "vai" in green).
+    expect(grouped).toContain('<Text variant="body" numberOfLines={1} style={[styles.shrink, { color: valueColor }]}>');
     for (const mark of ["<Disclosure />", "<MenuMark />", "<CheckMark />"]) expect(grouped).toContain(mark);
     const light = appColors("light");
     expect([light.separator, light.label2, light.label3, light.rowLit]).toEqual([
@@ -139,7 +140,7 @@ describe("a row pressed as the system's lists press theirs", () => {
     for (const file of ["src/ui/Grouped.tsx", "src/ui/ListRow.tsx", "src/ui/Row.tsx", "src/features/shared/parts.tsx"])
       expect(src(file)).toContain("<RowPressable");
     for (const file of [
-      "src/features/task-manager/TaskManagerScreen.tsx",
+      "src/features/task-manager/rows.tsx",
       "src/features/team/TeamScreen.tsx",
       "src/features/dashboards/parts.tsx",
       "src/features/chat/MentionPicker.tsx",

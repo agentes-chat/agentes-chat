@@ -414,9 +414,9 @@ function ManagerRow({ working, waiting, onPress }: { working: number; waiting: n
     <ListRow
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={[t("taskManager.title"), line].join(", ")}
+      accessibilityLabel={[t("mobile.taskManager.title"), line].join(", ")}
       leading={<Tile icon="list" size={52} />}
-      title={t("taskManager.title")}
+      title={t("mobile.taskManager.title")}
       sub={
         <Text variant="small" style={[LIST_PREVIEW, { color: waiting > 0 ? c.amber : c.muted }]} numberOfLines={1}>
           {line}
