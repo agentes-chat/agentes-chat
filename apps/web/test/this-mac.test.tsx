@@ -130,9 +130,7 @@ describe("Configurações → Dispositivos, in the app", () => {
     const tools = screen().getByRole("region", { name: "Ferramentas" });
     await act(async () => fireEvent.click(within(tools).getByRole("button", { name: "Abrir Ferramentas" })));
     expect(asked).toContainEqual({ kind: "prefs", tab: "tools" });
-    expect(asked.some((r) => r.kind === "settings" || r.kind === "thisMacHealth" || r.kind === "settingsNav")).toBe(
-      false,
-    );
+    expect(asked.some((r) => r.kind === "settings" || r.kind === "thisMacHealth")).toBe(false);
   });
 
   test("another computer's page, in the app: the usual words", async () => {
@@ -251,37 +249,5 @@ describe("Configurações › Este Mac, in the app", () => {
     await renderApp(`/org/${ORG_ID}/settings`, { api: createFakeApi(seedState()) });
     await settle(8);
     expect(group()).toBeNull();
-  });
-
-  test("the app is told the workspace's settings list, and that it went once the workspace's pages leave", async () => {
-    const asked = inTheApp({ status: { orgs: [] } as ThisMacStatus, code: null });
-    await renderApp(`/org/${ORG_ID}`, { api: createFakeApi(seedState()) });
-    await settle(8);
-    const sent = asked.filter((r) => r.kind === "settingsNav");
-    const last = sent.at(-1) as {
-      org: { id: string; name: string };
-      main: { id: string; label: string; icon: string; path: string }[];
-      advanced: { id: string; path: string }[];
-    };
-    expect(last.org).toEqual({ id: ORG_ID, name: "Acme" });
-    expect(last.main[0]).toEqual({
-      id: "account",
-      label: "Sua conta",
-      icon: "person",
-      path: `/org/${ORG_ID}/settings/account`,
-    });
-    expect(last.main.map((s) => s.label)).toContain("Workspace");
-    for (const s of [...last.main, ...last.advanced])
-      expect(s.path).toMatch(/^\/org\/[A-Za-z0-9_-]{1,64}\/settings(\/[a-z_]{1,32})?$/);
-    // Sent when it changes, not on every render.
-    await settle(6);
-    expect(asked.filter((r) => r.kind === "settingsNav")).toHaveLength(sent.length);
-    cleanup();
-    expect(asked.filter((r) => r.kind === "settingsNav").at(-1)).toEqual({
-      kind: "settingsNav",
-      org: null,
-      main: [],
-      advanced: [],
-    });
   });
 });

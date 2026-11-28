@@ -8,9 +8,9 @@
 //! Its web views are stacked in the order they were added, and Tauri has no call to reorder them, so the layer is
 //! always the last one added: the site (`main`), its cover (`main-cover`), then the layer, made on first use and kept
 //! alive. It shows in one of three ways:
-//! - `full`: the whole window (the first run, settings; on Linux and Windows every route);
+//! - `full`: the whole window (the first run; on Linux and Windows, and with no site behind it, every route);
 //! - `sheet`: macOS only, transparent over a site that is there, the layer drawing a scrim and a card (the top 48pt of
-//!   the scrim drags the window);
+//!   the scrim drags the window): This computer's settings and the sheets;
 //! - `hidden`: no size and hidden, so drags from Finder reach the site under it (the cover's lesson).
 //!
 //! Linux packs child web views side by side (no overlay at all), so there the site is hidden while the layer shows.
@@ -19,7 +19,6 @@
 //! A new route is sent to the page first (`layer://state`), and the layer appears once the page says it painted that
 //! route (`layer_painted`), or after a short wait, so it never flashes the previous screen.
 
-use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
@@ -149,11 +148,11 @@ pub enum Mode {
     Sheet,
 }
 
-/// How a route shows: the first run and settings take the window; the sheets show over a site that is there, where the
+/// How a route shows: the first run takes the window; settings and the sheets show over a site that is there, where the
 /// system can draw one web view over another (`overlay`), else full window too.
 pub fn mode_for(route: &Route, site_there: bool, overlay: bool) -> Mode {
     match route {
-        Route::FirstRun { .. } | Route::Settings { .. } => Mode::Full,
+        Route::FirstRun { .. } => Mode::Full,
         _ if overlay && site_there => Mode::Sheet,
         _ => Mode::Full,
     }
@@ -215,14 +214,10 @@ pub fn checked_route(value: Value, servers: &[String]) -> Result<Route, String> 
     })
 }
 
-// ───────────────────────────── the site's settings list ─────────────────────────────
-
-/// Items the site may list in its settings (both groups together).
-const NAV_MAX: usize = 40;
-const NAV_LABEL_MAX: usize = 48;
+// ───────────────────────────── the site's pages ─────────────────────────────
 
 /// A path of the site's settings: `/org/<id>/settings`, or one of its sections.
-pub fn settings_path(path: &str) -> bool {
+fn settings_path(path: &str) -> bool {
     let Some(rest) = path.strip_prefix("/org/") else { return false };
     let Some((org, tail)) = rest.split_once('/') else { return false };
     if !(1..=64).contains(&org.len()) || !org.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
@@ -237,62 +232,9 @@ pub fn settings_path(path: &str) -> bool {
     }
 }
 
-fn nav_item(item: &Value) -> Result<Value, String> {
-    let text = |key: &str| item.get(key).and_then(Value::as_str).unwrap_or_default();
-    let (id, label, icon, path) = (text("id"), text("label").trim(), text("icon"), text("path"));
-    let ok = (1..=32).contains(&id.len())
-        && id.chars().all(|c| c.is_ascii_lowercase() || c == '_')
-        && !label.is_empty()
-        && label.chars().count() <= NAV_LABEL_MAX
-        && !label.chars().any(char::is_control)
-        && (1..=32).contains(&icon.len())
-        && icon.chars().all(|c| c.is_ascii_alphabetic())
-        && settings_path(path);
-    if !ok {
-        return Err("bad settings item".into());
-    }
-    Ok(json!({ "id": id, "label": label, "icon": icon, "path": path }))
-}
-
-/// The site's settings list (`this_mac` `settingsNav`), checked and rebuilt: its workspace (or none), and its main and
-/// advanced sections, 40 items at most in all.
-pub fn checked_nav(request: &Value) -> Result<Value, String> {
-    let org = match request.get("org") {
-        None | Some(Value::Null) => Value::Null,
-        Some(org) => {
-            let id = org.get("id").and_then(Value::as_str).unwrap_or_default();
-            let name = org.get("name").and_then(Value::as_str).and_then(shown_name);
-            match name {
-                Some(name) if good_org_id(id) => json!({ "id": id, "name": name }),
-                _ => return Err("bad organization".into()),
-            }
-        }
-    };
-    let group = |key: &str| -> Result<Vec<Value>, String> {
-        match request.get(key) {
-            None | Some(Value::Null) => Ok(Vec::new()),
-            Some(Value::Array(items)) => items.iter().map(nav_item).collect(),
-            Some(_) => Err("bad settings list".into()),
-        }
-    };
-    let (main, advanced) = (group("main")?, group("advanced")?);
-    if main.len() + advanced.len() > NAV_MAX {
-        return Err("too many settings items".into());
-    }
-    Ok(json!({ "org": org, "main": main, "advanced": advanced }))
-}
-
-/// Whether `path` is one the site listed (`nav`), or one of a workspace's settings pages.
-fn site_path_ok(nav: Option<&Value>, path: &str) -> bool {
-    if path.len() > 512 || !path.starts_with('/') || path.starts_with("//") || path.contains('\\') {
-        return false;
-    }
-    let listed = nav.is_some_and(|nav| {
-        ["main", "advanced"].iter().any(|group| {
-            nav[*group].as_array().is_some_and(|items| items.iter().any(|i| i["path"].as_str() == Some(path)))
-        })
-    });
-    listed || settings_path(path)
+/// Whether `path` is one of a workspace's settings pages, the only pages the layer moves the site to.
+fn site_path_ok(path: &str) -> bool {
+    path.len() <= 512 && !path.starts_with("//") && !path.contains('\\') && settings_path(path)
 }
 
 // ───────────────────────────── state ─────────────────────────────
@@ -315,8 +257,6 @@ struct Inner {
     hide_after_paint: Option<u64>,
     /// The site's own title, for the window while the layer doesn't name it.
     site_title: Option<String>,
-    /// The site's settings list, per origin (`this_mac` `settingsNav`).
-    nav: HashMap<String, Value>,
     full_screen: bool,
     /// The site last opened the layer (`this_mac` `settings`).
     site_opened: Option<Instant>,
@@ -341,8 +281,8 @@ pub struct LayerState {
 pub struct SiteState {
     /// A page of a server of the app's list shows, its cover out of the way.
     pub there: bool,
-    /// Its settings list, as it last sent it.
-    pub nav: Option<Value>,
+    /// The workspace that page belongs to (`/org/<id>/…`), for the rows that lead to its settings.
+    pub org: Option<String>,
 }
 
 /// The origin the site shows now, when it is one of the app's servers.
@@ -356,15 +296,25 @@ fn site_there(app: &AppHandle) -> bool {
     site_origin(app).is_some() && !crate::cover::covering(app)
 }
 
+/// The workspace in a page's path (`/org/<id>/…`).
+fn org_of(url: &Url) -> Option<String> {
+    let mut parts = url.path_segments()?;
+    let id = (parts.next()? == "org").then(|| parts.next()).flatten()?;
+    good_org_id(id).then(|| id.to_string())
+}
+
 pub fn state(app: &AppHandle) -> LayerState {
-    let origin = site_origin(app);
-    let there = origin.is_some() && !crate::cover::covering(app);
+    let there = site_there(app);
+    let org = there
+        .then(|| app.get_webview(main_window::LABEL).and_then(|page| page.url().ok()))
+        .flatten()
+        .and_then(|url| org_of(&url));
     let inner = lock(app);
     LayerState {
         seq: inner.seq,
         mode: if inner.route.is_some() { inner.mode } else { Mode::Hidden },
         route: inner.route.clone(),
-        site: SiteState { there, nav: origin.and_then(|o| inner.nav.get(&o).cloned()) },
+        site: SiteState { there, org },
         full_screen: inner.full_screen,
     }
 }
@@ -577,15 +527,6 @@ pub fn site_changed(app: &AppHandle) {
     emit_state(app);
 }
 
-/// A whole page of the site starts loading: its settings list goes with the page that sent it.
-pub fn site_loading(app: &AppHandle, url: &Url) {
-    let origin = url.origin().ascii_serialization();
-    let removed = lock(app).nav.remove(&origin).is_some();
-    if removed {
-        emit_state(app);
-    }
-}
-
 /// The site's title changed: kept for when the layer steps aside. False while the layer names the window itself.
 pub fn site_title(app: &AppHandle, title: &str) -> bool {
     let mut inner = lock(app);
@@ -604,12 +545,6 @@ pub fn full_screen(app: &AppHandle, full: bool) {
     if changed {
         emit_state(app);
     }
-}
-
-/// The site's settings list (`this_mac` `settingsNav`, already checked) for its own origin.
-pub fn set_nav(app: &AppHandle, origin: &str, nav: Value) {
-    lock(app).nav.insert(origin.to_string(), nav);
-    emit_state(app);
 }
 
 /// The site asks for This computer's settings (`this_mac` `settings`): at most one every `SITE_OPEN_GAP`.
@@ -689,16 +624,15 @@ pub fn layer_painted(app: AppHandle, webview: tauri::Webview, seq: u64) -> Resul
     Ok(())
 }
 
-/// A workspace section in the layer's settings list: the layer steps aside and the site moves there (in the page, no
-/// reload). Only a path the site listed itself, or one of a workspace's settings pages.
+/// One of a workspace's settings pages (a row of This computer's settings leads there): the layer steps aside and the
+/// site moves there (in the page, no reload).
 #[tauri::command]
 pub fn layer_site_go(app: AppHandle, webview: tauri::Webview, path: String) -> Result<(), String> {
     if webview.label() != LABEL {
         return Err("only the layer asks this".into());
     }
     let origin = site_origin(&app).ok_or("no site")?;
-    let nav = lock(&app).nav.get(&origin).cloned();
-    if !site_path_ok(nav.as_ref(), &path) {
+    if !site_path_ok(&path) {
         return Err("not a page of the site's settings".into());
     }
     let url = origin.parse::<Url>().and_then(|o| o.join(&path)).map_err(|_| "not a URL")?;
@@ -811,56 +745,24 @@ mod tests {
         assert_eq!(mode_for(&sheet, true, true), Mode::Sheet);
         assert_eq!(mode_for(&sheet, false, true), Mode::Full, "no site behind it");
         assert_eq!(mode_for(&sheet, true, false), Mode::Full, "Windows and Linux");
-        assert_eq!(mode_for(&Route::settings(None, None), true, true), Mode::Full);
+        // This computer's settings are a sheet too, a dialog over the site; the first run takes the window.
+        assert_eq!(mode_for(&Route::settings(None, None), true, true), Mode::Sheet);
+        assert_eq!(mode_for(&Route::settings(None, None), false, true), Mode::Full, "no site behind it");
         assert_eq!(mode_for(&Route::first_run(None), true, true), Mode::Full);
         assert_eq!(serde_json::to_value(Mode::Sheet).unwrap(), json!("sheet"));
     }
 
     #[test]
-    fn the_sites_settings_list_is_checked_and_rebuilt() {
-        let nav = json!({
-            "org": { "id": "o1", "name": " Acme ", "x": 1 },
-            "main": [{ "id": "general", "label": "General", "icon": "settings", "path": "/org/o1/settings", "x": 2 }],
-            "advanced": [{ "id": "api_keys", "label": "API keys", "icon": "key", "path": "/org/o1/settings/api_keys" }],
-            "extra": true,
-        });
-        assert_eq!(
-            checked_nav(&nav),
-            Ok(json!({
-                "org": { "id": "o1", "name": "Acme" },
-                "main": [{ "id": "general", "label": "General", "icon": "settings", "path": "/org/o1/settings" }],
-                "advanced": [{ "id": "api_keys", "label": "API keys", "icon": "key", "path": "/org/o1/settings/api_keys" }],
-            }))
-        );
-        assert_eq!(checked_nav(&json!({ "org": null })), Ok(json!({ "org": null, "main": [], "advanced": [] })));
-        let item = |id: &str, label: &str, icon: &str, path: &str| json!({ "main": [{ "id": id, "label": label, "icon": icon, "path": path }] });
-        for bad in [
-            item("General", "General", "settings", "/org/o1/settings"),
-            item("general", "", "settings", "/org/o1/settings"),
-            item("general", &"a".repeat(49), "settings", "/org/o1/settings"),
-            item("general", "Gen\u{7}", "settings", "/org/o1/settings"),
-            item("general", "General", "set-tings", "/org/o1/settings"),
-            item("general", "General", "settings", "/org/o1/channels"),
-            item("general", "General", "settings", "https://evil.example/org/o1/settings"),
-            item("general", "General", "settings", "/org/o1/settings/a/b"),
-            json!({ "org": { "id": "../x", "name": "A" } }),
-            json!({ "main": "x" }),
-        ] {
-            assert!(checked_nav(&bad).is_err(), "{bad}");
-        }
-        let many: Vec<_> = (0..41).map(|_| json!({ "id": "a", "label": "A", "icon": "x", "path": "/org/o/settings" })).collect();
-        assert!(checked_nav(&json!({ "main": many })).is_err());
-    }
-
-    #[test]
     fn the_layer_moves_the_site_only_to_its_settings() {
-        let nav = json!({ "main": [{ "path": "/org/o1/settings/people" }], "advanced": [] });
-        assert!(site_path_ok(Some(&nav), "/org/o1/settings/people"));
-        assert!(site_path_ok(None, "/org/o1/settings"));
-        assert!(site_path_ok(None, "/org/o-2/settings/billing"));
-        assert!(!site_path_ok(Some(&nav), "/org/o1/c/general"));
-        assert!(!site_path_ok(None, "//evil.example/org/o1/settings"));
-        assert!(!site_path_ok(None, "/org/o1/settings/../../x"));
+        assert!(site_path_ok("/org/o1/settings/people"));
+        assert_eq!(org_of(&"https://x.example/org/o1/c/general".parse().unwrap()), Some("o1".into()));
+        assert_eq!(org_of(&"https://x.example/org/../x".parse().unwrap()), None);
+        assert_eq!(org_of(&"https://x.example/settings".parse().unwrap()), None);
+        assert!(site_path_ok("/org/o1/settings"));
+        assert!(site_path_ok("/org/o-2/settings/billing"));
+        assert!(!site_path_ok("/org/o1/c/general"));
+        assert!(!site_path_ok("//evil.example/org/o1/settings"));
+        assert!(!site_path_ok("/org/o1/settings/../../x"));
     }
 
     #[test]

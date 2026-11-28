@@ -36,8 +36,8 @@ cover, General, Servers and Updates, and some of it can be skipped once and neve
   the notch, not windows people manage).
 - The welcome window, Preferences and the offer/permissions sheets become **the app layer**: a local webview in the main
   window carrying the app's own bundle, as the cover does (ADR 0036, the cover's two layers). It shows full window (the
-  first run; This Mac's settings without the site), or as a sheet over the site (getting this Mac ready, a connect or
-  pair link). The site never gains a command for this computer: a click in the layer is the app's, as a click in
+  first run; everything else when the site isn't there, and on Windows and Linux, where one web view can't be drawn
+  over another), or as a card over the site (This Mac's settings, getting this Mac ready, a connect or pair link). The site never gains a command for this computer: a click in the layer is the app's, as a click in
   Preferences was.
 - `Cmd+,`, the menu bar's settings item and the popover's "This Mac settings" open the layer on This Mac's settings.
   They work in every state (offline, a server that doesn't answer, signed out, before any server is chosen): the layer
@@ -108,8 +108,11 @@ cover, General, Servers and Updates, and some of it can be skipped once and neve
   and tools, the server here (only when it runs here), Activity, and the app's settings (notifications, menu bar, notch,
   language, compatibility mode, the advanced limits). Updates are the Overview's version line and the app menu's Check
   for Updates; the list of servers is the site's workspace switcher (ADR 0154) and Add in the Overview.
-- In the app, the site's settings list a This Mac group; with the site there, the layer's list shows the workspace's
-  sections above This Mac's, and choosing one returns to the site.
+- They open as a dialog over the site: a card with the sections in a list beside the page, the site dimmed behind it,
+  closed with ×, Esc or Cmd+W back where the person was. Inside it one surface: groups without a card, icons without a tile.
+- The dialog holds This Mac alone. The workspace's own settings stay on its page, whose list has a This Mac group that
+  opens the dialog on that section; the dialog leads to the workspace's settings only where one of its rows needs it
+  (inviting people to the server here), by the workspace in the page's address.
 
 ### 7. The essentials stay on, and say when they fall
 

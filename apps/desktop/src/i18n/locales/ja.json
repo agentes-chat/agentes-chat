@@ -1028,14 +1028,12 @@
   "settings": {
     "nav": {
       "label": "設定",
-      "title": "設定",
       "thisDevice": "この{{device}}",
       "overview": "概要",
       "folders": "フォルダとツール",
       "server": "この{{device}}のサーバー",
       "activity": "アクティビティ",
       "app": "アプリの設定",
-      "back": "{{name}}に戻る",
       "needs_other": "{{count}}件があなたの対応待ち"
     },
     "away": {

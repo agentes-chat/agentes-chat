@@ -1046,14 +1046,12 @@
   "settings": {
     "nav": {
       "label": "Ustawienia",
-      "title": "Ustawienia",
       "thisDevice": "Ten {{device}}",
       "overview": "Przegląd",
       "folders": "Foldery i narzędzia",
       "server": "Serwer na tym urządzeniu ({{device}})",
       "activity": "Aktywność",
       "app": "Ustawienia aplikacji",
-      "back": "Wróć do {{name}}",
       "needs_one": "{{count}} sprawa wymaga twojej uwagi",
       "needs_few": "{{count}} sprawy wymagają twojej uwagi",
       "needs_many": "{{count}} spraw wymaga twojej uwagi",

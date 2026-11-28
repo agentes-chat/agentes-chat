@@ -51,27 +51,13 @@ export type LayerRoute =
 /** How the layer shows: not at all, the whole window, or a sheet over the site (macOS only). */
 export type LayerMode = "hidden" | "full" | "sheet";
 
-/** One of the site's settings sections, as it sent them (`this_mac` `settingsNav`). */
-export interface SiteNavItem {
-  id: string;
-  label: string;
-  icon: string;
-  path: string;
-}
-
-export interface SiteNav {
-  org: { id: string; name: string } | null;
-  main: SiteNavItem[];
-  advanced: SiteNavItem[];
-}
-
 /** What the layer draws from (`layer://state`); `seq` grows with every route shown or hidden. */
 export interface LayerState {
   seq: number;
   mode: LayerMode;
   route: LayerRoute | null;
-  /** `there`: a page of a server of the app's list shows, its cover out of the way; `nav`: its settings list. */
-  site: { there: boolean; nav: SiteNav | null };
+  /** `there`: a page of a server of the app's list shows, its cover out of the way; `org`: its workspace. */
+  site: { there: boolean; org: string | null };
   fullScreen: boolean;
 }
 

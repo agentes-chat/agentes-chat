@@ -1046,14 +1046,12 @@
   "settings": {
     "nav": {
       "label": "Настройки",
-      "title": "Настройки",
       "thisDevice": "Этот {{device}}",
       "overview": "Обзор",
       "folders": "Папки и инструменты",
       "server": "Сервер на этом {{device}}",
       "activity": "Активность",
       "app": "Настройки приложения",
-      "back": "Назад: {{name}}",
       "needs_one": "{{count}} пункт ждёт вас",
       "needs_few": "{{count}} пункта ждут вас",
       "needs_many": "{{count}} пунктов ждут вас",

@@ -331,7 +331,6 @@ fn build(app: &AppHandle, page: Option<Url>) -> Result<(), String> {
             // The blank page of a window with no server yet loads under the first run: no cover for it.
             PageLoadEvent::Started if payload.url().scheme() == "about" => {}
             PageLoadEvent::Started => {
-                crate::app_layer::site_loading(&on_load, payload.url());
                 crate::cover::show(&on_load);
             }
             // The page's own sizes follow the zoom (desktop.css), and the bar knows about full screen.
@@ -925,10 +924,10 @@ pub fn focus_top(app: &AppHandle, only_if_key: bool) {
 /// What the site may ask of this computer: which of its organizations this computer works for (`status`),
 /// pairing it with one (`connect`: the system's own dialog asks first, then the site confirms the runner's
 /// code with its own session), reconnecting it (`reconnect`), This computer's settings on a section (`settings`, and
-/// `prefs` on a tab from older sites: the app layer, ADR 0265), its own settings list for the layer's (`settingsNav`),
-/// how many of this computer's essentials need the person and whether the server runs here (`thisMacHealth`), the menu
-/// bar's access requests (`requests`), the Dock's badge (`badge`), the Go menu's organizations (`orgs`), a
-/// notification while the app is in the background (`notify`), System Settings on a permission it was refused
+/// `prefs` on a tab from older sites: the app layer, ADR 0265), how many of this computer's essentials need the person
+/// and whether the server runs here (`thisMacHealth`), the menu bar's access requests (`requests`), the Dock's badge
+/// (`badge`), the Go menu's organizations (`orgs`), a notification while the app is in the background (`notify`),
+/// System Settings on a permission it was refused
 /// (`privacy`) and the Local Network permission an Android phone over Wi-Fi needs (`localNetwork`), the first run to
 /// pick another server (`servers`: the sign-in page's way out, the same as Servers › Add a server…), the app's own speed numbers
 /// for the site's report (`vitals`: its opening and its web view's memory) and, on the server here, signing its
@@ -1112,11 +1111,6 @@ fn checked(request: &Value) -> Result<Value, String> {
                 out["focus"] = json!(focus);
             }
             Ok(out)
-        }
-        // The site's own settings list, for the layer's.
-        Some("settingsNav") => {
-            let nav = crate::app_layer::checked_nav(request)?;
-            Ok(json!({ "kind": "settingsNav", "org": nav["org"], "main": nav["main"], "advanced": nav["advanced"] }))
         }
         Some("thisMacHealth") => Ok(json!({ "kind": "thisMacHealth" })),
         Some("localNetwork") => Ok(json!({ "kind": "localNetwork" })),
@@ -1456,14 +1450,6 @@ pub async fn this_mac(app: AppHandle, webview: tauri::Webview, request: Value) -
         Some("prefs") => {
             let route = prefs_route(request["tab"].as_str().unwrap_or_default(), crate::local_server::runs(&app));
             crate::app_layer::open_from_site(&app, route)?;
-            return Ok(json!({}));
-        }
-        Some("settingsNav") => {
-            let mut nav = request.clone();
-            if let Some(fields) = nav.as_object_mut() {
-                fields.remove("kind");
-            }
-            crate::app_layer::set_nav(&app, &origin, nav);
             return Ok(json!({}));
         }
         Some("thisMacHealth") => {
@@ -1836,27 +1822,6 @@ mod tests {
         assert_eq!(prefs_route("updates", true), Route::settings(Some(Section::Overview), Some("updates")));
         assert_eq!(prefs_route("servers", true), Route::settings(Some(Section::Server), None));
         assert_eq!(prefs_route("servers", false), Route::settings(Some(Section::App), Some("servers")));
-    }
-
-    #[test]
-    fn the_sites_settings_list_reaches_the_app_checked() {
-        let nav = json!({
-            "kind": "settingsNav",
-            "org": { "id": "o1", "name": "Acme" },
-            "main": [{ "id": "people", "label": "People", "icon": "users", "path": "/org/o1/settings/people" }],
-            "origin": "https://evil.example",
-        });
-        assert_eq!(
-            checked(&nav),
-            Ok(json!({
-                "kind": "settingsNav",
-                "org": { "id": "o1", "name": "Acme" },
-                "main": [{ "id": "people", "label": "People", "icon": "users", "path": "/org/o1/settings/people" }],
-                "advanced": [],
-            }))
-        );
-        let outside = json!({ "kind": "settingsNav", "main": [{ "id": "x", "label": "X", "icon": "x", "path": "/admin" }] });
-        assert!(checked(&outside).is_err());
     }
 
     #[test]

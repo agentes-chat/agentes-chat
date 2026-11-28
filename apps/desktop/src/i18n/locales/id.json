@@ -1028,14 +1028,12 @@
   "settings": {
     "nav": {
       "label": "Pengaturan",
-      "title": "Pengaturan",
       "thisDevice": "{{device}} ini",
       "overview": "Ringkasan",
       "folders": "Folder dan alat",
       "server": "Server di {{device}} ini",
       "activity": "Aktivitas",
       "app": "Pengaturan aplikasi",
-      "back": "Kembali ke {{name}}",
       "needs_other": "{{count}} hal butuh kamu"
     },
     "away": {

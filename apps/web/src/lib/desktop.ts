@@ -314,20 +314,6 @@ export interface ThisDeviceHealth {
   server: boolean;
 }
 
-/** One line of the workspace's settings list, as the app's layer shows it above This {{device}} (ADR 0265 §2). */
-export interface DesktopSettingsNavItem {
-  id: string;
-  label: string;
-  icon: string;
-  path: string;
-}
-/** The workspace's settings list the app's layer shows; `org: null` takes it away (the workspace's pages left). */
-export interface DesktopSettingsNav {
-  org: { id: string; name: string } | null;
-  main: DesktopSettingsNavItem[];
-  advanced: DesktopSettingsNavItem[];
-}
-
 /** The app has This {{device}}'s settings in its own layer (`settings` in `window.__agentesDesktop`, ADR 0265). */
 export const desktopHasSettingsLayer = () => {
   if (!inDesktopApp()) return false;
@@ -379,8 +365,6 @@ export const thisMac = {
    * the first time, System Settings on that list after (ADR 0265 §7).
    */
   localNetwork: () => invoke<unknown>({ kind: "localNetwork" }),
-  /** The workspace's settings list, for the app's layer to show above This {{device}} (ADR 0265 §2). */
-  settingsNav: (nav: DesktopSettingsNav) => invoke<unknown>({ kind: "settingsNav", ...nav }),
   /** The menu bar's popover, where access requests are answered. */
   showRequests: () => invoke<unknown>({ kind: "requests" }),
   /** System Settings on the microphone's list (a voice message macOS refused); an older app refuses it. */

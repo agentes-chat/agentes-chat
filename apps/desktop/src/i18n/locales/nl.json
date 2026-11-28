@@ -1034,14 +1034,12 @@
   "settings": {
     "nav": {
       "label": "Instellingen",
-      "title": "Instellingen",
       "thisDevice": "Deze {{device}}",
       "overview": "Overzicht",
       "folders": "Mappen en tools",
       "server": "Server op deze {{device}}",
       "activity": "Activiteit",
       "app": "App-instellingen",
-      "back": "Terug naar {{name}}",
       "needs_one": "{{count}} ding heeft je nodig",
       "needs_other": "{{count}} dingen hebben je nodig"
     },

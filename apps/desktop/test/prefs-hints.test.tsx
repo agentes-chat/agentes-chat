@@ -13,7 +13,7 @@ import type { Essential } from "../src/control/essentials";
 import type { LocalServerStatus } from "../src/control/local-server";
 import { DesktopStore } from "../src/control/store";
 import type { UpdateCheck } from "../src/hooks";
-import { createFakeHost, type FakeHost, type HereOptions, type Scenario } from "../src/host/fake";
+import { createFakeHost, type FakeHost, type HereOptions, layerModeFor, type Scenario } from "../src/host/fake";
 import { createDesktopI18n } from "../src/i18n";
 import { Advanced } from "../src/layer/settings/Advanced";
 import { essentialRows } from "../src/layer/settings/AlwaysOn";
@@ -147,42 +147,43 @@ describe("Settings › This computer: its sections", () => {
     expect(sectionFor({ focus: "reach" }, none)).toBe("app");
   });
 
-  test("with the workspace's page there: its sections lead, each moves the site; This Mac's follow; a way back", () =>
+  test("with the workspace's page there: a dialog over it with This Mac's sections alone, closed with ×", () =>
     pane(
       "selfhost",
       <Settings />,
-      (el) => navItems(el).includes("Folders and tools") && navItems(el).includes("People"),
+      (el) => navItems(el).includes("Folders and tools"),
       async (el, host) => {
-        expect(navItems(el)).toEqual([
-          "Back to Acme",
-          "General",
-          "People",
-          "Agents",
-          "Connectors",
-          "Usage",
-          "Overview",
-          "Folders and tools",
-          "Activity",
-          "App settings",
-        ]);
-        expect(el.querySelector(".dk-pnav__whotext")?.textContent).toBe("SettingsAcme");
-        expect(el.querySelector(".dk-pnav__group")?.textContent).toBe("This Mac");
+        expect(navItems(el)).toEqual(["Overview", "Folders and tools", "Activity", "App settings"]);
+        expect(el.querySelector(".dk-sx__title")?.textContent).toBe("This Mac");
+        // The workspace's own settings stay on its page (ADR 0265 §6).
+        expect(buttonIn(el, "People")).toBeUndefined();
         // No line about the connection: the page is there.
         expect(el.querySelector(".dk-sx__away")).toBeNull();
-        await act(async () => buttonIn(el, "People")?.click());
-        expect(host.sitePaths).toEqual(["/org/org_acme/settings/members"]);
+        const close = el.querySelector<HTMLButtonElement>(".dk-sx__close button");
+        expect(close?.getAttribute("aria-label")).toBe("Close");
+        await act(async () => close?.click());
         expect(host.layer.route).toBeNull();
       },
     ));
 
-  test("without the site: This Mac's sections alone under its picture, and a quiet line with Try again", () =>
+  test("settings show as a dialog over the site on a Mac, and fill the window without it or elsewhere", () => {
+    const route = { screen: "settings" } as const;
+    expect(layerModeFor(route, true, "mac")).toBe("sheet");
+    expect(layerModeFor(route, false, "mac")).toBe("full");
+    expect(layerModeFor(route, true, "windows")).toBe("full");
+    expect(layerModeFor({ screen: "firstRun" }, true, "mac")).toBe("full");
+  });
+
+  test("without the site: the same sections, a quiet line with Try again, and no way to close onto nothing", () =>
     pane(
       "selfhost",
       <Settings />,
       (el) => el.querySelector(".dk-sx__away") && navItems(el).includes("Activity"),
       async (el, host) => {
         expect(navItems(el)).toEqual(["Overview", "Folders and tools", "Activity", "App settings"]);
-        expect(el.querySelector(".dk-pnav__whotext")?.textContent).toBe("This MacSettings");
+        expect(el.querySelector(".dk-sx__title")?.textContent).toBe("This Mac");
+        // Nothing would be under it: no ×.
+        expect(el.querySelector(".dk-sx__close")).toBeNull();
         expect(el.querySelector(".dk-sx__away")?.textContent).toBe(
           "No connection with Acme. What belongs to this Mac works the same. Who can use it and the agents' names come back with the connection.Try again",
         );

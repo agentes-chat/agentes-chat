@@ -294,7 +294,7 @@ function Running({ local, ctx }: { local: LocalServerStatus; ctx: SettingsContex
                 ctx.org && (
                   <Button
                     size="sm"
-                    onClick={() => ctx.org && ctx.siteGo(`/org/${encodeURIComponent(ctx.org.id)}/settings/invites`)}
+                    onClick={() => ctx.org && ctx.siteGo(`/org/${encodeURIComponent(ctx.org)}/settings/invites`)}
                   >
                     {t("desktop.settings.server.inviteButton")}
                   </Button>

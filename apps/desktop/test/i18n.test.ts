@@ -204,7 +204,7 @@ describe("desktop strings", () => {
       "prefs.general.menuBarTitle",
       ...leaves(desktopEn.prefs.updates).map((k) => `prefs.updates.${k}`),
       // Settings with no computer of this app's own: App settings and its parts.
-      "settings.nav.title",
+      "settings.nav.label",
       "settings.nav.app",
       "settings.app.title",
       "settings.app.notifications",

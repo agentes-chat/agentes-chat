@@ -1028,14 +1028,12 @@
   "settings": {
     "nav": {
       "label": "设置",
-      "title": "设置",
       "thisDevice": "这台 {{device}}",
       "overview": "概览",
       "folders": "文件夹和工具",
       "server": "这台 {{device}} 上的服务器",
       "activity": "动态",
       "app": "应用设置",
-      "back": "返回 {{name}}",
       "needs_other": "{{count}} 项等你处理"
     },
     "away": {

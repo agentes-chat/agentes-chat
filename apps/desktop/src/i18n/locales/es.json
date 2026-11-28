@@ -1040,14 +1040,12 @@
   "settings": {
     "nav": {
       "label": "Configuración",
-      "title": "Configuración",
       "thisDevice": "Esta {{device}}",
       "overview": "Resumen",
       "folders": "Carpetas y herramientas",
       "server": "Servidor en esta {{device}}",
       "activity": "Actividad",
       "app": "Configuración de la app",
-      "back": "Volver a {{name}}",
       "needs_one": "{{count}} cosa te necesita",
       "needs_many": "{{count}} cosas te necesitan",
       "needs_other": "{{count}} cosas te necesitan"

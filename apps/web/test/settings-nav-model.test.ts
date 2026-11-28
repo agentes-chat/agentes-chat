@@ -25,7 +25,7 @@ const team: OrgSummary = { id: "org-1", name: "Acme", role: "owner", permissions
 const member: OrgSummary = { id: "org-1", name: "Acme", role: "member", permissions: ["read"] };
 const selfHosted = { socialProviders: {}, signupOpen: true, firstRun: false } as unknown as AuthConfig;
 const cloud = { ...selfHosted, cloud: true } as AuthConfig;
-/** The address shape the desktop app accepts for a line (`settingsNav` in main_window.rs). */
+/** A workspace's settings page (`/org/<id>/settings`, or one of its sections). */
 const PATH = /^\/org\/[A-Za-z0-9_-]{1,64}\/settings(\/[a-z_]{1,32})?$/;
 
 describe("settingsNavModel", () => {

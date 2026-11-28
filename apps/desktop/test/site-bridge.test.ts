@@ -39,7 +39,6 @@ const EVER_ASKED = {
     "openServer",
     // This computer's settings in the app layer (ADR 0265).
     "settings",
-    "settingsNav",
     "thisMacHealth",
     "localNetwork",
   ],

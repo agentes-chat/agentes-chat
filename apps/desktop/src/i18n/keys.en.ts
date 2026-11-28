@@ -1167,16 +1167,12 @@ export const desktopEn = {
     nav: {
       /** The list of sections (for screen readers). */
       label: "Settings",
-      /** Over the list, beside the workspace's tile or this computer's picture. */
-      title: "Settings",
       thisDevice: "This {{device}}",
       overview: "Overview",
       folders: "Folders and tools",
       server: "Server on this {{device}}",
       activity: "Activity",
       app: "App settings",
-      /** The way back to the workspace's own page, over the list. */
-      back: "Back to {{name}}",
       needs_one: "{{count}} thing needs you",
       needs_other: "{{count}} things need you",
     },

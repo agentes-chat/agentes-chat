@@ -145,7 +145,7 @@ function heldSetup(window: "notch" | "app" = "notch") {
       seq,
       mode,
       route: mode === "hidden" ? null : { screen: "settings" },
-      site: { there: true, nav: null },
+      site: { there: true, org: null },
       fullScreen: false,
     });
   return { store, reply, event, line, release, drain, asked, shown: (name: string) => onShown(name), layer };

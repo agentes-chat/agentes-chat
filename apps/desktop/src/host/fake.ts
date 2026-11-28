@@ -77,7 +77,6 @@ import type {
   LayerState,
   RunnerInfo,
   RunnerStateChange,
-  SiteNav,
   WindowName,
 } from "./types";
 
@@ -177,29 +176,9 @@ export interface FakeHost extends Host {
   readonly publishedHealth: { needs: number; server: boolean } | null;
 }
 
-/** The stand-in site's settings list (the layer's settings show it above This computer's sections), in the language
- * the site would send it in (`?lang=`). */
-const SITE_PT =
-  typeof location !== "undefined" && (new URLSearchParams(location.search).get("lang") ?? "").startsWith("pt");
-const FAKE_NAV: SiteNav = {
-  org: { id: "org_acme", name: "Acme" },
-  main: [
-    { id: "general", label: SITE_PT ? "Geral" : "General", icon: "settings", path: "/org/org_acme/settings" },
-    { id: "members", label: SITE_PT ? "Pessoas" : "People", icon: "members", path: "/org/org_acme/settings/members" },
-    { id: "agents", label: SITE_PT ? "Agentes" : "Agents", icon: "brainAgent", path: "/org/org_acme/settings/agents" },
-    {
-      id: "connectors",
-      label: SITE_PT ? "Conectores" : "Connectors",
-      icon: "plug",
-      path: "/org/org_acme/settings/connectors",
-    },
-  ],
-  advanced: [{ id: "usage", label: SITE_PT ? "Uso" : "Usage", icon: "chart", path: "/org/org_acme/settings/usage" }],
-};
-
-/** How a route shows (app_layer.rs `mode_for`): sheets over a site only on a Mac. */
+/** How a route shows (app_layer.rs `mode_for`): settings and sheets over a site only on a Mac. */
 export function layerModeFor(route: LayerRoute, siteThere: boolean, platform: Platform): LayerMode {
-  if (route.screen === "firstRun" || route.screen === "settings") return "full";
+  if (route.screen === "firstRun") return "full";
   return platform === "mac" && siteThere ? "sheet" : "full";
 }
 
@@ -401,12 +380,12 @@ export function createFakeHost(
     seq: firstRoute ? 1 : 0,
     mode: firstRoute ? layerModeFor(firstRoute, siteThere(), platform) : "hidden",
     route: firstRoute,
-    site: { there: siteThere(), nav: siteThere() ? FAKE_NAV : null },
+    site: { there: siteThere(), org: siteThere() ? "org_acme" : null },
     fullScreen: false,
   };
   if (firstRoute) routes.push(firstRoute);
   const sayLayer = () => {
-    layer.site = { there: siteThere(), nav: siteThere() ? FAKE_NAV : null };
+    layer.site = { there: siteThere(), org: siteThere() ? "org_acme" : null };
     const now = { ...layer, site: { ...layer.site } };
     for (const l of layerListeners) l(now);
     devChanged();

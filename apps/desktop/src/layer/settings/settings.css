@@ -1,44 +1,68 @@
 /*
- * Settings › This computer on the app layer (ADR 0265 §7, Settings.tsx): the section list (the desktop's `.dk-pnav`)
- * beside the page (`.dk-pbody`), with the pieces of its own. States are words in their colour, never pills.
+ * Settings › This computer on the app layer (ADR 0265 §7, Settings.tsx): a dialog in the sheets' card (`SheetFrame`),
+ * the section list (the desktop's `.dk-pnav` buttons) beside the page, one size for every section, smaller with the
+ * window. Inside it one surface: the groups lose their card and the icons their tile. States are words in their
+ * colour, never pills.
  */
 .dk-sx {
-  grid-template-columns: 232px minmax(0, 1fr);
+  position: relative;
+  display: grid;
+  grid-template-columns: 216px minmax(0, 1fr);
+  width: 1000px;
+  max-width: calc(100vw - 48px);
+  height: 720px;
+  min-height: 0;
+  flex-shrink: 1;
 }
-.dk-sx .dk-pnav {
-  background: var(--side, var(--sunken));
+.dk-sx .dk-sx__nav {
+  background: none;
+  padding: 22px 12px 14px;
 }
-.dk-sx .dk-pbody {
-  padding: 26px 40px 32px;
+.dk-sx__title {
+  margin: 0;
+  padding: 2px 9px 16px;
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
-.dk-sx .dk-pbody > * {
+/* The section open now: a plate on the card, not a second card. */
+.dk-sx .dk-pnav button[aria-current="page"] {
+  background: var(--plate);
+  box-shadow: none;
+}
+.dk-sx__body {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 30px 36px 34px;
+}
+.dk-sx__body > * {
   max-width: 680px;
+}
+.dk-sx__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 3;
+}
+.dk-sx .dk-card {
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+}
+.dk-sx .dk-logo--soft {
+  width: 20px;
+  background: none;
+  box-shadow: none;
+  color: var(--muted);
 }
 .dk-sx__label {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-/* The way back to the workspace's page, over the list. */
-.dk-sx .dk-pnav .dk-sx__back {
-  height: 28px;
-  margin-bottom: 6px;
-  font-size: 12.5px;
-  color: var(--muted);
-}
-/* Between the workspace's own sections and its advanced ones. */
-.dk-sx__gap {
-  height: 8px;
-  flex: none;
-}
-/* With no site: this computer's picture over its sections. */
-.dk-sx__alone {
-  padding-top: 2px;
-}
-.dk-sx__alone .ac-computer {
-  width: 40px;
-  height: auto;
 }
 /* Something on this computer needs the person: a dot in the waiting colour after Overview. */
 .dk-sx__dot {
@@ -56,9 +80,6 @@
   align-items: flex-start;
   gap: 10px;
   margin: 0 0 22px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: var(--sunken);
   font-size: 13.5px;
   color: var(--muted);
   text-wrap: pretty;
@@ -211,18 +232,17 @@
 
 /* The row a route asked for, marked a moment once it is in view. */
 [data-focus][data-focused] .dk-card {
-  box-shadow:
-    var(--e1),
-    0 0 0 2px var(--agent2);
+  border-radius: 12px;
+  box-shadow: 0 0 0 2px var(--agent2);
   transition: box-shadow 0.6s var(--out, ease-out);
 }
 
 @media (max-width: 760px) {
   .dk-sx {
-    grid-template-columns: 200px minmax(0, 1fr);
+    grid-template-columns: 184px minmax(0, 1fr);
   }
-  .dk-sx .dk-pbody {
-    padding: 20px 20px 28px;
+  .dk-sx__body {
+    padding: 24px 20px 28px;
   }
 }
 /* A coding program's mark as a row's picture: the 32 px of the rows' other icons. */

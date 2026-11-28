@@ -1,22 +1,21 @@
 /**
- * Settings › This computer on the main window's app layer (ADR 0265 §7). With the workspace's page there, its own
- * settings sections (as the site sent them) lead the list, and each moves the site there; This computer's sections
- * follow: Overview, Folders and tools, Server on this computer (only while the app runs it), Activity and App
- * settings. Without the site (offline, its server down, signed out) the list is This computer's alone and a quiet
- * line on top says what waits for the connection. Everything about this computer acts through its own runners and
- * the app; nothing is granted from the site.
+ * Settings › This computer on the main window's app layer (ADR 0265 §7): a dialog over the workspace's page (a card of
+ * the layer's sheets, `SheetFrame`), its sections in a list beside the page: Overview, Folders and tools, Server on
+ * this computer (only while the app runs it), Activity and App settings. The workspace's own settings stay on its
+ * page. × , Esc and ⌘W close it; without the site behind it (offline, its server down, signed out) the same card fills
+ * the window, stays, and a quiet line on top says what waits for the connection. Everything about this computer acts
+ * through its own runners and the app; nothing is granted from the site.
  */
-import { Icon, type IconName, iconNames } from "@agenteschat/ui";
+import { Button, Icon, type IconName } from "@agenteschat/ui";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost, useSnapshot } from "../../app";
 import { homeServer, serverName } from "../../control/server";
 import { type Home, orgName, pairedHomes } from "../../control/store";
-import { macStateOf } from "../../control/tray";
-import { type UpdateCheck, useLocalServer, useUpdateCheck, useWorkspaces } from "../../hooks";
-import type { LayerSection, LayerState, SiteNavItem } from "../../host/types";
-import { MacPortrait, OrgTile } from "../../ui/bits";
+import { type UpdateCheck, useLocalServer, useUpdateCheck } from "../../hooks";
+import type { LayerSection, LayerState } from "../../host/types";
 import { type Essentials, useEssentials } from "../../ui/essentials";
+import { SHEET_TITLE_ID } from "../sheets/SheetFrame";
 import { Access } from "./Access";
 import { Activity } from "./Activity";
 import { rowsNeedingYou } from "./AlwaysOn";
@@ -37,7 +36,7 @@ const SECTION_ICON: Record<LayerSection, IconName> = {
 /** The site's part of the layer's state, kept current (`layer://state`). */
 function useLayerSite(): LayerState["site"] {
   const host = useHost();
-  const [site, setSite] = useState<LayerState["site"]>({ there: false, nav: null });
+  const [site, setSite] = useState<LayerState["site"]>({ there: false, org: null });
   useEffect(() => {
     let live = true;
     let seq = -1;
@@ -78,8 +77,8 @@ export interface SettingsContext {
   homes: Home[];
   essentials: Essentials;
   update: UpdateCheck;
-  /** The site's workspace while its page is there (its invite page, its name). */
-  org: { id: string; name: string } | null;
+  /** The workspace whose page is there (its invite page). */
+  org: string | null;
   siteThere: boolean;
   /** Moves the site to one of its pages and steps the layer aside (only paths the site listed, or its settings). */
   siteGo: (path: string) => void;
@@ -101,7 +100,6 @@ export function Settings({ section, focus, shownAt }: { section?: LayerSection; 
   const update = useUpdateCheck(false);
   const site = useLayerSite();
   const [current, readCurrent] = useCurrentServer();
-  const workspaces = useWorkspaces();
   const homes = pairedHomes(snap);
   const essentials = useEssentials(update.state, homes);
   const needs = rowsNeedingYou(essentials.list);
@@ -168,9 +166,6 @@ export function Settings({ section, focus, shownAt }: { section?: LayerSection; 
     return () => window.removeEventListener("keydown", onKey, true);
   }, [site.there]);
 
-  const nav = site.there ? site.nav : null;
-  const org = nav?.org ?? null;
-  const logo = org ? (workspaces.flatMap((w) => w.orgs).find((o) => o.id === org.id)?.logo ?? null) : null;
   // The workspace the window opens, by its name when this computer works for it; else its server.
   const awayName =
     (current && homes.find((h) => homeServer(h) === current && orgName(h))?.status?.org?.name) ||
@@ -184,19 +179,13 @@ export function Settings({ section, focus, shownAt }: { section?: LayerSection; 
     homes,
     essentials,
     update,
-    org,
+    org: site.there ? site.org : null,
     siteThere: site.there,
     siteGo,
     focus: askedFocus,
     show,
   };
 
-  const siteItem = (item: SiteNavItem) => (
-    <button key={item.id} type="button" onClick={() => siteGo(item.path)}>
-      {(iconNames as readonly string[]).includes(item.icon) && <Icon name={item.icon as IconName} size={16} />}
-      <span className="dk-sx__label">{item.label}</span>
-    </button>
-  );
   const sectionItem = (id: LayerSection) => (
     <button
       key={id}
@@ -225,42 +214,14 @@ export function Settings({ section, focus, shownAt }: { section?: LayerSection; 
   else body = <Overview ctx={ctx} />;
 
   return (
-    <div className="dk-prefs dk-sx">
-      <nav className="dk-pnav" aria-label={t("desktop.settings.nav.label")}>
-        {site.there && (
-          <button type="button" className="dk-sx__back" onClick={() => void host.hideLayer().catch(() => {})}>
-            <Icon name="chevronLeft" size={16} />
-            <span className="dk-sx__label">
-              {t("desktop.settings.nav.back", { name: org?.name ?? (current ? serverName(current) : "agentes.chat") })}
-            </span>
-          </button>
-        )}
-        {nav?.org ? (
-          <>
-            <div className="dk-pnav__who">
-              <OrgTile logo={logo} size="md" />
-              <span className="dk-pnav__whotext">
-                <b>{t("desktop.settings.nav.title")}</b>
-                <small>{nav.org.name}</small>
-              </span>
-            </div>
-            {nav.main.map(siteItem)}
-            {nav.advanced.length > 0 && <span className="dk-sx__gap" />}
-            {nav.advanced.map(siteItem)}
-            <span className="dk-pnav__group">{t("desktop.settings.nav.thisDevice")}</span>
-          </>
-        ) : (
-          <div className="dk-pnav__who dk-sx__alone">
-            <MacPortrait state={macStateOf(homes)} />
-            <span className="dk-pnav__whotext">
-              <b>{t("desktop.settings.nav.thisDevice")}</b>
-              <small>{t("desktop.settings.nav.title")}</small>
-            </span>
-          </div>
-        )}
+    <div className="dk-sx">
+      <nav className="dk-pnav dk-sx__nav" aria-label={t("desktop.settings.nav.label")}>
+        <h1 id={SHEET_TITLE_ID} className="dk-sx__title">
+          {t("desktop.settings.nav.thisDevice")}
+        </h1>
         {shown.map(sectionItem)}
       </nav>
-      <main className="dk-pbody" key={open}>
+      <main className="dk-sx__body" key={open}>
         {!site.there && awayName && (
           <p className="dk-sx__away" role="status">
             <Icon name="cloud" size={16} />
@@ -278,6 +239,20 @@ export function Settings({ section, focus, shownAt }: { section?: LayerSection; 
         )}
         {body}
       </main>
+      {/* With the site behind it; without it, nothing would be under (the settings stay). */}
+      {site.there && (
+        <span className="dk-sx__close">
+          <Button
+            variant="ghost"
+            size="sm"
+            iconOnly
+            icon="close"
+            className="ac-btn--glyph"
+            aria-label={t("desktop.common.close")}
+            onClick={() => void host.hideLayer().catch(() => {})}
+          />
+        </span>
+      )}
     </div>
   );
 }

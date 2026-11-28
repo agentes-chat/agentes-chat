@@ -2660,9 +2660,6 @@
   "settings.nav.label": {
     "value": "Settings"
   },
-  "settings.nav.title": {
-    "value": "Settings"
-  },
   "settings.nav.thisDevice": {
     "value": "This {{device}}"
   },
@@ -2680,9 +2677,6 @@
   },
   "settings.nav.app": {
     "value": "App settings"
-  },
-  "settings.nav.back": {
-    "value": "Back to {{name}}"
   },
   "settings.nav.needs": {
     "value": {

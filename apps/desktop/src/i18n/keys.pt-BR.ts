@@ -1083,14 +1083,12 @@ export const desktopPtBR = {
   settings: {
     nav: {
       label: "Configurações",
-      title: "Configurações",
       thisDevice: "Este {{device}}",
       overview: "Visão geral",
       folders: "Pastas e ferramentas",
       server: "Servidor neste {{device}}",
       activity: "Atividade",
       app: "Ajustes do app",
-      back: "Voltar para {{name}}",
       needs_one: "{{count}} coisa precisa de você",
       needs_other: "{{count}} coisas precisam de você",
     },

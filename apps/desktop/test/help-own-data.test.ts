@@ -46,7 +46,7 @@ describe("the help page on starting over and uninstalling", () => {
       // computer on every system.
       const fill = (label: string) => label.replaceAll("{{device}}", d.device.linux);
       const at = (section: string) =>
-        `**${[d.settings.nav.title, fill(d.settings.nav.thisDevice), fill(section)].join("\u00a0›\u00a0")}**`;
+        `**${[d.settings.nav.label, fill(d.settings.nav.thisDevice), fill(section)].join("\u00a0›\u00a0")}**`;
       const names = [
         at(d.settings.nav.server),
         at(d.settings.nav.app),

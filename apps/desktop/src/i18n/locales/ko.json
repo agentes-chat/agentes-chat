@@ -1028,14 +1028,12 @@
   "settings": {
     "nav": {
       "label": "설정",
-      "title": "설정",
       "thisDevice": "이 {{device}}",
       "overview": "개요",
       "folders": "폴더와 도구",
       "server": "이 {{device}}의 서버",
       "activity": "활동",
       "app": "앱 설정",
-      "back": "{{name}}(으)로 돌아가기",
       "needs_other": "{{count}}건이 나를 기다려요"
     },
     "away": {

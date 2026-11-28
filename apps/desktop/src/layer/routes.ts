@@ -31,8 +31,8 @@ export function settingsRouteOf(tab?: string | null): SettingsRoute {
   }
 }
 
-/** Whether a route is one of the sheets (shown over the site on a Mac when it is there). */
-export const isSheet = (route: LayerRoute) => route.screen !== "firstRun" && route.screen !== "settings";
+/** Whether a route shows in a card over the site on a Mac when it is there: This computer's settings and the sheets. */
+export const isSheet = (route: LayerRoute) => route.screen !== "firstRun";
 
 /** A key that changes when the route names another thing to show (a new workspace offered, another link). */
 export function routeKey(route: LayerRoute): string {
