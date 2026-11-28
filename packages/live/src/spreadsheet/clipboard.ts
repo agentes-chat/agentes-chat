@@ -1397,6 +1397,22 @@ function followMoved(
   }
 }
 
+/** On another sheet, a moved formula names the sheet its previously unnamed references belong to. */
+function nameMovedReferences(cell: CellData, sheet: string): CellData {
+  if (!cell.f) return cell;
+  const f = rewriteRefs(cell.f, (node) => {
+    let changed = false;
+    for (const ref of node.t === "ref" ? [node.ref] : [node.from, node.to]) {
+      if (ref.sheet === undefined) {
+        ref.sheet = sheet;
+        changed = true;
+      }
+    }
+    return changed;
+  });
+  return f ? { ...cell, f } : cell;
+}
+
 /**
  * Moves a range's cells so its top-left lands on `to`, as cutting and pasting does in Excel: values, formulas, formats
  * and the merges inside it go there and leave their old place empty. Moved formulas keep pointing where they did
@@ -1434,26 +1450,46 @@ export function moveRange(doc: Y.Doc, from: RangeIds, to: CellAt, origin: LiveOr
     const colTo = new Map<string, string>();
     for (let i = 0; i < height; i++) rowTo.set(fromRows[src.r1 + i] as string, toRows[dst.r1 + i] as string);
     for (let j = 0; j < width; j++) colTo.set(fromCols[src.c1 + j] as string, toCols[dst.c1 + j] as string);
-    // The cells as they are now; on another sheet, their references to this one's cells name it.
+    // Large sparse selections need only stored cells. Counting a Y.Map also scans it, so keep small moves cheap.
+    let sparse = false;
+    if (height * width > COPY_TRIM_AT) {
+      const sourceSize = source.cells.size;
+      const targetSize = target.cells === source.cells ? sourceSize : target.cells.size;
+      sparse = height * width > sourceSize + targetSize;
+    }
     const moving: { from: string; to: string; cell: CellData | undefined }[] = [];
-    for (let i = 0; i < height; i++) {
-      for (let j = 0; j < width; j++) {
-        const fromKey = cellKey(fromRows[src.r1 + i] as string, fromCols[src.c1 + j] as string);
-        let cell = readCell(source.cells.get(fromKey));
-        if (cell?.f && src.sheet !== dst.sheet) {
-          const f = rewriteRefs(cell.f, (node) => {
-            let changed = false;
-            for (const ref of node.t === "ref" ? [node.ref] : [node.from, node.to]) {
-              if (ref.sheet === undefined) {
-                ref.sheet = src.sheet;
-                changed = true;
-              }
-            }
-            return changed;
+    if (sparse) {
+      for (const [fromKey, raw] of source.cells.entries()) {
+        const ids = parseCellKey(fromKey);
+        const row = ids ? rowTo.get(ids[0]) : undefined;
+        const col = ids ? colTo.get(ids[1]) : undefined;
+        if (row === undefined || col === undefined) continue;
+        let cell = readCell(raw);
+        if (cell?.f && src.sheet !== dst.sheet) cell = nameMovedReferences(cell, src.sheet);
+        moving.push({ from: fromKey, to: cellKey(row, col), cell });
+      }
+    } else {
+      for (let i = 0; i < height; i++) {
+        for (let j = 0; j < width; j++) {
+          const fromKey = cellKey(fromRows[src.r1 + i] as string, fromCols[src.c1 + j] as string);
+          let cell = readCell(source.cells.get(fromKey));
+          if (cell?.f && src.sheet !== dst.sheet) cell = nameMovedReferences(cell, src.sheet);
+          moving.push({
+            from: fromKey,
+            to: cellKey(toRows[dst.r1 + i] as string, toCols[dst.c1 + j] as string),
+            cell,
           });
-          if (f) cell = { ...cell, f };
         }
-        moving.push({ from: fromKey, to: cellKey(toRows[dst.r1 + i] as string, toCols[dst.c1 + j] as string), cell });
+      }
+    }
+    const emptied: string[] = [];
+    if (sparse) {
+      const rows = new Set(rowTo.values());
+      const cols = new Set(colTo.values());
+      const occupied = new Set(moving.map((m) => m.to));
+      for (const key of target.cells.keys()) {
+        const ids = parseCellKey(key);
+        if (ids && rows.has(ids[0]) && cols.has(ids[1]) && !occupied.has(key)) emptied.push(key);
       }
     }
     const movedMerges = merges.map(
@@ -1466,8 +1502,9 @@ export function moveRange(doc: Y.Doc, from: RangeIds, to: CellAt, origin: LiveOr
     );
     for (const m of merges) source.merges.delete(m.key);
     unmergeOver(target, dst);
-    // The old place empties first, so where the two overlap the moved cells win.
+    // The old place empties first, so where the two overlap the moved cells win. Empty source cells replace too.
     for (const m of moving) writeCell(source.cells, m.from, undefined);
+    for (const key of emptied) writeCell(target.cells, key, undefined);
     for (const m of moving) writeCell(target.cells, m.to, m.cell);
     for (const m of movedMerges) target.merges.set(cellKey(m.r1, m.c1), m);
     followMoved(doc, src.sheet, dst.sheet, rowTo, colTo);
