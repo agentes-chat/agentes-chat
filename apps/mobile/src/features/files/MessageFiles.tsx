@@ -16,6 +16,7 @@ import { opensLive } from "../live-files/routes";
 import { useColors, useOrgId } from "../shared/hooks";
 import { AttachmentTile } from "./AttachmentTile";
 import { FileVoice } from "./FileVoice";
+import { useGrowTile } from "./grow";
 import { ImageStack, type StackImage } from "./ImageStack";
 import { isLocalMedia, type LocalFile, localRatio } from "./local-files";
 import {
@@ -30,6 +31,7 @@ import {
   VIDEO_EXT,
   videoBox,
   videoClock,
+  viewerVersion,
 } from "./logic";
 import { MediaLink, ZoomSource } from "./MediaLink";
 import { openFile } from "./open";
@@ -286,9 +288,21 @@ function InlineImage({
   // key changed, and the picture went blank and faded in again.
   const picture = usePicture(orgId, file.id, file.version);
   const { key, source, failed } = picture;
+  // The tile its picture grows out of where there's no system's zoom (`grow.tsx`), under the viewer page's key.
+  const growKey = pictureKey(opens.id, viewerVersion(opens));
+  const tile = useGrowTile(growKey);
   return (
-    // Opened with the system's zoom where there is one: the picture grows into the viewer (`MediaLink`).
-    <MediaLink file={opens} siblings={siblings}>
+    // Opened with the system's zoom where there is one, else the picture growing out of the tile (`MediaLink`).
+    <MediaLink
+      file={opens}
+      siblings={siblings}
+      grow={{
+        key: growKey,
+        picture: source && !failed ? source : null,
+        aspect: height > 0 ? width / height : null,
+        corners: cardCorners,
+      }}
+    >
       {(press) => (
         <PressScale
           haptic={false}
@@ -299,7 +313,7 @@ function InlineImage({
           style={[styles.shot, { width, height, backgroundColor: c.sunken, borderColor: c.line2 }, cardCorners]}
         >
           <ZoomSource>
-            <View style={StyleSheet.absoluteFill} collapsable={false}>
+            <View ref={tile.ref} style={[StyleSheet.absoluteFill, tile.hidden && styles.lifted]} collapsable={false}>
               {source && !failed ? (
                 <Image
                   source={source}
@@ -596,6 +610,8 @@ function RemovedCard() {
 }
 
 const styles = StyleSheet.create({
+  // Its picture out on the layer, growing into the viewer or shrinking back (`grow.tsx`): the tile shows nothing.
+  lifted: { opacity: 0 },
   audio: { gap: 4 },
   // Under the player, in line with its card's inner edge.
   audioName: { paddingHorizontal: 12 },

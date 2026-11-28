@@ -1,6 +1,9 @@
 import { type Href, Link } from "expo-router";
 import { createContext, type ReactElement, useContext } from "react";
 import { Platform } from "react-native";
+import { useReducedMotion } from "@/ui";
+import type { Corners } from "@/ui/radius";
+import { type GrowPicture, growOpen } from "./grow";
 import { type FileRef, fileRoute } from "./logic";
 import { openFile } from "./open";
 
@@ -29,13 +32,25 @@ const InZoomLink = createContext(false);
 export function MediaLink({
   file,
   siblings,
+  grow,
   children,
 }: {
   file: FileRef;
   siblings?: readonly FileRef[] | undefined;
+  /**
+   * Without the system's zoom: the picture grows out of the tile on the layer over the app (`grow.tsx`), from the
+   * tile registered under `key` (`useGrowTile`), the picture it shows and that picture's shape.
+   */
+  grow?: { key: string; picture: GrowPicture | null; aspect: number | null; corners: Corners | null } | undefined;
   children: (press: (() => void) | undefined) => ReactElement;
 }) {
-  if (!NATIVE_ZOOM) return children(() => openFile(file, siblings));
+  const reduced = useReducedMotion();
+  if (!NATIVE_ZOOM) {
+    const plain = () => openFile(file, siblings);
+    return children(
+      grow ? () => growOpen({ ...grow, open: () => openFile(file, siblings, { grow: true }), reduced }, plain) : plain,
+    );
+  }
   const route = fileRoute(file, siblings);
   const href = { ...route, params: { ...route.params, [ZOOM_PARAM]: "1" } } as Href;
   return (

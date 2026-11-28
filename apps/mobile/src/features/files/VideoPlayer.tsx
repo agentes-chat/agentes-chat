@@ -8,13 +8,14 @@ import {
   type VideoThumbnail,
   VideoView,
 } from "expo-video";
-import { useEffect, useRef, useState } from "react";
+import { type RefObject, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, PixelRatio, Text as RNText, StyleSheet, View } from "react-native";
+import { ActivityIndicator, PixelRatio, Text as RNText, StyleSheet, View, type ViewInstance } from "react-native";
 import { CHROME_MAX_SCALE, Icon, PressScale } from "@/ui";
 import { useMessageCardCorners } from "../chat/look";
 import { useColors } from "../shared/hooks";
 import { onVoiceStarts, stopPlayback } from "../voice/playback";
+import { useGrowTile } from "./grow";
 import { handVideo } from "./handoff";
 import { type FileRef, stillAt, videoClock, videoHeight, viewerVersion } from "./logic";
 import { MediaLink, ZoomSource } from "./MediaLink";
@@ -222,10 +223,12 @@ export function VideoPlayer({
 }: VideoPlayerProps) {
   // On the touch, the viewer about to open gets the cover shown here and the link held here (`handoff.ts`): it opens
   // on the cover and starts playing from the link, never on black while it asks for its own.
-  const hand = opens
-    ? (frame: VideoThumbnail | null) =>
-        handVideo(pictureKey(opens.file.id, viewerVersion(opens.file)), source, linkReadAt, frame)
-    : undefined;
+  const growKey = opens ? pictureKey(opens.file.id, viewerVersion(opens.file)) : null;
+  const hand = growKey ? (frame: VideoThumbnail | null) => handVideo(growKey, source, linkReadAt, frame) : undefined;
+  // The still grows out of the tile where there's no system's zoom (`grow.tsx`); the tile reports the still it shows.
+  const grownTile = useGrowTile(growKey);
+  const [shownFrame, setShownFrame] = useState<VideoThumbnail | null>(null);
+  const tileHeight = height ?? videoHeight(width);
   const tile = (press: (() => void) | undefined) => (
     <InlineVideo
       source={source}
@@ -236,11 +239,18 @@ export function VideoPlayer({
       height={height ?? videoHeight(width)}
       onPress={press}
       onFailed={onFailed}
+      growRef={grownTile.ref}
+      lifted={grownTile.hidden}
+      onFrame={setShownFrame}
     />
   );
   // Opened with the system's zoom where there is one: the still grows into the viewer (`MediaLink`).
   return opens ? (
-    <MediaLink file={opens.file} siblings={opens.siblings}>
+    <MediaLink
+      file={opens.file}
+      siblings={opens.siblings}
+      grow={growKey ? { key: growKey, picture: shownFrame, aspect: width / tileHeight, corners: null } : undefined}
+    >
       {tile}
     </MediaLink>
   ) : (
@@ -258,11 +268,19 @@ function InlineVideo({
   onPress,
   onHand,
   onFailed,
+  growRef,
+  lifted = false,
+  onFrame,
 }: {
   source: VideoPlayerProps["source"];
   stillKey: string;
   /** On the touch: hands the viewer this cover (`handVideo`). */
   onHand?: ((frame: VideoThumbnail | null) => void) | undefined;
+  /** The view its still grows out of (`useGrowTile`), hidden while the still is out on the layer (`lifted`). */
+  growRef?: RefObject<ViewInstance | null> | undefined;
+  lifted?: boolean;
+  /** The still it shows, once read: what grows out of it. */
+  onFrame?: ((frame: VideoThumbnail | null) => void) | undefined;
   name: string;
   width: number;
   height: number;
@@ -284,6 +302,12 @@ function InlineVideo({
   }, [failed]);
   const duration = still?.duration ?? 0;
   const length = duration > 0 ? videoClock(duration) : "";
+  const frame = still?.frame ?? null;
+  const tellFrame = useRef(onFrame);
+  tellFrame.current = onFrame;
+  useEffect(() => {
+    tellFrame.current?.(frame);
+  }, [frame]);
   return (
     // Opening it is navigation, as opening a picture: the press shows it, no tap.
     <PressScale
@@ -297,7 +321,7 @@ function InlineVideo({
     >
       {/* The still alone grows into the viewer (the play key and the length stay in the message). */}
       <ZoomSource>
-        <View style={StyleSheet.absoluteFill} collapsable={false}>
+        <View ref={growRef} style={[StyleSheet.absoluteFill, lifted && styles.lifted]} collapsable={false}>
           {still?.frame ? (
             <Image
               source={still.frame}
@@ -436,6 +460,8 @@ export function VideoFirstFrame({ uri }: { uri: string }) {
 }
 
 const styles = StyleSheet.create({
+  // Its still out on the layer, growing into the viewer or shrinking back (`grow.tsx`).
+  lifted: { opacity: 0 },
   // A picture's shape in a message (`MessageFiles`' `shot`): rounded, a hairline, its frame whole on the gray.
   inline: { borderRadius: 14, overflow: "hidden", borderWidth: StyleSheet.hairlineWidth },
   center: {

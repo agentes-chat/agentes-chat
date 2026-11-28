@@ -2,6 +2,7 @@ import { type ErrorBoundaryProps, type NativeStackNavigationOptions, Stack } fro
 import { useMemo } from "react";
 import { slideListeners } from "@/agent/live";
 import { opensWithZoom } from "@/features/files/MediaLink";
+import { opensGrown } from "@/features/files/open";
 import { isStill, STILL_PARAM } from "@/features/links/landing";
 import { ScreenError } from "@/features/shared/ScreenError";
 import { coverBarOptions, usePushedOptions, useScrollUnderPushedOptions, useSideInsets, useTheme } from "@/ui";
@@ -168,6 +169,10 @@ export default function MainStack() {
       // Opened with the system's zoom (`MediaLink`): the stack's own push, which the zoom takes over. Any animation
       // of the stack's own (the viewer's fade) runs its own animator instead, and the zoom never shows.
       if (route.name === "images" && opensWithZoom(route.params)) return { ...options, animation: "default" };
+      // Its picture grew out of its tile on the layer over the app (`grow.tsx`): pushed and popped under that layer,
+      // with no animation of the stack's, and no edge swipe (its pull shrinks it back into the tile).
+      if (route.name === "images" && opensGrown(route.params))
+        return { ...options, animation: "none", gestureEnabled: false };
       return options;
     };
   }, [colors, pushed, scrollUnder, side]);

@@ -6,6 +6,7 @@ import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { usePlanTurnedOn } from "@/features/billing/PaidMoment";
+import { GrowLayer } from "@/features/files/grow";
 import { NoticeIsland } from "@/features/island/NoticeIsland";
 import { noteWorkspaceOnScreen } from "@/features/links/on-screen";
 import { LiveActivityWork } from "@/features/live-activity/LiveActivityWork";
@@ -44,6 +45,8 @@ export default function AppLayout() {
   return (
     <>
       <AppSheets />
+      {/* A message's picture growing out of its tile into the viewer, and back, over the screens (`grow.tsx`). */}
+      <GrowLayer />
       <AppWork />
       {/* The agents at work in the iPhone's Dynamic Island and on its Lock Screen (ADR 0210). */}
       <LiveActivityWork />

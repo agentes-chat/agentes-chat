@@ -5,10 +5,17 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation, usePreventZoomTransitionDismissal } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import type { VideoPlayer as Player } from "expo-video";
+import type { VideoPlayer as Player, VideoThumbnail } from "expo-video";
 import { type MutableRefObject, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, type LayoutChangeEvent, StyleSheet, useWindowDimensions, View } from "react-native";
+import {
+  ActivityIndicator,
+  BackHandler,
+  type LayoutChangeEvent,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { GestureDetector, GestureHandlerRootView, usePanGesture } from "react-native-gesture-handler";
 import PagerView from "react-native-pager-view";
 import Animated, {
@@ -38,9 +45,11 @@ import {
 import { PicturePins } from "../live-files/talk/PicturePins";
 import { takeReveal, useRevealFor, useTalkAbout } from "../live-files/talk/store";
 import { FileTalkLine } from "../live-files/talk/TalkLine";
+import { MESSAGE_CARD_CORNERS } from "../shared/bubble-part";
 import { useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import { goBack } from "../shared/parts";
 import { savedAt, useFileActions, useSavedWhen } from "./actions";
+import { type GrowPicture, growClose, growReady } from "./grow";
 import { takeVideo } from "./handoff";
 import { decodeFileList, fileInfo, type MediaView, pageStep } from "./logic";
 import { ZoomTarget } from "./MediaLink";
@@ -48,7 +57,15 @@ import { pictureKey, usePicture, useRemoteFile } from "./source";
 import { keptStill, ViewerVideo } from "./VideoPlayer";
 import { tellViewerPlace } from "./viewer-place";
 import { PageWait, ZoomPicture } from "./ZoomPicture";
-import { awaySpeed, type PictureTap, pullCloses, pullDirection, pulledPlacement, type Size } from "./zoom";
+import {
+  awaySpeed,
+  type PictureTap,
+  pullCloses,
+  pullDirection,
+  pulledPlacement,
+  pullProgress,
+  type Size,
+} from "./zoom";
 
 /**
  * Pictures and videos, full screen, as the phone's own photos: one viewer for both, wherever they open from (a
@@ -75,6 +92,7 @@ export function ImageViewer({
   from,
   focusId = null,
   zoom = false,
+  grown = false,
 }: {
   files: string | string[] | undefined;
   at: string | undefined;
@@ -86,6 +104,8 @@ export function ImageViewer({
    * system's, shrinking it back into the tile, in place of the viewer's own pull.
    */
   zoom?: boolean;
+  /** Its picture grew out of its tile on the layer over the app (`grow.tsx`): it shrinks back into it on closing. */
+  grown?: boolean;
 }) {
   return (
     // The zoom's target: the system fits the tile's shape in the screen, where the picture is drawn.
@@ -93,11 +113,14 @@ export function ImageViewer({
       {/* Gestures get their own root in the modal (the app's sits under it). Toasts need none: the app's draw above
           any screen, a modal included. */}
       <GestureHandlerRootView style={styles.screen}>
-        <Viewer rawFiles={rawFiles} at={at} from={from} focusId={focusId} zoom={zoom} />
+        <Viewer rawFiles={rawFiles} at={at} from={from} focusId={focusId} zoom={zoom} grown={grown} />
       </GestureHandlerRootView>
     </ZoomTarget>
   );
 }
+
+/** A page's key: its file at the version the route names (`viewerVersion` of where it opened), the tile's own. */
+const pageKey = (f: { id: string; version?: number }) => pictureKey(f.id, f.version);
 
 const WHITE = "#fff";
 const DIM = "rgba(255,255,255,0.6)";
@@ -126,12 +149,14 @@ function Viewer({
   from,
   focusId,
   zoom,
+  grown,
 }: {
   rawFiles: string | string[] | undefined;
   at: string | undefined;
   from: string | undefined;
   focusId: string | null;
   zoom: boolean;
+  grown: boolean;
 }) {
   const { t } = useTranslation();
   const orgId = useOrgId();
@@ -167,11 +192,55 @@ function Viewer({
   const detail = useArtifact(orgId, current?.id ?? null, current?.version).data;
   const actions = useFileActions(detail);
   const closed = useRef(false);
+  // What each page shows once drawn (a picture, or a video's cover) and its shape: what shrinks into the tile.
+  const shownPages = useRef(new Map<string, { picture: GrowPicture; aspect: number | null }>());
+  const onShown = useCallback((key: string, picture: GrowPicture, aspect: number | null) => {
+    shownPages.current.set(key, { picture, aspect });
+  }, []);
+  // Grown out of its tile: the page in sight shrinks back into its tile (from a pull's place, or whole) as the viewer
+  // goes from under the layer (`growClose`); a page with no tile on screen closes as before.
+  const shrink = useCallback(
+    (pulled?: { x: number; y: number; scale: number }) => {
+      const page = files[index];
+      if (!grown || !page) return false;
+      const key = pageKey(page);
+      const shownPage = shownPages.current.get(key);
+      return growClose({
+        key,
+        picture: shownPage?.picture ?? null,
+        aspect: shownPage?.aspect ?? null,
+        corners: MESSAGE_CARD_CORNERS,
+        pulled,
+        dim: pulled ? 1 - pullProgress(pulled.y, height) : 1,
+        close: goBack,
+        reduced: reducedMotion,
+      });
+    },
+    [grown, files, index, height, reducedMotion],
+  );
   const close = useCallback(() => {
     if (closed.current) return;
     closed.current = true;
-    goBack();
-  }, []);
+    if (!shrink()) goBack();
+  }, [shrink]);
+  // A pull let go far enough, grown out of a tile: back into it from where the finger left it.
+  const pulledClose = useCallback(
+    (at: { x: number; y: number; scale: number }) => {
+      if (closed.current) return;
+      closed.current = true;
+      if (!shrink(at)) goBack();
+    },
+    [shrink],
+  );
+  // Android's back, grown out of a tile: back into it too (its route pops with no animation of its own).
+  useEffect(() => {
+    if (!grown) return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      close();
+      return true;
+    });
+    return () => sub.remove();
+  }, [grown, close]);
   const currentId = current?.id;
   useEffect(() => {
     if (from && currentId) tellViewerPlace(from, currentId);
@@ -281,6 +350,9 @@ function Viewer({
                 draft={i === index ? draft : null}
                 videoClock={videoClock}
                 ownPull={!zoom}
+                grown={grown}
+                onShown={onShown}
+                onPulledClose={pulledClose}
                 onTap={onTap}
                 onZoom={onZoom}
                 onVideo={showChrome}
@@ -394,6 +466,9 @@ function Page({
   draft,
   videoClock,
   ownPull,
+  grown,
+  onShown,
+  onPulledClose,
   onTap,
   onZoom,
   onVideo,
@@ -419,6 +494,12 @@ function Page({
   videoClock: MutableRefObject<(() => number) | null>;
   /** The viewer's own pull to close; off when the system's swipe down closes it (opened with its zoom). */
   ownPull: boolean;
+  /** Its picture grew out of its tile (`grow.tsx`): a closing pull hands the picture back to the layer where it is. */
+  grown: boolean;
+  /** Its picture (or video's cover) and its shape once drawn, by its key. */
+  onShown: (key: string, picture: GrowPicture, aspect: number | null) => void;
+  /** A closing pull, grown out of a tile: where the picture is (from the middle, its scale). */
+  onPulledClose: (at: { x: number; y: number; scale: number }) => void;
   onTap: () => void;
   onZoom: (zoomed: boolean) => void;
   onVideo: () => void;
@@ -509,6 +590,11 @@ function Page({
       const travel = from.value.y + e.translationY;
       if (pullCloses(travel, e.velocityY, screen.height)) {
         leaving.value = true;
+        // Grown out of a tile: the picture stays where the finger left it, and shrinks from there into its tile.
+        if (grown && !reducedMotion) {
+          scheduleOnRN(onPulledClose, pulledPlacement(pullX.value, pullY.value, screen, grab.value));
+          return;
+        }
         if (reducedMotion) shown.value = withTiming(0, FADE_OUT);
         else {
           const direction = pullDirection(travel, e.velocityY);
@@ -547,6 +633,7 @@ function Page({
               bars={bars}
               startAt={startAt}
               videoClock={videoClock}
+              onShown={(cover) => onShown(key, cover, cover.width > 0 ? cover.width / cover.height : null)}
             />
           </View>
         </GestureDetector>
@@ -563,6 +650,11 @@ function Page({
           onZoom={zoomChanged}
           onRetry={picture.retry}
           onSourceError={picture.onError}
+          onDrawn={(pixels) => {
+            if (picture.source) onShown(key, picture.source, pixels.width / pixels.height);
+            // The layer it grew on goes: the same picture is here, in the same place.
+            growReady(key);
+          }}
           overlay={
             shownPins.length > 0 || draft
               ? (zoom) => <PicturePins pins={shownPins} zoom={zoom} draft={draft} />
@@ -602,6 +694,7 @@ function PageVideo({
   bars,
   startAt,
   videoClock,
+  onShown,
 }: {
   id: string;
   version?: number;
@@ -611,6 +704,8 @@ function PageVideo({
   /** The moment it starts from (a comment's). */
   startAt: number | undefined;
   videoClock: MutableRefObject<(() => number) | null>;
+  /** Its cover, shown at once: what shrinks back into its tile (`grow.tsx`). */
+  onShown: (cover: VideoThumbnail) => void;
 }) {
   const { t } = useTranslation();
   const orgId = useOrgId();
@@ -648,6 +743,13 @@ function PageVideo({
   );
   // The cover its message showed: it opens on it, never on black, while the player gets ready.
   const poster = handed?.frame ?? keptStill(pictureKey(id, version));
+  // On its cover from the first frame: the layer its cover grew on goes (`grow.tsx`).
+  const tellShown = useRef(onShown);
+  tellShown.current = onShown;
+  useEffect(() => {
+    if (poster) tellShown.current(poster);
+    growReady(pictureKey(id, version));
+  }, [poster, id, version]);
   return (
     <View style={[styles.videoFrame, { top: bars.top, bottom: bars.bottom }]}>
       {unplayable ? (

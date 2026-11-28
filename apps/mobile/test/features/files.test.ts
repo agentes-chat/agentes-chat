@@ -280,19 +280,21 @@ describe("viewer", () => {
       'export const NATIVE_ZOOM = Platform.OS === "ios" && Number.parseFloat(String(Platform.Version)) >= 18;',
     );
     // A link that takes the press where the zoom is; the tile's own press everywhere else.
-    expect(link).toContain("if (!NATIVE_ZOOM) return children(() => openFile(file, siblings));");
+    // (Without it, the picture grows out of the tile on the layer: `grow.tsx`.)
+    expect(link).toContain("const plain = () => openFile(file, siblings);");
     expect(link).toContain("<Link href={href} asChild>");
     // The source only inside such a link (`Link.AppleZoom` needs the link's identity).
     expect(link).toContain("return NATIVE_ZOOM && inLink ? <Link.AppleZoom>{children}</Link.AppleZoom> : children;");
     const message = src("features/files/MessageFiles.tsx");
-    expect(message).toContain("<MediaLink file={opens} siblings={siblings}>");
+    expect(message).toMatch(/<MediaLink\s+file=\{opens\}\s+siblings=\{siblings\}/);
     expect(message).toContain("<ZoomSource>");
     const player = src("features/files/VideoPlayer.tsx");
-    expect(player).toContain("<MediaLink file={opens.file} siblings={opens.siblings}>");
-    // The link hands its press to the tile's `onPress`; the still alone grows (not the play key).
+    expect(player).toMatch(/<MediaLink\s+file=\{opens\.file\}\s+siblings=\{opens\.siblings\}/);
+    // The link hands its press to the tile's `onPress`; the still alone grows (not the play key), from the view the
+    // layer measures too (`useGrowTile`).
     expect(player).toContain("onPress={press}");
     expect(player).toMatch(
-      /<ZoomSource>\s*<View style=\{StyleSheet\.absoluteFill\} collapsable=\{false\}>\s*\{still\?\.frame/,
+      /<ZoomSource>\s*<View ref=\{growRef\} style=\{\[StyleSheet\.absoluteFill, lifted && styles\.lifted\]\} collapsable=\{false\}>\s*\{still\?\.frame/,
     );
     const viewer = src("features/files/ImageViewer.tsx");
     expect(viewer).toContain("<ZoomTarget on={zoom}>");
@@ -308,9 +310,8 @@ describe("viewer", () => {
       'if (route.name === "images" && opensWithZoom(route.params)) return { ...options, animation: "default" };',
     );
     // The tile hands its cover and link on the touch, under the page's own key.
-    expect(player).toContain(
-      "handVideo(pictureKey(opens.file.id, viewerVersion(opens.file)), source, linkReadAt, frame)",
-    );
+    expect(player).toContain("const growKey = opens ? pictureKey(opens.file.id, viewerVersion(opens.file)) : null;");
+    expect(player).toContain("(frame: VideoThumbnail | null) => handVideo(growKey, source, linkReadAt, frame)");
     expect(player).toContain("onPressIn={() => onHand?.(still?.frame ?? null)}");
   });
 
