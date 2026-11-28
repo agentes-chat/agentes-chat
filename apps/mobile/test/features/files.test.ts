@@ -279,17 +279,20 @@ describe("viewer", () => {
     expect(link).toContain(
       'export const NATIVE_ZOOM = Platform.OS === "ios" && Number.parseFloat(String(Platform.Version)) >= 18;',
     );
-    // A link that takes the press where the zoom is; the tile's own press everywhere else.
-    // (Without it, the picture grows out of the tile on the layer: `grow.tsx`.)
-    expect(link).toContain("const plain = () => openFile(file, siblings);");
+    // A link that takes the press where the zoom is; the tile's own press everywhere else (and for a video).
+    expect(link).toContain("if (!NATIVE_ZOOM || !zoom) return children(() => openFile(file, siblings));");
     expect(link).toContain("<Link href={href} asChild>");
     // The source only inside such a link (`Link.AppleZoom` needs the link's identity).
     expect(link).toContain("return NATIVE_ZOOM && inLink ? <Link.AppleZoom>{children}</Link.AppleZoom> : children;");
     const message = src("features/files/MessageFiles.tsx");
-    expect(message).toMatch(/<MediaLink\s+file=\{opens\}\s+siblings=\{siblings\}/);
+    expect(message).toContain("<MediaLink file={opens} siblings={siblings}>");
     expect(message).toContain("<ZoomSource>");
-    // A video never takes the zoom: the system's own player plays it in full screen (`FullscreenVideo`).
-    expect(src("features/files/VideoPlayer.tsx")).not.toContain("MediaLink");
+    const player = src("features/files/VideoPlayer.tsx");
+    // The link hands its press to the tile's `onPress`; the still alone grows (not the play key).
+    expect(player).toContain("onPress={press}");
+    expect(player).toMatch(
+      /<ZoomSource>\s*<View style=\{StyleSheet\.absoluteFill\} collapsable=\{false\}>\s*\{still\?\.frame/,
+    );
     const viewer = src("features/files/ImageViewer.tsx");
     expect(viewer).toContain("<ZoomTarget on={zoom}>");
     // The system's swipe down waits while a picture is zoomed in; the viewer's own pull only without the zoom.
@@ -299,10 +302,25 @@ describe("viewer", () => {
     expect(viewer).toContain("enabled: ownPull && active && !zoomed && !paging,");
     expect(viewer).toContain("ownPull={!zoom}");
     expect(src("../app/(app)/(main)/images.tsx")).toContain('zoom={zoom === "1"}');
+    // A video never takes the zoom (under it its player drew no picture, only its sound played): the viewer opens with
+    // its own fade, on the cover its tile handed; the cover over its player never stays once it plays.
+    expect(player).toMatch(/<MediaLink\s+file=\{opens\.file\}\s+siblings=\{opens\.siblings\}\s+zoom=\{false\}>/);
+    expect(src("features/files/MediaLink.tsx")).toContain(
+      "if (!NATIVE_ZOOM || !zoom) return children(() => openFile(file, siblings));",
+    );
+    expect(player).toContain("const COVER_MAX_MS = 1500;");
+    expect(player).toContain(
+      'reportError(new Error("A video played with no frame drawn"), { where: "video.noFrame" });',
+    );
     // The zoom's push is the stack's own: the viewer's fade would run its own animator and the zoom never show.
     expect(src("../app/(app)/(main)/_layout.tsx")).toContain(
       'if (route.name === "images" && opensWithZoom(route.params)) return { ...options, animation: "default" };',
     );
+    // The tile hands its cover and link on the touch, under the page's own key.
+    expect(player).toContain(
+      "handVideo(pictureKey(opens.file.id, viewerVersion(opens.file)), source, linkReadAt, frame)",
+    );
+    expect(player).toContain("onPressIn={() => onHand?.(still?.frame ?? null)}");
   });
 
   test("‹ › go one picture at a time and never round past the first or the last", () => {
@@ -675,17 +693,15 @@ describe("viewer", () => {
   test("on Android a video draws with the views around it, inside rounded corners and under a pull", () => {
     const player = src("features/files/VideoPlayer.tsx");
     expect(player).toContain('const SURFACE = "textureView";');
-    // Live views: the viewer's video, and a message's while it plays full screen; one on its way up is a still.
-    expect(player.match(/surfaceType=\{SURFACE\}/g)?.length).toBe(2);
+    // Only the viewer's video is a live view: a message's and one on its way up are stills.
+    expect(player.match(/surfaceType=\{SURFACE\}/g)?.length).toBe(1);
   });
 
   test("a video in a message is a still: no player stays mounted per row, a few decoders at most at a time", () => {
     const player = src("features/files/VideoPlayer.tsx");
-    // A player is mounted only while a video plays (the viewer's, or a message's full screen one, mounted on the tap
-    // and gone with full screen); the stills' players are released once read.
-    expect(player.match(/useVideoPlayer\(/g)?.length).toBe(2);
-    expect(player.match(/<VideoView\s/g)?.length).toBe(2);
-    expect(player).toContain("{playing ? (");
+    // One player in the whole file stays mounted (the viewer's); the stills' players are released once read.
+    expect(player.match(/useVideoPlayer\(/g)?.length).toBe(1);
+    expect(player.match(/<VideoView\b/g)?.length).toBe(1);
     expect(player).toContain("createVideoPlayer(source)");
     expect(player).toContain("player.generateThumbnailsAsync([stillAt(duration)], { maxWidth: STILL_PIXELS })");
     expect(player).toContain("player.release();");
@@ -751,11 +767,8 @@ describe("viewer", () => {
     const player = src("features/files/VideoPlayer.tsx");
     // In full screen the platform's controls are the only way back out: they are always on where it plays.
     expect(player).toContain("nativeControls\n");
+    expect(player).not.toContain("enterFullscreen");
     expect(player).not.toContain("<Glass");
-    // A message's video: the system's own player, full screen from its tile (as the phone's own apps play one),
-    // gone when full screen ends.
-    expect(player).toContain("view.current?.enterFullscreen().catch(() => done.current());");
-    expect(player).toContain("onFullscreenExit={() => {");
   });
 });
 

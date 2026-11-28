@@ -1,6 +1,6 @@
 import type { ArtifactDetail } from "@agenteschat/client";
 import { Image } from "expo-image";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { type AccessibilityActionEvent, StyleSheet, View } from "react-native";
 import { GestureDetector, useExclusiveGestures, usePanGesture, useTapGesture } from "react-native-gesture-handler";
@@ -17,11 +17,10 @@ import { haptics, Icon, motion, Text, useReducedMotion, useTheme } from "@/ui";
 import { useMessageCardCorners } from "../chat/look";
 import { useColors, useOrgId } from "../shared/hooks";
 import { DECK_DRAG, DECK_RISE, deckCard, deckIndex, deckTarget, wrapPlace } from "./deck";
-import { type GrowPicture, growOpen, useGrowTile } from "./grow";
-import { type FileRef, viewerVersion } from "./logic";
+import type { FileRef } from "./logic";
 import type { MessageFile } from "./MessageFiles";
 import { openFile } from "./open";
-import { pictureDrawn, pictureFade, pictureKey, useRemoteFile } from "./source";
+import { pictureDrawn, pictureFade, useRemoteFile } from "./source";
 import { listenViewerPlace } from "./viewer-place";
 
 export interface StackImage {
@@ -84,32 +83,14 @@ export function ImageStack({
     [key, place, ids],
   );
 
-  // What each card shows (`StackCard`): the picture that grows out of it into the viewer (`grow.tsx`).
-  const shown = useRef(new Map<string, { picture: GrowPicture; aspect: number | null }>());
-  const cardCorners = useMessageCardCorners();
-  // Opening the pictures is plain navigation: no haptic (a swipe through the stack has its own). The picture on top
-  // grows out of its card into the viewer, uncropping as it goes; with reduced motion the viewer fades in.
+  // Opening the pictures is plain navigation: no haptic (a swipe through the stack has its own).
   const open = (at: number) => {
     if (!openable) return;
     const deck = images.map(
       ({ file, detail }): FileRef => ({ id: file.id, version: file.version, title: file.title, detail }),
     );
     const tapped = deck[at];
-    if (!tapped) return;
-    const all = siblings ?? deck;
-    const plain = () => openFile(tapped, all, { from: key });
-    const card = shown.current.get(tapped.id);
-    growOpen(
-      {
-        key: pictureKey(tapped.id, viewerVersion(tapped)),
-        picture: card?.picture ?? null,
-        aspect: card?.aspect ?? null,
-        corners: cardCorners,
-        open: () => openFile(tapped, all, { from: key, grow: true }),
-        reduced,
-      },
-      plain,
-    );
+    if (tapped) openFile(tapped, siblings ?? deck, { from: key });
   };
 
   const settle = (target: number, velocity: number) => {
@@ -185,7 +166,6 @@ export function ImageStack({
               place={place}
               // The pictures in sight, or the next to come into it.
               near={wrapPlace(i - active, count) <= 3 || wrapPlace(active - i, count) <= 1}
-              onShown={(picture, aspect) => shown.current.set(item.file.id, { picture, aspect })}
             />
           ))}
         </Animated.View>
@@ -204,13 +184,12 @@ export function ImageStack({
 }
 
 function StackCard({
-  item: { file, detail },
+  item: { file },
   index,
   count,
   size,
   place,
   near,
-  onShown,
 }: {
   item: StackImage;
   index: number;
@@ -218,8 +197,6 @@ function StackCard({
   size: number;
   place: SharedValue<number>;
   near: boolean;
-  /** The picture it shows, and that picture's shape once loaded (the card crops it to a square). */
-  onShown: (picture: GrowPicture, aspect: number | null) => void;
 }) {
   const cardCorners = useMessageCardCorners();
   const orgId = useOrgId();
@@ -230,9 +207,6 @@ function StackCard({
   const key = `${file.id}@${version ?? "latest"}`;
   const link = useRemoteFile(orgId, near ? file.id : null, version);
   const [failed, setFailed] = useState(false);
-  // The card its picture grows out of into the viewer (`grow.tsx`), under the viewer page's key.
-  const tile = useGrowTile(pictureKey(file.id, viewerVersion({ id: file.id, version: file.version, detail })));
-  const ratio = file.width && file.height ? file.width / file.height : null;
   const placed = useAnimatedStyle(() => {
     const s = deckCard(index, place.value, count, size);
     return {
@@ -250,7 +224,7 @@ function StackCard({
         placed,
       ]}
     >
-      <View ref={tile.ref} style={[styles.clip, cardCorners, tile.hidden && styles.lifted]} collapsable={false}>
+      <View style={[styles.clip, cardCorners]}>
         {link.data && !failed ? (
           <Image
             source={{ uri: link.data.uri, headers: link.data.headers, cacheKey: key }}
@@ -258,11 +232,7 @@ function StackCard({
             cachePolicy="memory-disk"
             contentFit="cover"
             transition={pictureFade(key)}
-            onLoad={(e) => {
-              pictureDrawn(key);
-              const own = e.source.width > 0 && e.source.height > 0 ? e.source.width / e.source.height : ratio;
-              if (link.data) onShown({ uri: link.data.uri, headers: link.data.headers, cacheKey: key }, own);
-            }}
+            onLoad={() => pictureDrawn(key)}
             style={StyleSheet.absoluteFill}
             onError={() => setFailed(true)}
             accessible={false}
@@ -299,8 +269,6 @@ function Dot({
 }
 
 const styles = StyleSheet.create({
-  // Its picture out on the layer, growing into the viewer or shrinking back (`grow.tsx`).
-  lifted: { opacity: 0 },
   block: { marginTop: 8 },
   stage: { position: "relative" },
   card: {

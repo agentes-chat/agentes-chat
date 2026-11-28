@@ -64,8 +64,6 @@ export interface ZoomPictureProps {
   onRetry: () => void;
   /** It didn't draw: true when another source is on its way (a copy on the phone gone: the link), so it waits. */
   onSourceError?: (() => boolean) | undefined;
-  /** The picture is drawn, at these pixels (the layer it grew on goes, `grow.tsx`). */
-  onDrawn?: ((pixels: Size) => void) | undefined;
   /**
    * Drawn over the picture, in its box, zooming with it (a file's comments, ADR 0208), once the picture's shape is
    * known; `zoom` is the picture's zoom now, for what keeps the screen's own size.
@@ -94,7 +92,6 @@ export function ZoomPicture({
   onZoom,
   onRetry,
   onSourceError,
-  onDrawn,
   overlay,
 }: ZoomPictureProps) {
   const reduced = useReducedMotion();
@@ -143,11 +140,7 @@ export function ZoomPicture({
       transition={pictureFade(cacheKey)}
       onLoad={(e) => {
         pictureDrawn(cacheKey);
-        if (e.source.width > 0 && e.source.height > 0) {
-          const drawn = { width: e.source.width, height: e.source.height };
-          setPixels(drawn);
-          onDrawn?.(drawn);
-        }
+        if (e.source.width > 0 && e.source.height > 0) setPixels({ width: e.source.width, height: e.source.height });
       }}
       onError={() => {
         if (!onSourceError?.()) setFailed(true);

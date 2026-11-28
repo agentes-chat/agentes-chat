@@ -11,25 +11,11 @@ import { type FileRef, fileRoute, whereKnown } from "./logic";
  * they show); anything else in the file screen (`fileRoute`). `from`: the deck it opened from, told where the person
  * stops; `replace`: in the current screen's place (a file's link that turned out to be a picture).
  */
-export function openFile(
-  ref: FileRef,
-  siblings?: readonly FileRef[],
-  how: { from?: string; replace?: boolean; grow?: boolean } = {},
-) {
+export function openFile(ref: FileRef, siblings?: readonly FileRef[], how: { from?: string; replace?: boolean } = {}) {
   const route = fileRoute(ref, siblings, how.from);
-  // Opened with its picture grown out of its tile on the layer over it (`grow.tsx`): pushed with no animation.
-  const go =
-    how.grow && route.pathname === "/images" ? { ...route, params: { ...route.params, [GROW_PARAM]: "1" } } : route;
-  if (how.replace) router.replace(go);
-  else router.push(go);
+  if (how.replace) router.replace(route);
+  else router.push(route);
 }
-
-/** The viewer's param for a viewer whose picture grew out of its tile (`grow.tsx`): it shrinks back into it. */
-export const GROW_PARAM = "grow";
-
-/** A viewer's route params that say its picture grew out of its tile (`GROW_PARAM`). */
-export const opensGrown = (params: object | undefined) =>
-  (params as Record<string, unknown> | undefined)?.[GROW_PARAM] === "1";
 
 /**
  * `openFile` for places that know a file only by its name (the Drive, a search, a pill): when the name doesn't say

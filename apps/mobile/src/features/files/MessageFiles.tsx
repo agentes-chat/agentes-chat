@@ -16,7 +16,6 @@ import { opensLive } from "../live-files/routes";
 import { useColors, useOrgId } from "../shared/hooks";
 import { AttachmentTile } from "./AttachmentTile";
 import { FileVoice } from "./FileVoice";
-import { useGrowTile } from "./grow";
 import { ImageStack, type StackImage } from "./ImageStack";
 import { isLocalMedia, type LocalFile, localRatio } from "./local-files";
 import {
@@ -31,7 +30,6 @@ import {
   VIDEO_EXT,
   videoBox,
   videoClock,
-  viewerVersion,
 } from "./logic";
 import { MediaLink, ZoomSource } from "./MediaLink";
 import { openFile } from "./open";
@@ -288,21 +286,9 @@ function InlineImage({
   // key changed, and the picture went blank and faded in again.
   const picture = usePicture(orgId, file.id, file.version);
   const { key, source, failed } = picture;
-  // The tile its picture grows out of where there's no system's zoom (`grow.tsx`), under the viewer page's key.
-  const growKey = pictureKey(opens.id, viewerVersion(opens));
-  const tile = useGrowTile(growKey);
   return (
-    // Opened with the system's zoom where there is one, else the picture growing out of the tile (`MediaLink`).
-    <MediaLink
-      file={opens}
-      siblings={siblings}
-      grow={{
-        key: growKey,
-        picture: source && !failed ? source : null,
-        aspect: height > 0 ? width / height : null,
-        corners: cardCorners,
-      }}
-    >
+    // Opened with the system's zoom where there is one: the picture grows into the viewer (`MediaLink`).
+    <MediaLink file={opens} siblings={siblings}>
       {(press) => (
         <PressScale
           haptic={false}
@@ -313,7 +299,7 @@ function InlineImage({
           style={[styles.shot, { width, height, backgroundColor: c.sunken, borderColor: c.line2 }, cardCorners]}
         >
           <ZoomSource>
-            <View ref={tile.ref} style={[StyleSheet.absoluteFill, tile.hidden && styles.lifted]} collapsable={false}>
+            <View style={StyleSheet.absoluteFill} collapsable={false}>
               {source && !failed ? (
                 <Image
                   source={source}
@@ -341,10 +327,9 @@ function InlineImage({
 }
 
 /**
- * A video on a message: its first frame; a tap plays it in the system's own player in full screen (`VideoPlayer`);
- * one this phone can't play becomes the file's card (`siblings`: what that card opens among). Its link is read once,
- * at the version the message names, so a link refreshed later never reloads the frame (a flash); it's read again when
- * the row comes back, or when a tap finds it too old to play from.
+ * A video on a message: its first frame; a tap opens it in the viewer among the message's pictures and videos
+ * (`siblings`); one this phone can't play becomes the file's card. Its link is read once, at the version the message
+ * names, so a link refreshed later never reloads the frame (a flash); it's read again when the row comes back.
  */
 function InlineVideo({
   file,
@@ -382,11 +367,10 @@ function InlineVideo({
           name={info?.name || file.title}
           width={box.width}
           height={box.height}
-          // Played by the system's own player in full screen; a new link when the tile's is too old to play from.
-          refreshLink={async () => {
-            const fresh = await link.refetch();
-            return fresh.data ? { uri: fresh.data.uri, headers: fresh.data.headers } : null;
-          }}
+          // In the same viewer as the pictures: one place where media opens.
+          opens={
+            detail ? { file: { id: file.id, version: file.version, title: file.title, detail }, siblings } : undefined
+          }
           onFailed={() => setFailed(true)}
         />
       ) : (
@@ -612,8 +596,6 @@ function RemovedCard() {
 }
 
 const styles = StyleSheet.create({
-  // Its picture out on the layer, growing into the viewer or shrinking back (`grow.tsx`): the tile shows nothing.
-  lifted: { opacity: 0 },
   audio: { gap: 4 },
   // Under the player, in line with its card's inner edge.
   audioName: { paddingHorizontal: 12 },
