@@ -37,6 +37,11 @@ const EVER_ASKED = {
     "vitals",
     "addWorkspace",
     "openServer",
+    // This computer's settings in the app layer (ADR 0265).
+    "settings",
+    "settingsNav",
+    "thisMacHealth",
+    "localNetwork",
   ],
   prefsTabs: ["folders", "tools", "updates", "servers"],
   privacyPanes: ["microphone", "network"],

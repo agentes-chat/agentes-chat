@@ -29,7 +29,7 @@ import {
   UPDATE_SLOW_MS,
 } from "../control/local-server";
 import { platformOf } from "../control/platform";
-import { serverName, type ServerWorkspaces, type VersionProblem, versionProblem } from "../control/server";
+import { type ServerWorkspaces, serverName, type VersionProblem, versionProblem } from "../control/server";
 import { SITE_URL } from "../control/version";
 import { desktopStrings, systemLocale } from "../i18n";
 import { mountReportPanel } from "../report/panel";
