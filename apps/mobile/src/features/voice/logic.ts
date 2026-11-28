@@ -60,12 +60,14 @@ export function playedColumns(width: number): { count: number; start: number } {
 }
 
 /**
- * Where a played wave's handle (`handle` wide) starts at `progress`: flush with its left end at 0:00, with its right
- * end at the end.
+ * Where a played wave's handle (`handle` wide, the square's by default) starts at `progress`: flush with its left end
+ * at 0:00, with its right end at the end. A worklet takes no default naming a constant: on the UI thread a default is
+ * read before the worklet's captured values, where the constant doesn't exist (a voice message crashed its
+ * conversation), so the default is set in the body.
  */
-export function handleAt(progress: number, width: number, handle = WAVE_HANDLE): number {
+export function handleAt(progress: number, width: number, handle?: number): number {
   "worklet";
-  return progress * (width - handle);
+  return progress * (width - (handle ?? WAVE_HANDLE));
 }
 
 /**
@@ -82,9 +84,11 @@ export function handleRoom(x: number, start: number, room: number): { left: numb
 }
 
 /** Where `x` falls on a played wave `width` wide: the handle's middle there, up to 0.999 at the end. */
-export function waveAt(x: number, width: number, handle = WAVE_HANDLE): number {
+export function waveAt(x: number, width: number, handle?: number): number {
   "worklet";
-  return Math.max(0, Math.min(0.999, (x - handle / 2) / (width - handle)));
+  // The default in the body (see `handleAt`).
+  const h = handle ?? WAVE_HANDLE;
+  return Math.max(0, Math.min(0.999, (x - h / 2) / (width - h)));
 }
 
 /** A finger's position during a hold: what it asks for now. */
