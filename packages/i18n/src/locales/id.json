@@ -1404,7 +1404,6 @@
       "go_other": "Impor {{count}} item",
       "nothingNew": "Semua ini sudah ada di sini.",
       "nothingToBring": "Tidak ada yang bisa dibawa dari sini. Tiap item menjelaskan alasannya.",
-      "withTeam": "Tiba saat kamu membawa timnya.",
       "applying": "Mengimpor… {{done}} dari {{total}}",
       "files": {
         "copy": "Salin file ke Drive",

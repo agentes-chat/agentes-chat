@@ -1460,7 +1460,6 @@
       "go_other": "{{count}} Elemente importieren",
       "nothingNew": "Das alles ist schon hier.",
       "nothingToBring": "Nichts davon kann mitkommen. Bei jedem Element steht, warum.",
-      "withTeam": "Kommt an, wenn du das Team holst.",
       "applying": "Wird importiert… {{done}} von {{total}}",
       "files": {
         "copy": "Dateien ins Drive kopieren",

@@ -1514,7 +1514,6 @@
       "go_other": "Importa {{count}} elementi",
       "nothingNew": "Tutto questo c'è già.",
       "nothingToBring": "Niente qui può essere portato. Ogni elemento dice perché.",
-      "withTeam": "Arriva quando porti il team.",
       "applying": "Importazione… {{done}} di {{total}}",
       "files": {
         "copy": "Copia i file nel Drive",

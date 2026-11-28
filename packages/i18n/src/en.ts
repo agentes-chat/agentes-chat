@@ -1555,7 +1555,6 @@ export const en = {
       go_other: "Import {{count}} items",
       nothingNew: "All of this is already here.",
       nothingToBring: "Nothing here can come along. Each item says why.",
-      withTeam: "It arrives when you bring the team.",
       applying: "Importing… {{done}} of {{total}}",
       files: {
         copy: "Copy the files to the Drive",

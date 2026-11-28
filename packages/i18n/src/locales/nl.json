@@ -1460,7 +1460,6 @@
       "go_other": "{{count}} items importeren",
       "nothingNew": "Dit staat hier allemaal al.",
       "nothingToBring": "Niets hiervan kan mee. Bij elk item staat waarom.",
-      "withTeam": "Het komt binnen als je het team ophaalt.",
       "applying": "Importeren… {{done}} van {{total}}",
       "files": {
         "copy": "De bestanden naar de Drive kopiëren",

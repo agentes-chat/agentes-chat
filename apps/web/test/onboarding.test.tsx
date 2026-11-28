@@ -774,6 +774,57 @@ describe("one first agent, whatever way in (ADR 0264 addendum)", () => {
     expect(heading()).toBe("Iara, do atendimento");
   });
 
+  test("a pasted answer from another app comes in during the onboarding: Importar, then its agent is the first agent", async () => {
+    const state = settingUp({ area: "support" });
+    await open(state);
+    await click(button("Voltar"), 8);
+    await click(button("Pedir à sua IA"), 8);
+    await click(within(screen().getByRole("dialog")).getByRole("button", { name: "Outro app" }), 16);
+    await click(button("Tenho um arquivo ou link"), 4);
+    const field = screen().getByLabelText("Ou cole um link do GitHub ou a resposta do outro app");
+    const reply = {
+      format: "agenteschat.bundle",
+      version: 1,
+      source: { app: "openclaw", ref: "my-bots", name: "Meus bots", files: [] },
+      agents: [
+        {
+          key: "news",
+          name: "Newsy",
+          handle: "news",
+          role: "Notícias do dia",
+          instructions: "Resume as notícias do dia em cinco tópicos.",
+          model: null,
+          appearance: {},
+          skills: [],
+        },
+      ],
+      skills: [],
+      channels: [],
+      routines: [],
+      notes: [],
+      todo: [],
+      leftOut: [],
+    };
+    const pasted = `Aqui está:\n\`\`\`json\n${JSON.stringify(reply, null, 2)}\n\`\`\``;
+    await act(async () => fireEvent.paste(field, { clipboardData: { getData: () => pasted } }));
+    await settle(10);
+    // The sheet's own steps closed: what comes, on the import's page, with its own Importar.
+    const sheet = document.querySelector(".imp-choice")?.closest("[role='dialog']") as HTMLElement | null;
+    if (sheet) await click(within(sheet).getAllByRole("button", { name: "Fechar" })[0] as HTMLElement, 4);
+    expect(document.body.textContent).not.toContain("Chega quando você trouxer o time.");
+    await click(button(/^Importar \d+ ite/), 12);
+    const applied = calls(state, "imports.apply").filter((c) => !(c.args[1] as { dryRun: boolean }).dryRun);
+    expect(applied).toHaveLength(1);
+    // Closing the import makes the agent it brought the first agent, in Iara's place.
+    await click(within(screen().getByRole("dialog")).getAllByRole("button", { name: "Fechar" })[0] as HTMLElement, 4);
+    await settle(24);
+    const newsy = state.agents.find((a) => a.name === "Newsy")?.id;
+    expect(calls(state, "firstAgents.adopt").map((c) => c.args)).toEqual([
+      [ORG_ID, { agentId: newsy, replace: agentIdOf("support") }],
+    ]);
+    expect(heading()).toBe("Newsy");
+  });
+
   test("its first delivery armed (a Continue whose save didn't land): past its step, with no way back to the work", async () => {
     const state = settingUp({ area: "support" });
     if (state.firstDelivery) state.firstDelivery.armedAt = new Date().toISOString();

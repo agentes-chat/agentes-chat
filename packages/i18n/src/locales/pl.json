@@ -1569,7 +1569,6 @@
       "go_other": "Importuj {{count}} elementu",
       "nothingNew": "Wszystko to już tu jest.",
       "nothingToBring": "Niczego stąd nie da się przenieść. Przy każdym elemencie podano powód.",
-      "withTeam": "Pojawi się, gdy przeniesiesz zespół.",
       "applying": "Importowanie… {{done}} z {{total}}",
       "files": {
         "copy": "Skopiuj pliki do Drive",

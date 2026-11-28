@@ -1459,7 +1459,6 @@
       "go_other": "{{count}} öğeyi içe aktar",
       "nothingNew": "Bunların hepsi zaten burada.",
       "nothingToBring": "Buradan hiçbir şey gelemiyor. Her öğe nedenini söylüyor.",
-      "withTeam": "Ekibi getirdiğinde gelir.",
       "applying": "İçe aktarılıyor… {{done}}/{{total}}",
       "files": {
         "copy": "Dosyaları Drive'a kopyala",

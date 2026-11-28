@@ -1404,7 +1404,6 @@
       "go_other": "항목 {{count}}개 가져오기",
       "nothingNew": "모두 이미 여기 있어요.",
       "nothingToBring": "가져올 수 있는 게 없어요. 항목마다 이유가 나와 있어요.",
-      "withTeam": "팀을 가져오면 함께 와요.",
       "applying": "가져오는 중… {{total}}개 중 {{done}}개",
       "files": {
         "copy": "파일을 Drive에 복사",

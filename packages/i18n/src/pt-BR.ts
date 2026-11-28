@@ -1515,7 +1515,6 @@ export const ptBR = {
       go_other: "Importar {{count}} itens",
       nothingNew: "Tudo isso já está aqui.",
       nothingToBring: "Nada daqui pode vir. O motivo está em cada item.",
-      withTeam: "Chega quando você trouxer o time.",
       applying: "Importando… {{done}} de {{total}}",
       files: {
         copy: "Copiar os arquivos para o Drive",

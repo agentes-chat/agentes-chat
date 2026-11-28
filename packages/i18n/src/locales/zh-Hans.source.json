@@ -3588,9 +3588,6 @@
   "onboarding.import.nothingToBring": {
     "value": "Nothing here can come along. Each item says why."
   },
-  "onboarding.import.withTeam": {
-    "value": "It arrives when you bring the team."
-  },
   "onboarding.import.applying": {
     "value": "Importing… {{done}} of {{total}}"
   },

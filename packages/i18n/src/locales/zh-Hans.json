@@ -1404,7 +1404,6 @@
       "go_other": "导入 {{count}} 项",
       "nothingNew": "这些内容这里都已经有了。",
       "nothingToBring": "这里没有可以带上的内容。每一项都说明了原因。",
-      "withTeam": "导入团队时会一并带来。",
       "applying": "正在导入… {{done}}/{{total}}",
       "files": {
         "copy": "把文件复制到 Drive",

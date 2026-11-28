@@ -1404,7 +1404,6 @@
       "go_other": "{{count}}件をインポート",
       "nothingNew": "これはすべてすでにここにあります。",
       "nothingToBring": "ここには移行できるものがありません。各項目に理由が表示されています。",
-      "withTeam": "チームを連れてくると届きます。",
       "applying": "インポートしています… {{total}}件中{{done}}件",
       "files": {
         "copy": "ファイルをDriveにコピー",

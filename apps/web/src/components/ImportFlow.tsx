@@ -464,10 +464,11 @@ function whyText(t: TFunction, kind: ImportItemKind, reason: ImportSkipReason) {
 
 /**
  * The whole flow: the source cards and the drop zone, the plan to pick from,
- * then the report. `standalone` (Configurações) has its own Importar button and
- * links to the workspace's pages; onboarding applies when its agents step
- * continues, and links nowhere (until it's finished, every page of the workspace
- * leads back to it). `level` is the flow's top heading level.
+ * its Importar button, then the report. `standalone` (Configurações, a new agent's
+ * card) links to the workspace's pages; the onboarding's links nowhere (until it's
+ * finished, every page of the workspace leads back to it), and what it brings
+ * becomes the first agent as its dialog closes (ADR 0264 addendum). `level` is the
+ * flow's top heading level.
  */
 export function ImportFlow({
   flow,
@@ -499,7 +500,7 @@ export function ImportFlow({
       {flow.planned && flow.report ? (
         <ImportReport flow={flow} orgId={orgId} level={level} onAnother={flow.reset} linked={standalone} />
       ) : flow.planned ? (
-        <Preview flow={flow} orgId={orgId} standalone={standalone} level={level} />
+        <Preview flow={flow} orgId={orgId} level={level} />
       ) : (
         <Picker flow={flow} open={sheet} onOpen={open} />
       )}
@@ -643,17 +644,7 @@ function useBundleIndex(flow: ImportFlowState) {
 const RANK: Record<ImportItemResult["action"], number> = { create: 0, update: 0, unchanged: 1, skip: 2 };
 
 /** The dry run, to pick from: groups with a status per row, then what to do after and what stays behind. */
-export function Preview({
-  flow,
-  orgId,
-  standalone,
-  level,
-}: {
-  flow: ImportFlowState;
-  orgId: string;
-  standalone: boolean;
-  level: 2 | 3;
-}) {
+export function Preview({ flow, orgId, level }: { flow: ImportFlowState; orgId: string; level: 2 | 3 }) {
   const { t } = useTranslation();
   const heading = useFocusOn<HTMLHeadingElement>(flow, "preview");
   const index = useBundleIndex(flow);
@@ -734,19 +725,12 @@ export function Preview({
         <span>{t("onboarding.import.never")}</span>
       </p>
 
-      {standalone ? (
-        <ApplyBar flow={flow} count={picks.length} />
-      ) : (
-        <p className="imp-note ac-iconline">
-          <Icon name="info" size={16} />
-          <span>{t("onboarding.import.withTeam")}</span>
-        </p>
-      )}
+      <ApplyBar flow={flow} count={picks.length} />
     </section>
   );
 }
 
-/** Importar (Configurações): the count, the progress while it runs, and what to do when it fails. */
+/** Importar: the count, the progress while it runs, and what to do when it fails. */
 function ApplyBar({ flow, count }: { flow: ImportFlowState; count: number }) {
   const { t } = useTranslation();
   const apply = useMutation({ mutationFn: () => flow.apply(), meta: { silent: true } });

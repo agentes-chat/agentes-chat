@@ -155,7 +155,7 @@ export function ImportSheet({
   const shown = sheet ?? last.current;
   const apply = useMutation({ mutationFn: () => flow.apply(), meta: { silent: true } });
   // Choosing what comes, a step at a time, once there is a plan.
-  const choice = useChoiceSheet({ flow, standalone, todos, apply, onClose });
+  const choice = useChoiceSheet({ flow, todos, apply, onClose });
   const card = shown === "file" ? null : shown;
   const { mcp, method, paths } = useImportMethod(flow, orgId, card);
   const client = card ? mcpClient(card) : undefined;
