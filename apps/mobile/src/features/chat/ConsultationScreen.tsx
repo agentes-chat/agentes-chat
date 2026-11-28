@@ -27,6 +27,7 @@ import {
   useRouteSheetHeader,
   useRouteSheetScrollable,
 } from "@/ui";
+import { Lightbox } from "../lightbox/Lightbox";
 import { chatHref } from "../links/logic";
 import { LoadFailed } from "../shared/FirstUse";
 import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
@@ -68,6 +69,8 @@ export function ConsultationScreen({
         <FocusLive>
           <SheetSurface>
             <Consultation consultationId={consultationId} channelId={channelId} group={group} />
+            {/* Its messages' pictures and videos open here: the sheet presents over the app's own lightbox. */}
+            <Lightbox />
           </SheetSurface>
         </FocusLive>
       </SheetHostProvider>

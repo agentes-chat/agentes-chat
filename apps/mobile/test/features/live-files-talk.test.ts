@@ -393,7 +393,8 @@ describe("a picture's, a video's and a PDF's conversation (ADR 0208)", () => {
   test("the viewer and the PDF's screen push the conversation; a held touch marks a point; a link opens it", () => {
     const viewer = src("features/files/ImageViewer.tsx");
     // One way in, the line; no Comment at the top. A played video's line opens it about that moment.
-    expect(viewer).toContain("{talkFile ? <FileTalkLine file={talkFile} bare onOpen={openLine} /> : null}");
+    expect(viewer).toContain("{talkFile ? <FileTalkLine file={talkFile} bare onOpen={onLine} /> : null}");
+    expect(viewer).toContain("onLine={openLine}");
     expect(viewer).not.toContain('icon="comment"');
     expect(viewer).toContain("if (talkFile && time > PLAYED_S) openTalk({ selection: commentSelection(pins, { time }");
     // A touch held on the picture marks the point and opens the conversation about it; the draft's pin stays on it.

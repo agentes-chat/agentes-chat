@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { usePlanTurnedOn } from "@/features/billing/PaidMoment";
 import { NoticeIsland } from "@/features/island/NoticeIsland";
+import { Lightbox } from "@/features/lightbox/Lightbox";
 import { noteWorkspaceOnScreen } from "@/features/links/on-screen";
 import { LiveActivityWork } from "@/features/live-activity/LiveActivityWork";
 import { ShareInbox } from "@/features/share/ShareInbox";
@@ -44,6 +45,9 @@ export default function AppLayout() {
   return (
     <>
       <AppSheets />
+      {/* A message's pictures and videos, grown out of their tiles over every screen (a sheet that shows messages has
+          its own, as it presents over this). */}
+      <Lightbox />
       <AppWork />
       {/* The agents at work in the iPhone's Dynamic Island and on its Lock Screen (ADR 0210). */}
       <LiveActivityWork />

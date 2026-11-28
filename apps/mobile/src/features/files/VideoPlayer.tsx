@@ -11,15 +11,15 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, PixelRatio, Text as RNText, StyleSheet, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { reportError } from "@/lib/error-reports";
-import { CHROME_MAX_SCALE, Icon, PressScale } from "@/ui";
+import { CHROME_MAX_SCALE, Icon, PressScale, RADIUS } from "@/ui";
 import { useMessageCardCorners } from "../chat/look";
+import { lightboxKey, openMedia } from "../lightbox/open";
+import { useLightboxTile } from "../lightbox/store";
 import { useColors } from "../shared/hooks";
 import { onVoiceStarts, stopPlayback } from "../voice/playback";
-import { handVideo } from "./handoff";
-import { type FileRef, stillAt, videoClock, videoHeight, viewerVersion } from "./logic";
-import { MediaLink, ZoomSource } from "./MediaLink";
-import { pictureKey } from "./source";
+import { type FileRef, stillAt, videoClock, videoHeight } from "./logic";
 
 /**
  * Android draws a video on a SurfaceView by default, a window of its own that ignores the rounded corners it sits in
@@ -192,7 +192,7 @@ onVoiceStarts(pauseCurrent);
 export interface VideoPlayerProps {
   /** Where it plays from, with the session when the link is ours. */
   source: { uri: string; headers?: Record<string, string> };
-  /** When `source` was read: handed to the viewer it opens while it has life ahead (`handVideo`). */
+  /** When `source` was read: the lightbox plays from it while it has life ahead (`freshLink`). */
   linkReadAt?: number | undefined;
   /** Its still's key, the same for every link to this version of the file (`pictureKey`). */
   stillKey: string;
@@ -201,7 +201,7 @@ export interface VideoPlayerProps {
   width?: number;
   /** Its height there: 16:9 for `width` unless the caller knows the video's own shape (`videoBox`). */
   height?: number;
-  /** What a tap opens in the picture viewer, where it plays, among the message's pictures and videos. */
+  /** What a tap opens in the lightbox, where it plays, among the message's pictures and videos. */
   opens?: { file: FileRef; siblings: readonly FileRef[] } | undefined;
   /** It can't play on this device (a format it lacks): the caller shows the file's card instead. */
   onFailed?: () => void;
@@ -209,9 +209,9 @@ export interface VideoPlayerProps {
 
 /**
  * A video. In a message, its first frame in a picture's shape with a play key and its length in a small badge (no name
- * over it, as a picture has none); a tap opens it in the picture viewer (`ViewerVideo`), where the system's own player
- * plays it at once with the platform's controls (play, the timeline to drag, full screen and back out of it, AirPlay),
- * so it feels like every other video on the phone, with no controls of ours to get stuck behind.
+ * over it, as a picture has none); a tap opens it in the lightbox (`Lightbox`), its cover growing out of the tile into
+ * the player (`PageVideo`), which starts at once from the link this tile already holds, between the viewer's bars with
+ * the file's conversation and actions, and lands back in the tile on closing.
  */
 export function VideoPlayer({
   source,
@@ -223,59 +223,8 @@ export function VideoPlayer({
   opens,
   onFailed,
 }: VideoPlayerProps) {
-  // On the touch, the viewer about to open gets the cover shown here and the link held here (`handoff.ts`): it opens
-  // on the cover and starts playing from the link, never on black while it asks for its own.
-  const hand = opens
-    ? (frame: VideoThumbnail | null) =>
-        handVideo(pictureKey(opens.file.id, viewerVersion(opens.file)), source, linkReadAt, frame)
-    : undefined;
-  const tile = (press: (() => void) | undefined) => (
-    <InlineVideo
-      source={source}
-      stillKey={stillKey}
-      onHand={hand}
-      name={name}
-      width={width}
-      height={height ?? videoHeight(width)}
-      onPress={press}
-      onFailed={onFailed}
-    />
-  );
-  // Opened in the viewer, with its comments and actions, through the link that opens a message's media (`MediaLink`).
-  return opens ? (
-    // Never the system's zoom for a video: under it the player drew no picture (its sound played on black). The
-    // viewer opens with its own fade, on the cover handed on the touch (`handoff.ts`).
-    <MediaLink file={opens.file} siblings={opens.siblings} zoom={false}>
-      {tile}
-    </MediaLink>
-  ) : (
-    tile(undefined)
-  );
-}
-
-/** In a message: the first frame, the play key and the length; nothing plays here. */
-function InlineVideo({
-  source,
-  stillKey,
-  name,
-  width,
-  height,
-  onPress,
-  onHand,
-  onFailed,
-}: {
-  source: VideoPlayerProps["source"];
-  stillKey: string;
-  /** On the touch: hands the viewer this cover (`handVideo`). */
-  onHand?: ((frame: VideoThumbnail | null) => void) | undefined;
-  name: string;
-  width: number;
-  height: number;
-  /** Opens it in the viewer: the tile's own, or the zoom's link's (`MediaLink` hands its press to this prop). */
-  onPress?: (() => void) | undefined;
-  onFailed?: (() => void) | undefined;
-}) {
   const { t } = useTranslation();
+  const h = height ?? videoHeight(width);
   const c = useColors();
   // In a message, the corners every card there has, as the picture's beside it (its loading frame had them).
   const cardCorners = useMessageCardCorners();
@@ -289,45 +238,51 @@ function InlineVideo({
   }, [failed]);
   const duration = still?.duration ?? 0;
   const length = duration > 0 ? videoClock(duration) : "";
+  const frame = still?.frame ?? null;
+  // The tile the lightbox opens from (`Lightbox`): its cover grows out of it, and the player plays from its link.
+  const tileRef = useLightboxTile(opens ? lightboxKey(opens.file) : null, {
+    image: frame,
+    aspect: frame && frame.width > 0 && frame.height > 0 ? frame.width / frame.height : h > 0 ? width / h : null,
+    radius: RADIUS.xl,
+    contain: true,
+    video: { ...source, readAt: linkReadAt },
+  });
   return (
     // Opening it is navigation, as opening a picture: the press shows it, no tap.
     <PressScale
       haptic={false}
-      onPressIn={() => onHand?.(still?.frame ?? null)}
-      onPress={onPress}
-      disabled={!onPress}
+      onPress={opens ? () => openMedia(opens.file, opens.siblings) : undefined}
+      disabled={!opens}
       accessibilityRole="button"
       accessibilityLabel={`${t("mobile.files.video.play")}: ${name}${length ? `, ${length}` : ""}`}
-      style={[styles.inline, { width, height, backgroundColor: c.sunken, borderColor: c.line2 }, cardCorners]}
+      style={[styles.inline, { width, height: h, backgroundColor: c.sunken, borderColor: c.line2 }, cardCorners]}
     >
-      {/* The still alone grows into the viewer (the play key and the length stay in the message). */}
-      <ZoomSource>
-        <View style={StyleSheet.absoluteFill} collapsable={false}>
-          {still?.frame ? (
-            <Image
-              source={still.frame}
-              contentFit="contain"
-              transition={0}
-              accessible={false}
-              style={StyleSheet.absoluteFill}
-            />
-          ) : null}
+      {/* What the lightbox measures and empties while the video is out: the cover, the play key and the length. */}
+      <Animated.View ref={tileRef} style={StyleSheet.absoluteFill} collapsable={false}>
+        {frame ? (
+          <Image
+            source={frame}
+            contentFit="contain"
+            transition={0}
+            accessible={false}
+            style={StyleSheet.absoluteFill}
+          />
+        ) : null}
+        <View style={styles.center} pointerEvents="none">
+          <View style={[styles.big, { backgroundColor: c.raised }]}>
+            <Icon name="play" size={24} color={c.ink} />
+          </View>
         </View>
-      </ZoomSource>
-      <View style={styles.center} pointerEvents="none">
-        <View style={[styles.big, { backgroundColor: c.raised }]}>
-          <Icon name="play" size={24} color={c.ink} />
-        </View>
-      </View>
-      {length ? (
-        // The length as a video on its way up shows it (`MessageFiles`): a play mark and the time on a dark pill.
-        <View style={styles.length} pointerEvents="none">
-          <Icon name="play" size={9} color="#fff" />
-          <RNText maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.lengthText}>
-            {length}
-          </RNText>
-        </View>
-      ) : null}
+        {length ? (
+          // The length as a video on its way up shows it (`MessageFiles`): a play mark and the time on a dark pill.
+          <View style={styles.length} pointerEvents="none">
+            <Icon name="play" size={9} color="#fff" />
+            <RNText maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.lengthText}>
+              {length}
+            </RNText>
+          </View>
+        ) : null}
+      </Animated.View>
     </PressScale>
   );
 }

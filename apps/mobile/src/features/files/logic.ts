@@ -424,7 +424,7 @@ export function liveKindOfRef(ref: FileRef): PhoneLiveKind | null {
  * them) at the one tapped; a live file on its own screen, as it is now (ADR 0196 §9); anything else in the file screen,
  * at an older version when that's the one shown. `from`: the deck it opened from, told where the person stops.
  */
-export function fileRoute(ref: FileRef, siblings?: readonly FileRef[], from?: string): FileRoute {
+export function fileRoute(ref: FileRef, siblings?: readonly FileRef[]): FileRoute {
   const live = liveKindOfRef(ref);
   if (live) return liveRoute(live, ref.id);
   if (!isMediaFile(ref)) {
@@ -441,7 +441,6 @@ export function fileRoute(ref: FileRef, siblings?: readonly FileRef[], from?: st
     params: {
       files: encodeFileList(pages.map((f) => ({ id: f.id, version: viewerVersion(f), view: mediaViewOf(f) }))),
       at: String(Math.max(at, 0)),
-      ...(from ? { from } : {}),
     },
   };
 }

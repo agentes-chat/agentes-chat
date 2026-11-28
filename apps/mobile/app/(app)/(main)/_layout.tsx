@@ -1,7 +1,6 @@
 import { type ErrorBoundaryProps, type NativeStackNavigationOptions, Stack } from "expo-router";
 import { useMemo } from "react";
 import { slideListeners } from "@/agent/live";
-import { opensWithZoom } from "@/features/files/MediaLink";
 import { isStill, STILL_PARAM } from "@/features/links/landing";
 import { ScreenError } from "@/features/shared/ScreenError";
 import { coverBarOptions, usePushedOptions, useScrollUnderPushedOptions, useSideInsets, useTheme } from "@/ui";
@@ -124,10 +123,10 @@ export default function MainStack() {
       ...Object.fromEntries(NEW_AGENT_ROUTES.map((name) => [name, connectAi])),
       // Código: its grouped screens on the gray they draw on, as the steps above (no white flash in a push).
       ...Object.fromEntries(CODING_GROUPED_ROUTES.map((name) => [name, connectAi])),
-      // A message's pictures: pushed (faded in, as a photo opens; from a message's tile on iOS 18 and later the
-      // system's zoom instead, the tile growing into it, `MediaLink`), black, the viewer's own bars over the picture. A
-      // screen of the stack, so the file's conversation pushes over it and its back comes back to the picture (ADR
-      // 0208); as a modal, whatever was pushed from it opened hidden under it.
+      // Pictures and videos opened from the Drive, a link or a notice (a message's open in the lightbox): pushed,
+      // faded in as a photo opens, black, the viewer's own bars over the picture. A screen of the stack, so the file's
+      // conversation pushes over it and its back comes back to the picture (ADR 0208); as a modal, whatever was pushed
+      // from it opened hidden under it.
       images: {
         ...base,
         animation: "fade",
@@ -165,9 +164,6 @@ export default function MainStack() {
     return ({ route }: { route: { name: string; params?: object } }): NativeStackNavigationOptions => {
       const options = own[route.name] ?? page;
       if (isStill(route.params)) return { ...options, animation: "none" };
-      // Opened with the system's zoom (`MediaLink`): the stack's own push, which the zoom takes over. Any animation
-      // of the stack's own (the viewer's fade) runs its own animator instead, and the zoom never shows.
-      if (route.name === "images" && opensWithZoom(route.params)) return { ...options, animation: "default" };
       return options;
     };
   }, [colors, pushed, scrollUnder, side]);

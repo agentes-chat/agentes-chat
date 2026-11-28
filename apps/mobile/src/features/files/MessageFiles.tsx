@@ -5,12 +5,15 @@ import { Image } from "expo-image";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Text as RNText, StyleSheet, View } from "react-native";
-import { CHROME_MAX_SCALE, Icon, MESSAGE_CARD_X, PressScale, Text } from "@/ui";
+import Animated from "react-native-reanimated";
+import { CHROME_MAX_SCALE, Icon, MESSAGE_CARD_X, PressScale, RADIUS, Text } from "@/ui";
 import { ChoicesCard } from "../blocks/ChoicesCard";
 import { LiveBlockCard } from "../blocks/LiveBlock";
 import { PollCard } from "../blocks/PollCard";
 import { FileCommentsLink } from "../chat/cards";
 import { useKeptWidth, useMessageCardCorners, useMessageCardFrame } from "../chat/look";
+import { lightboxKey, openMedia } from "../lightbox/open";
+import { useLightboxTile } from "../lightbox/store";
 import { LiveFileCard } from "../live-files/LiveFileCard";
 import { opensLive } from "../live-files/routes";
 import { useColors, useOrgId } from "../shared/hooks";
@@ -31,7 +34,6 @@ import {
   videoBox,
   videoClock,
 } from "./logic";
-import { MediaLink, ZoomSource } from "./MediaLink";
 import { openFile } from "./open";
 import { LocalPdfPage } from "./pdf-preview";
 import {
@@ -286,43 +288,48 @@ function InlineImage({
   // key changed, and the picture went blank and faded in again.
   const picture = usePicture(orgId, file.id, file.version);
   const { key, source, failed } = picture;
+  // The picture's own shape once drawn (the tile's is close to it, the picture drawn whole in it).
+  const [drawn, setDrawn] = useState<number | null>(null);
+  // The tile the lightbox opens from: the picture it drew grows out of it and lands back in it (`Lightbox`).
+  const tileRef = useLightboxTile(lightboxKey(opens), {
+    image: source && !failed ? source : null,
+    aspect: drawn ?? (height > 0 ? width / height : null),
+    radius: RADIUS.xl,
+    contain: true,
+  });
   return (
-    // Opened with the system's zoom where there is one: the picture grows into the viewer (`MediaLink`).
-    <MediaLink file={opens} siblings={siblings}>
-      {(press) => (
-        <PressScale
-          haptic={false}
-          onPress={press}
-          accessibilityRole="imagebutton"
-          accessibilityLabel={label || t("mobile.files.openImage")}
-          accessibilityHint={t("mobile.files.openImage")}
-          style={[styles.shot, { width, height, backgroundColor: c.sunken, borderColor: c.line2 }, cardCorners]}
-        >
-          <ZoomSource>
-            <View style={StyleSheet.absoluteFill} collapsable={false}>
-              {source && !failed ? (
-                <Image
-                  source={source}
-                  recyclingKey={key}
-                  cachePolicy="memory-disk"
-                  contentFit="contain"
-                  transition={pictureFade(key)}
-                  onLoad={() => pictureDrawn(key)}
-                  style={StyleSheet.absoluteFill}
-                  onError={picture.onError}
-                  accessible={false}
-                />
-              ) : null}
-              {failed ? (
-                <View style={styles.center}>
-                  <Icon name="image" size={22} color={c.faint} />
-                </View>
-              ) : null}
-            </View>
-          </ZoomSource>
-        </PressScale>
-      )}
-    </MediaLink>
+    <PressScale
+      haptic={false}
+      onPress={() => openMedia(opens, siblings)}
+      accessibilityRole="imagebutton"
+      accessibilityLabel={label || t("mobile.files.openImage")}
+      accessibilityHint={t("mobile.files.openImage")}
+      style={[styles.shot, { width, height, backgroundColor: c.sunken, borderColor: c.line2 }, cardCorners]}
+    >
+      <Animated.View ref={tileRef} style={StyleSheet.absoluteFill} collapsable={false}>
+        {source && !failed ? (
+          <Image
+            source={source}
+            recyclingKey={key}
+            cachePolicy="memory-disk"
+            contentFit="contain"
+            transition={pictureFade(key)}
+            onLoad={(e) => {
+              pictureDrawn(key);
+              if (e.source.width > 0 && e.source.height > 0) setDrawn(e.source.width / e.source.height);
+            }}
+            style={StyleSheet.absoluteFill}
+            onError={picture.onError}
+            accessible={false}
+          />
+        ) : null}
+        {failed ? (
+          <View style={styles.center}>
+            <Icon name="image" size={22} color={c.faint} />
+          </View>
+        ) : null}
+      </Animated.View>
+    </PressScale>
   );
 }
 
