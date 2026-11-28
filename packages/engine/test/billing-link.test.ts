@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { eq, schema } from "@agenteschat/db";
+import { and, eq, inArray, rowsOf, schema, sql } from "@agenteschat/db";
 import {
   archiveChannel,
   BILLING_FROM,
@@ -12,14 +12,18 @@ import {
   deleteArtifact,
   deleteWikiPage,
   insertMessage,
+  MONTH_ACTIONS_MAX,
   mintBillingLink,
   openAgentDm,
   openLinkToken,
   openPersonAgentDm,
   saveStorage,
+  sayTeamHello,
   sealLinkToken,
   setBillingHold,
   setOrgStanding,
+  TEAM_TEXT_MAX,
+  teamText,
   testStorage,
   updateIssue,
 } from "../src";
@@ -58,11 +62,30 @@ const VECTOR: BillingLinkClaims = {
     wikiPages: 9,
     issues: 54,
     since: 1782864000,
+    team: [
+      { name: "Caio", role: "Cobrança", look: { color: "amber", eyes: "happy", accessory: "hat" } },
+      { name: "Iara", role: "Atendimento", look: { color: "#3f4fd6", eyes: "round", accessory: "flower" } },
+      { name: "Nina", role: null, look: { color: "sky", eyes: "round", accessory: null } },
+    ],
+    routines: 5,
+    // December 2026 in São Paulo, on the 31st at 21:00 there (`iat`, 00:00 UTC on New Year's Day).
+    month: {
+      start: 1796094000,
+      days: [
+        96, 120, 88, 0, 0, 132, 140, 101, 97, 115, 0, 0, 160, 151, 149, 98, 103, 0, 0, 143, 120, 64, 12, 0, 0, 0, 87,
+        90, 102, 110, 33,
+      ],
+      messages: 2512,
+      agentActions: 1307,
+      files: 6,
+      wikiPages: 2,
+      issues: 11,
+    },
   },
 };
 const NONCE = Buffer.from("000102030405060708090a0b", "hex");
 const TOKEN =
-  "v2.AAECAwQFBgcICQoL.4mXFzaaVtaXxnkAAGO7bTeJrx6CcLnIJVtW5CtprgGzRTOpN1T2QKli761vnU-HRfO9tS4k0Cf1vLZ-xcaOij1eOLsvTajFwDl9qpLvtPv1958CLWxNlChZRt8e5JhzzVq9ikWJ2qK6YRMTKyQ6fywD9I6KRyVmLUmNEGFd5-vbPgyCLr5P4WfCvPCUf5oGr2JnuiQFaLTRVcwDS2wwl752KsC6LTcTMcrtsSs_YM4UWuhYeOevuDYB_FuYpRdJP7K5bQEbZIL38wfPj7P5gftzTnqeB4CypTFTrysDbWwLNAXUsqo-AXK3B0gS3EKUymSehFpyNrMinLHms_FBqswIAgKtQ_9QDmTDU_SGmi5SKLUvG5QuVbqvBPyg4_sB2uXCiaj386abqvzdlZGPbYmpeClfRgKEFP-5bZYwp2MHc46Jzs9NJkRB5K87EWuauxctUBCf5Kn22z-7GoI3mTyYluPLJk1jbL2coOgKUicg122ScIWn7_LEemp4uFNK52uFBHrNtHc5odDiYOURwhH0aoQw0PLxfdH1aLHkn0dPHDrGeZfoxlqfBYJFKSOB5RYF9CZ6bF7tI4u-ScnqoC4iHG-SN8zeVA5EOAlASt3pNC_fJvrtL3QNQev7Kc-xZiU_BQOQnVO_TIYKYb5kf8A.MKnd_x1NJIHv8r82xcU-rQ";
+  "v2.AAECAwQFBgcICQoL.4mXFzaaVtaXxnkAAGO7bTeJrx6CcLnIJVtW5CtprgGzRTOpN1T2QKli761vnU-HRfO9tS4k0Cf1vLZ-xcaOij1eOLsvTajFwDl9qpLvtPv1958CLWxNlChZRt8e5JhzzVq9ikWJ2qK6YRMTKyQ6fywD9I6KRyVmLUmNEGFd5-vbPgyCLr5P4WfCvPCUf5oGr2JnuiQFaLTRVcwDS2wwl752KsC6LTcTMcrtsSs_YM4UWuhYeOevuDYB_FuYpRdJP7K5bQEbZIL38wfPj7P5gftzTnqeB4CypTFTrysDbWwLNAXUsqo-AXK3B0gS3EKUymSehFpyNrMinLHms_FBqswIAgKtQ_9QDmTDU_SGmi5SKLUvG5QuVbqvBPyg4_sB2uXCiaj386abqvzdlZGPbYmpeClfRgKEFP-5bZYwp2MHc46Jzs9NJkRB5K87EWuauxctUBCf5Kn22z-7GoI3mTyYluPLJk1jbL2coOgKUicg122ScIWn7_LEemp4uFNK52uFBHrNtHc5odDiYOURwhH0aoQw0PLxfdH1aLHkn0dPHDrGeZfoxlqfBYJFKSOB5RYF9CZ6bF7tI4u-ScnqoC4iHG-SN8zeVA5EOAlASt3pNC_fJvrtL3QNQev7Kc-xZiU_BQOQnVO_TIYKYb5lOryyOXAs3a95CAkevGtP-b99htq5iW7lA7EfFfpH-ttV7Ctq_QnETtYwlbWzznYCVfFg7Woj66HkI9zqEOPkWnJYidy9w307OD_sUaEeqg74xRFQw5PjZB98ROw_dttkWWFDIx__HX8o0EoWbljXUCZL5lcNJCnNsvrt5HV_WEpukl7bFlsqG4U72FVPrOyu7dLCTqVCnycb8cTYxQtDLxosH710JNlu5bju5_HTsjl9p1MtbKLPsySmIVzKADvaF6liteJexf5FQBp3PtCAb-BwUw0NKQ2ULPHGutZ7e1xIsNCqJZwjPJijjvrZ3zVFAOy00DhHx1BlZVpRtiGtuxukBRymhMvCzfaxknmV1xBJoAoomhYlzVVqiMdUQ4npTmE4o-C7mXW9LzrFvcYYutGnCtpL4NjeGoBp-uVWwklcvC1CQLGtX8vyUs-1vd0u-DAZsw_R1mECeqT6d-k_TIC6Ab_JbyJcYmuS25pp91LUgn0GklxWKOvBXo021nwoZTrmwe2930fIqiu3YptW3O8BCcL4hy2ulzH5tZG8Qg-2ujF-gv-MFPN-RgMWG33N8Fng6MIG3APq-9Q2IfsYFDY1W5Y_4slYA4iCA8h6rSi24QugzpU8-xGr7K6GD0duNnnh9HeUQK6C_tA76ydKTrZoVWglaewdRWHg.QkkQLhwjBM2HlAoWC79CHA";
 
 const NOW = new Date("2027-01-01T00:00:00Z");
 const mint = (
@@ -84,11 +107,25 @@ describe("sealLinkToken", () => {
 
   test("the address carries nothing readable, and each link has its own nonce", () => {
     const decoded = TOKEN.split(".").map((part) => Buffer.from(part, "base64url").toString("latin1"));
-    for (const word of ["Acme", "ana@example.com", "agentes-billing", "settings"]) {
+    for (const word of ["Acme", "ana@example.com", "agentes-billing", "settings", "Caio", "Cobrança"]) {
       expect([TOKEN, ...decoded].filter((text) => text.includes(word))).toEqual([]);
     }
     expect(sealLinkToken(SECRET, VECTOR)).not.toBe(sealLinkToken(SECRET, VECTOR));
     expect(() => openLinkToken("another-secret-of-thirty-two-characters", TOKEN)).toThrow();
+  });
+});
+
+describe("teamText", () => {
+  test("a name or role trimmed, cut to 80 UTF-16 units, with no space left where the cut lands and no half of a pair", () => {
+    // The cut lands just after a space: the space goes too.
+    expect(teamText(`${"a".repeat(79)} b`)).toBe("a".repeat(79));
+    expect(teamText(`  ${"a".repeat(78)}   bc  `)).toBe("a".repeat(78));
+    // The cut lands inside an emoji's surrogate pair: neither half stays, nor the space before it.
+    expect(teamText(`${"a".repeat(78)} 😀`)).toBe("a".repeat(78));
+    expect(teamText(`${"a".repeat(78)}😀`)).toBe(`${"a".repeat(78)}😀`);
+    expect(teamText("  Caio  ")).toBe("Caio");
+    expect(teamText("   ")).toBe("");
+    expect(teamText("x".repeat(81)).length).toBe(TEAM_TEXT_MAX);
   });
 });
 
@@ -101,6 +138,7 @@ describe("mintBillingLink", () => {
     const claims = claimsOf(link.url);
     expect(Object.keys(claims)).toEqual(Object.keys(VECTOR));
     expect(Object.keys(claims.usage)).toEqual(Object.keys(VECTOR.usage));
+    expect(Object.keys(claims.usage.month)).toEqual(Object.keys(VECTOR.usage.month));
     expect(claims).toEqual({
       aud: "agentes-billing",
       jti: expect.any(String),
@@ -115,7 +153,8 @@ describe("mintBillingLink", () => {
       locale: "pt-BR",
       from: "settings",
       return: `/org/${f.org.id}/settings/billing`,
-      // A new workspace: #general, its owner and @dev, nothing written yet.
+      // A new workspace: #general, its owner and @dev in the default look, nothing written yet, on day one of a month
+      // in its time zone (UTC: it set none).
       usage: {
         members: 1,
         agents: 1,
@@ -126,6 +165,17 @@ describe("mintBillingLink", () => {
         wikiPages: 0,
         issues: 0,
         since: Math.floor(f.org.createdAt.getTime() / 1000),
+        team: [{ name: "Dev", role: "Developer", look: { color: "sky", eyes: "round", accessory: null } }],
+        routines: 0,
+        month: {
+          start: NOW.getTime() / 1000,
+          days: [0],
+          messages: 0,
+          agentActions: 0,
+          files: 0,
+          wikiPages: 0,
+          issues: 0,
+        },
       },
     });
     // Single use on the billing side: every link is its own.
@@ -265,6 +315,343 @@ describe("mintBillingLink", () => {
       wikiPages: 1,
       issues: 1,
     });
+  });
+
+  test("the team: five agents at most, oldest first, the right hand left out; names and roles cut, looks as drawn", async () => {
+    const g = await setup({ rightHand: true });
+    try {
+      type Look = { color: string; eyes: string; accessory: string };
+      const add = async (name: string, role: string, at: string, appearance?: Look) => {
+        const made = await createAgent(
+          g.db,
+          g.owner.id,
+          g.org.id,
+          { name, handle: name.slice(0, 8).toLowerCase(), role, instructions: "Help.", credentialId: g.credential.id },
+          { model: "claude-sonnet-5-5" },
+        );
+        await g.db
+          .update(schema.agents)
+          .set({ createdAt: new Date(at), ...(appearance ? { appearance } : {}) })
+          .where(eq(schema.agents.id, made.id));
+        return made;
+      };
+      await g.db
+        .update(schema.agents)
+        .set({
+          createdAt: new Date("2026-11-01T10:00:00Z"),
+          appearance: { color: "teal", eyes: "wide", accessory: "headset" },
+        })
+        .where(eq(schema.agents.id, g.agent.id));
+      await add("Caio", "  Cobrança  ", "2026-11-01T11:00:00Z", { color: "amber", eyes: "happy", accessory: "hat" });
+      // Archived: not on the team any more.
+      const gone = await add("Lia", "Vendas", "2026-11-01T11:30:00Z");
+      await g.db.update(schema.agents).set({ archivedAt: new Date() }).where(eq(schema.agents.id, gone.id));
+      // A custom color, and glasses the app no longer draws: no accessory.
+      await add("Iara", "", "2026-11-01T12:00:00Z", { color: "#3f4fd6", eyes: "dots", accessory: "glasses" });
+      await add("N".repeat(100), `${"R".repeat(79)}😀`, "2026-11-01T13:00:00Z", {
+        color: "neon",
+        eyes: "lasers",
+        accessory: "none",
+      });
+      await add("Ada", "Bugs", "2026-11-01T14:00:00Z");
+      await add("Theo", "Sexto", "2026-11-01T15:00:00Z");
+      const claims = claimsOf(
+        (
+          await mintBillingLink(g.db, {
+            secret: SECRET,
+            baseUrl: "https://billing.example.com",
+            userId: g.owner.id,
+            orgId: g.org.id,
+            from: "settings",
+            now: NOW,
+          })
+        ).url,
+      );
+      expect(claims.usage.agents).toBe(6);
+      expect(claims.usage.team).toEqual([
+        { name: "Dev", role: "Developer", look: { color: "teal", eyes: "wide", accessory: "headset" } },
+        { name: "Caio", role: "Cobrança", look: { color: "amber", eyes: "happy", accessory: "hat" } },
+        { name: "Iara", role: null, look: { color: "#3f4fd6", eyes: "dots", accessory: null } },
+        // Cut to 80 UTF-16 units without splitting the emoji: the billing service's limit.
+        { name: "N".repeat(80), role: "R".repeat(79), look: { color: "sky", eyes: "round", accessory: null } },
+        { name: "Ada", role: "Bugs", look: { color: "sky", eyes: "round", accessory: null } },
+      ]);
+    } finally {
+      await g.close();
+    }
+  });
+
+  test("the team: agents made at the same moment come by name, then by id, on every link alike", async () => {
+    await f.db
+      .update(schema.agents)
+      .set({ createdAt: new Date("2026-10-01T10:00:00Z") })
+      .where(eq(schema.agents.id, f.agent.id));
+    const made: Awaited<ReturnType<typeof createAgent>>[] = [];
+    for (const [name, handle] of [
+      ["Nina", "nina"],
+      ["Caio", "caio"],
+      ["Iara", "iara"],
+      ["Caio", "caio-2"],
+    ] as const) {
+      made.push(
+        await createAgent(
+          f.db,
+          f.owner.id,
+          f.org.id,
+          { name, handle, role: handle, instructions: "Help.", credentialId: f.credential.id },
+          { model: "claude-sonnet-5-5" },
+        ),
+      );
+    }
+    // One moment for all four, as a team made before each insert had its own time.
+    const ids = made.map((a) => a.id);
+    await f.db
+      .update(schema.agents)
+      .set({ createdAt: new Date("2026-11-01T10:00:00Z") })
+      .where(inArray(schema.agents.id, ids));
+    const caios = made
+      .filter((a) => a.name === "Caio")
+      .sort((a, b) => (a.id < b.id ? -1 : 1))
+      .map((a) => a.role);
+    const team = claimsOf((await mint(f.owner.id)).url).usage.team.map((a) => `${a.name}/${a.role}`);
+    expect(team).toEqual(["Dev/Developer", ...caios.map((role) => `Caio/${role}`), "Iara/iara", "Nina/nina"]);
+  });
+
+  test("routines: the repeating ones that are on, as an agent's cap counts them", async () => {
+    const routine = (name: string, extra: Partial<typeof schema.routines.$inferInsert> = {}) =>
+      f.db.insert(schema.routines).values({
+        orgId: f.org.id,
+        agentId: f.agent.id,
+        name,
+        prompt: "Resumo",
+        target: { type: "channel", channelId: f.general.id },
+        triggerType: "schedule",
+        cron: "0 9 * * *",
+        ...extra,
+      });
+    await routine("daily summary");
+    await routine("new issue", { triggerType: "event", event: "issue.created", cron: null });
+    await routine("paused", { active: false, pausedReason: "failing" });
+    await routine("deleted", { deletedAt: new Date() });
+    await routine("one-off", { triggerType: "once", cron: null });
+    await routine("reminder", { target: { type: "conversation", reminder: true } });
+    await routine("widget", { target: { type: "widget", widgetId: crypto.randomUUID() } });
+    expect(claimsOf((await mint(f.owner.id)).url).usage.routines).toBe(2);
+  });
+
+  test("the month so far in the workspace's zone: messages per local day, agents' own lines, what was created", async () => {
+    // New York leaves daylight time on 1 November 2026: that day has 25 hours, and the 2nd starts at 05:00 UTC.
+    await f.db
+      .insert(schema.organizationSettings)
+      .values({ orgId: f.org.id, timezone: "America/New_York" })
+      .onConflictDoUpdate({ target: schema.organizationSettings.orgId, set: { timezone: "America/New_York" } });
+    const now = new Date("2026-11-24T17:00:00Z");
+    const ana = { type: "person" as const, userId: f.owner.id };
+    const dev = { type: "agent" as const, agentId: f.agent.id, runId: null, hop: 1, stretchId: null };
+    const say = (
+      at: string,
+      channelId = f.general.id,
+      author: Parameters<typeof insertMessage>[1]["author"] = ana,
+      extra: { threadId?: string; meta?: Record<string, unknown> } = {},
+    ) => insertMessage(f.db, { orgId: f.org.id, channelId, author, body: "Oi", createdAt: new Date(at), ...extra });
+
+    await say("2026-10-15T12:00:00Z"); // last month
+    await say("2026-11-01T03:30:00Z"); // 31 October, 23:30 in New York
+    const first = await say("2026-11-01T04:00:00Z"); // the 1st, 00:00
+    await say("2026-11-02T04:30:00Z", f.general.id, dev); // still the 1st, 23:30: an agent's own line
+    await say("2026-11-03T12:00:00Z", f.general.id, dev, { meta: { bodyCode: "brain_unavailable" } }); // the server's
+    const old = await createChannel(f.db, f.owner.id, f.org.id, { name: "old" });
+    await say("2026-11-05T15:00:00Z", old.id);
+    await archiveChannel(f.db, f.owner.id, f.org.id, old.id);
+    const ops = await createAgent(
+      f.db,
+      f.owner.id,
+      f.org.id,
+      { name: "Ops", handle: "ops", role: "Ops", instructions: "Watch.", credentialId: f.credential.id },
+      { model: "claude-sonnet-5-5" },
+    );
+    // Rooms no person reads.
+    await say("2026-11-10T12:00:00Z", (await openAgentDm(f.db, f.org.id, f.agent.id, ops.id)).id, dev);
+    await say("2026-11-11T12:00:00Z", (await openRoutineRoom(f.db, f.org.id, f.agent.id, crypto.randomUUID())).id, dev);
+    await say("2026-11-24T16:00:00Z", f.general.id, dev, { threadId: first.id }); // today, in a thread
+
+    const placed = (table: "artifacts" | "wiki_pages" | "issues", id: string, at: string) =>
+      f.db.execute(sql`update ${sql.identifier(table)} set created_at = ${at}::timestamptz where id = ${id}`);
+    const file = (name: string) =>
+      createFileArtifact(f.artifactDeps, ana, f.org.id, { title: name, name, bytes: new Uint8Array(1) });
+    await placed("artifacts", (await file("this-month.txt")).id, "2026-11-10T12:00:00Z");
+    await placed("artifacts", (await file("last-month.txt")).id, "2026-10-30T12:00:00Z");
+    const trashed = await file("trashed.txt");
+    await placed("artifacts", trashed.id, "2026-11-12T12:00:00Z");
+    await deleteArtifact(f.artifactDeps, f.owner.id, f.org.id, trashed.id);
+    const wiki = { db: f.db };
+    await placed(
+      "wiki_pages",
+      (await createWikiPage(wiki, ana, f.org.id, { title: "Glossário" })).id,
+      "2026-11-05T12:00:00Z",
+    );
+    const draft = await createWikiPage(wiki, ana, f.org.id, { title: "Rascunho" });
+    await placed("wiki_pages", draft.id, "2026-11-06T12:00:00Z");
+    await deleteWikiPage(wiki, ana, f.org.id, draft.id);
+    const tasks = { db: f.db };
+    await placed("issues", (await createIssue(tasks, ana, f.org.id, { title: "Lançar" })).id, "2026-11-06T12:00:00Z");
+    await placed("issues", (await createIssue(tasks, ana, f.org.id, { title: "Antes" })).id, "2026-10-20T12:00:00Z");
+    const dropped = await createIssue(tasks, ana, f.org.id, { title: "Esquecer" });
+    await placed("issues", dropped.id, "2026-11-07T12:00:00Z");
+    await updateIssue(tasks, ana, f.org.id, dropped.id, { status: "canceled" });
+
+    const usage = claimsOf(
+      (
+        await mintBillingLink(f.db, {
+          secret: SECRET,
+          baseUrl: "https://billing.example.com",
+          userId: f.owner.id,
+          orgId: f.org.id,
+          from: "settings",
+          now,
+        })
+      ).url,
+    ).usage;
+    const days = Array.from({ length: 24 }, () => 0);
+    days[0] = 2;
+    days[2] = 1;
+    days[4] = 1;
+    days[23] = 1;
+    expect(usage.month).toEqual({
+      start: Date.UTC(2026, 10, 1, 4) / 1000,
+      days,
+      messages: 5,
+      agentActions: 2,
+      files: 1,
+      wikiPages: 1,
+      issues: 1,
+    });
+    // The same counts in all: every message people can read, the month's among them.
+    expect(usage).toMatchObject({ messages: 7, files: 2, wikiPages: 1, issues: 2 });
+  });
+
+  test("the lines the server posts as an agent count as messages, never as the team's own: its hello first", async () => {
+    const g = await setup({ rightHand: true });
+    try {
+      // A clinic template's agent beside the right hand: each says hi in #general with no model call (ADR 0162).
+      const nina = await createAgent(
+        g.db,
+        g.owner.id,
+        g.org.id,
+        { name: "Nina", handle: "nina", role: "Agenda", instructions: "Help.", credentialId: g.credential.id },
+        { model: "claude-sonnet-5-5" },
+      );
+      const [lodi] = await g.db
+        .select({ id: schema.agents.id })
+        .from(schema.agents)
+        .where(and(eq(schema.agents.orgId, g.org.id), eq(schema.agents.builtin, "right_hand")));
+      for (const agentId of [lodi?.id, nina.id])
+        await sayTeamHello({ db: g.db }, g.org.id, { agentId, userId: g.owner.id, how: "paid" });
+      // Into a month of the past, which nothing else this workspace wrote reaches.
+      const hellos = await g.db.execute(
+        sql`update messages set created_at = '2026-10-15T12:00:00Z' where org_id = ${g.org.id}
+          and meta->>'greeting' = 'true' returning id`,
+      );
+      expect(rowsOf(hellos)).toHaveLength(2);
+      const dev = { type: "agent" as const, agentId: g.agent.id, runId: null, hop: 1, stretchId: null };
+      const say = (meta: Record<string, unknown>, at = "2026-10-16T12:00:00Z") =>
+        insertMessage(g.db, {
+          orgId: g.org.id,
+          channelId: g.general.id,
+          author: dev,
+          body: "Oi",
+          meta,
+          createdAt: new Date(at),
+        });
+      // A reminder's line, a device wait's card, a task's and a file's hidden first message, the GIF after a reply.
+      for (const meta of [
+        { reminder: true },
+        { deviceWait: { id: crypto.randomUUID(), state: "waiting" } },
+        { taskConversation: { number: 1 } },
+        { fileConversation: { kind: "doc" } },
+        { mediaAfter: crypto.randomUUID() },
+      ])
+        await say(meta);
+      const monthOf = async () =>
+        claimsOf(
+          (
+            await mintBillingLink(g.db, {
+              secret: SECRET,
+              baseUrl: "https://billing.example.com",
+              userId: g.owner.id,
+              orgId: g.org.id,
+              from: "settings",
+              now: new Date("2026-10-20T12:00:00Z"),
+            })
+          ).url,
+        ).usage.month;
+      expect(await monthOf()).toMatchObject({ messages: 7, agentActions: 0 });
+      // An agent's own line is the team's work.
+      await say({});
+      expect(await monthOf()).toMatchObject({ messages: 8, agentActions: 1 });
+    } finally {
+      await g.close();
+    }
+  });
+
+  test("the agents' own lines count up to MONTH_ACTIONS_MAX, and the reading stops there; every message still counts", async () => {
+    const over = MONTH_ACTIONS_MAX + 1;
+    // A month of the past, which nothing else this workspace wrote reaches.
+    await f.db.execute(sql`insert into messages (id, org_id, channel_id, author_type, author_agent_id, body, created_at)
+      select gen_random_uuid(), ${f.org.id}::uuid, ${f.general.id}::uuid, 'agent'::author_type, ${f.agent.id}::uuid, 'Oi',
+        timestamptz '2026-09-10T12:00:00Z' + i * interval '1 second'
+      from generate_series(1, ${over}) i`);
+    const month = claimsOf(
+      (
+        await mintBillingLink(f.db, {
+          secret: SECRET,
+          baseUrl: "https://billing.example.com",
+          userId: f.owner.id,
+          orgId: f.org.id,
+          from: "settings",
+          now: new Date("2026-09-20T12:00:00Z"),
+        })
+      ).url,
+    ).usage.month;
+    expect(month).toMatchObject({ messages: over, agentActions: MONTH_ACTIONS_MAX });
+    expect(month.days[9]).toBe(over);
+  });
+
+  test("the link stays short enough for any address bar and proxy, with the longest team and month", async () => {
+    await f.db.update(schema.agents).set({ archivedAt: new Date() }).where(eq(schema.agents.id, f.agent.id));
+    for (const [i, name] of ["Caio", "Iara", "Nina", "Lodi", "Ada"].entries()) {
+      const made = await createAgent(
+        f.db,
+        f.owner.id,
+        f.org.id,
+        {
+          name: `${name} ${"界".repeat(120)}`,
+          handle: `${name.toLowerCase()}-${i}`,
+          role: "務".repeat(120),
+          instructions: "Help.",
+          credentialId: f.credential.id,
+        },
+        { model: "claude-sonnet-5-5" },
+      );
+      await f.db
+        .update(schema.agents)
+        .set({ appearance: { color: "#3f4fd6", eyes: "sleepy", accessory: "headphones" } })
+        .where(eq(schema.agents.id, made.id));
+    }
+    const link = await mintBillingLink(f.db, {
+      secret: SECRET,
+      baseUrl: "https://billing.example.com",
+      userId: f.owner.id,
+      orgId: f.org.id,
+      from: "settings",
+      now: new Date("2026-12-31T23:00:00Z"),
+    });
+    const usage = claimsOf(link.url).usage;
+    expect(usage.team).toHaveLength(5);
+    expect(usage.team.every((agent) => agent.name.length === 80 && agent.role?.length === 80)).toBe(true);
+    expect(usage.month.days).toHaveLength(31);
+    // Well under the 8 KB request line most servers and proxies take.
+    expect(link.url.length).toBeLessThan(6000);
   });
 
   test("members and strangers never get one; a held workspace does, a suspended one doesn't", async () => {
