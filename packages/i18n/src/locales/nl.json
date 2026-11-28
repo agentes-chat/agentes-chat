@@ -16613,7 +16613,8 @@
       "invalid": "Dit antwoord heeft niet het gevraagde formaat. Kopieer het verzoek opnieuw en plak het hele antwoord van je AI.",
       "picking": "Deze agent wordt al gemaakt. Wacht even.",
       "rateLimited": "Te veel pogingen voor nu. Probeer het zo opnieuw.",
-      "kept": "Je eerste agent is al gemaakt, dus deze is niet gemaakt."
+      "kept": "Je eerste agent is al gemaakt, dus deze is niet gemaakt.",
+      "failed": "De agent is niet gemaakt. Probeer het opnieuw."
     },
     "proposal": {
       "changed": "Dit is gewijzigd nadat het werd toegepast: pas het met de hand aan.",

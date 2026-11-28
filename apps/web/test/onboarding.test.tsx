@@ -778,6 +778,24 @@ describe("one first agent, whatever way in (ADR 0264 addendum)", () => {
     expect(screen().queryByRole("button", { name: "Voltar" })).toBeNull();
     expect(calls(state, "firstAgents.start")).toEqual([]);
   });
+
+  test("a name and zone that don't save: the dialog stays with what was typed, and a toast says why", async () => {
+    const state = settingUp();
+    const api = createFakeApi(state);
+    api.orgs.updateSettings = async () => {
+      throw new ApiError(500, "internal_error", "Something went wrong on our side");
+    };
+    await renderApp("/onboarding", { api });
+    await settle(14);
+    await click(button("Trocar"), 4);
+    const dialog = screen().getByRole("dialog", { name: "Nome e fuso horário" });
+    const name = within(dialog).getByLabelText("Nome") as HTMLInputElement;
+    await act(async () => fireEvent.change(name, { target: { value: "Acme Clínicas" } }));
+    await click(within(dialog).getByRole("button", { name: "Salvar" }), 12);
+    expect(screen().getByRole("dialog", { name: "Nome e fuso horário" })).toBeTruthy();
+    expect(name.value).toBe("Acme Clínicas");
+    expect(document.querySelector(".ac-toasts")?.textContent?.trim()).toBeTruthy();
+  });
 });
 
 describe("meeting the first agent and connecting its apps (ADR 0264, ADR 0242)", () => {
@@ -1161,15 +1179,43 @@ describe("the plan (agentes.chat Cloud, ADR 0079)", () => {
     ]);
     // Waiting for the plan even though the agents think.
     expect(box().querySelector(".onb-next__delivery")?.hasAttribute("data-waiting")).toBe(true);
-    expect(calls(state, "orgs.saveOnboarding").map((c) => c.args)).toEqual([[ORG_ID, { step: "computer" }]]);
+    // Kept as past the plan and the AI steps, which a workspace waiting for its plan skips.
+    expect(calls(state, "orgs.saveOnboarding").map((c) => c.args)).toEqual([
+      [ORG_ID, { step: "computer" }],
+      [ORG_ID, { step: "ai" }],
+    ]);
     await click(button(/^Conhecer o workspace/), 20);
     expect(calls(state, "orgs.saveOnboarding").map((c) => c.args)).toEqual([
       [ORG_ID, { step: "computer" }],
+      [ORG_ID, { step: "ai" }],
       [ORG_ID, { finished: true }],
     ]);
     // Into the right hand's DM, whose card leads with the plan.
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/dm/agent/${LODI_ID}`);
     expect(landed.at(-1)?.arrival).toBe("beta");
+  });
+});
+
+describe("the plan left for later, after a reload", () => {
+  test("Not now, then a reload: the photo again, its plan still to sign, never the plan step", async () => {
+    plans(PLANS);
+    const state = settingUp({ held: true, step: "agents", area: "support" });
+    await open(state);
+    await click(button("Agora não"), 6);
+    await click(
+      within(screen().getByRole("dialog", { name: "Continuar sem um plano?" })).getByRole("button", {
+        name: "Continuar sem plano",
+      }),
+      20,
+    );
+    expect(heading()).toBe(TEAM_PHOTO);
+    cleanup();
+    const { router } = await open(state);
+    expect(heading()).toBe(TEAM_PHOTO);
+    expect(photoRows()[0]).toEqual({ text: "1Assinar o plano Equipe", done: false, working: false });
+    // Its button still opens the right hand's DM, the plan waiting there.
+    await click(button(/^Conhecer o workspace/), 20);
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/dm/agent/${LODI_ID}`);
   });
 });
 

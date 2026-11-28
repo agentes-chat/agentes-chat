@@ -263,9 +263,11 @@ describe("Connect an AI, after the first agent", () => {
     const asked = arrivals(router);
     await click(button(/^Conhecer o workspace/), 16);
     await settle(8);
-    // The AI step was never answered: only the plan step shown, then finished.
+    // The AI step was never shown: the plan step shown, "Not now" kept as past both (a reload stays on the photo), then
+    // finished.
     expect(calls(state, "orgs.saveOnboarding").map((c) => c.args)).toEqual([
       [ORG_ID, { step: "computer" }],
+      [ORG_ID, { step: "ai" }],
       [ORG_ID, { finished: true }],
     ]);
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/dm/agent/${LODI_ID}`);

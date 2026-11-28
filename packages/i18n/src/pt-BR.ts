@@ -17035,6 +17035,7 @@ export const ptBR = {
       picking: "Esse agente já está sendo criado. Espere um instante.",
       rateLimited: "Muitas tentativas por agora. Tente de novo daqui a pouco.",
       kept: "O seu primeiro agente já foi criado, então este não foi.",
+      failed: "O agente não foi criado. Tente de novo.",
     },
     /** Undo on a change an agent applied (ADR 0219). */
     proposal: {

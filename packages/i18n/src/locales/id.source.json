@@ -40590,6 +40590,9 @@
   "errors.firstAgents.kept": {
     "value": "Your first agent is already made, so this one wasn't created."
   },
+  "errors.firstAgents.failed": {
+    "value": "The agent wasn't created. Try again."
+  },
   "errors.proposal.changed": {
     "value": "This changed after it was applied: adjust it by hand."
   },

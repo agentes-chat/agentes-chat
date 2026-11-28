@@ -114,11 +114,23 @@ describe("the web onboarding's rail (ADR 0162, amended by ADR 0264's addendum of
 
   test('"Not now" on the plan: the photo next, the plan still waiting', () => {
     const atPlan = { agent: true, standing: payment, billingUrl: BILLING, funnel: { passed: "computer" as const } };
-    expect(web(atPlan)).toMatchObject({ at: "plan", waitsForPlan: true });
+    expect(web(atPlan)).toMatchObject({ at: "plan", waitsForPlan: true, planLater: false });
     expect(web({ ...atPlan, planLater: true })).toMatchObject({
       at: "celebrate",
       step: "celebrate",
       waitsForPlan: true,
+      planLater: true,
+    });
+    // Saved ("ai" while the plan waits): a reload keeps the photo, the plan still to do.
+    expect(web({ ...atPlan, funnel: { passed: "ai" } })).toMatchObject({
+      at: "celebrate",
+      waitsForPlan: true,
+      planLater: true,
+    });
+    // Paid since: the photo, the plan no longer left for later.
+    expect(web({ agent: true, billingUrl: BILLING, funnel: { passed: "ai" } })).toMatchObject({
+      at: "celebrate",
+      planLater: false,
     });
   });
 

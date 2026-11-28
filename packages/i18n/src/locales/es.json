@@ -17024,7 +17024,8 @@
       "invalid": "Esta respuesta no tiene el formato que pedimos. Copia el pedido otra vez y pega la respuesta completa de tu IA.",
       "picking": "Este agente ya se está creando. Espera un momento.",
       "rateLimited": "Demasiados intentos por ahora. Inténtalo de nuevo en un rato.",
-      "kept": "Tu primer agente ya está creado, así que este no se creó."
+      "kept": "Tu primer agente ya está creado, así que este no se creó.",
+      "failed": "El agente no se creó. Inténtalo de nuevo."
     },
     "proposal": {
       "changed": "Esto cambió después de aplicarse: ajústalo a mano.",

@@ -16469,7 +16469,8 @@
       "invalid": "Bu yanıt istediğimiz biçimde değil. İsteği yeniden kopyalayın ve yapay zekanızın yanıtının tamamını yapıştırın.",
       "picking": "Bu ajan zaten oluşturuluyor. Biraz bekleyin.",
       "rateLimited": "Şimdilik çok fazla deneme yapıldı. Birazdan yeniden deneyin.",
-      "kept": "İlk ajanınız zaten oluşturuldu, bu yüzden bu ajan oluşturulmadı."
+      "kept": "İlk ajanınız zaten oluşturuldu, bu yüzden bu ajan oluşturulmadı.",
+      "failed": "Ajan oluşturulmadı. Tekrar deneyin."
     },
     "proposal": {
       "changed": "Bu, uygulandıktan sonra değişti: elle düzenleyin.",

@@ -1,5 +1,6 @@
 import type { FirstAgents } from "@agenteschat/client";
 import type { AppClient } from "@agenteschat/client/lib/app-clients";
+import { errorText } from "@agenteschat/client/lib/errors";
 import { areasFor, FIRST_AREAS, type FirstArea } from "@agenteschat/client/lib/first-areas";
 import { lowerFirst } from "@agenteschat/client/lib/format";
 import type { ImportCard } from "@agenteschat/client/lib/import/flow";
@@ -26,6 +27,7 @@ import { ConnectorIcon } from "@/components/ConnectorIcon";
 import { ZonePicker } from "@/components/ZoneSelect";
 import { CARD_MARK } from "@/lib/import-marks";
 import { useTheme } from "@/lib/theme";
+import { useToast } from "@/lib/toast";
 import { ASK_CLIENTS, type AskVariant, AskYourAi } from "./AskStep";
 import { AREA_ICON, useAreaApps } from "./areas";
 import { AppWall, Box, type ShellFace } from "./Shell";
@@ -402,6 +404,7 @@ function PlaceDialog({
   onSave: (next: { name: string; timezone: string }) => Promise<void>;
 }) {
   const { t } = useTranslation();
+  const toast = useToast();
   const [draft, setDraft] = useState(name);
   const [tz, setTz] = useState(zone);
   const [saving, setSaving] = useState(false);
@@ -456,9 +459,10 @@ function PlaceDialog({
           loading={saving}
           onClick={() => {
             setSaving(true);
+            // A save that failed keeps the dialog open with what was typed, and says why.
             onSave({ name: draft.trim(), timezone: tz })
               .then(onClose)
-              .catch(() => undefined)
+              .catch((error: unknown) => toast.show(errorText(t, error), "error"))
               .finally(() => setSaving(false));
           }}
         >

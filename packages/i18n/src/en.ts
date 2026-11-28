@@ -17069,6 +17069,7 @@ export const en = {
       rateLimited: "Too many tries for now. Try again in a little while.",
       /** Another first agent is already kept and this request doesn't take its place (ADR 0264 addendum). */
       kept: "Your first agent is already made, so this one wasn't created.",
+      failed: "The agent wasn't created. Try again.",
     },
     /** Undo on a change an agent applied (ADR 0219). */
     proposal: {

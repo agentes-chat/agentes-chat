@@ -17670,7 +17670,8 @@
       "invalid": "Ta odpowiedź nie ma formatu, o który prosiliśmy. Skopiuj prośbę ponownie i wklej całą odpowiedź swojej AI.",
       "picking": "Ten agent już powstaje. Poczekaj chwilę.",
       "rateLimited": "Za dużo prób na teraz. Spróbuj ponownie za chwilę.",
-      "kept": "Twój pierwszy agent już powstał, więc ten nie został utworzony."
+      "kept": "Twój pierwszy agent już powstał, więc ten nie został utworzony.",
+      "failed": "Agent nie został utworzony. Spróbuj ponownie."
     },
     "proposal": {
       "changed": "To zmieniło się po zastosowaniu: popraw to ręcznie.",

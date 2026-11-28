@@ -38,8 +38,9 @@ export function presetInput(t: TFunction, preset: Preset): AgentInput {
  * The onboarding's steps, in order (the server's `ONBOARDING_STEPS`, `packages/db/src/schema/tenancy.ts`, keeps the
  * furthest one reached).
  * The web's rail reads them back as answers with no data of their own (`RailFunnel`, ADR 0162): "agents" for the agent
- * step's Continue, "computer" for a plan step that was shown and "ai" for the AI step left for later. "context",
- * "import" and "team" are the phone's and older onboardings'.
+ * step's Continue, "computer" for a plan step that was shown and "ai" for the AI step answered, or for "Not now" on the
+ * plan (past both: a workspace waiting for its plan has no AI step). "context", "import" and "team" are the phone's and
+ * older onboardings'.
  */
 export const ONBOARDING_STEPS = [
   { id: "workspace", optional: false },
@@ -124,13 +125,15 @@ export function railState(f: {
   armed?: boolean;
   picked: RailStep | null;
   funnel: RailFunnel;
-  /** "Not now" on the plan step, in this visit. */
+  /** "Not now" on the plan step, in this visit (once saved, the stored "ai" says it too). */
   planLater?: boolean;
 }) {
   const waitsForPlan = f.orgId ? billingHoldOf(f.standing) === "payment" : Boolean(f.billingUrl);
   const { funnel } = f;
   const passed = stepIndex(funnel.passed ?? "workspace");
   const computer = stepIndex("computer");
+  // "Not now", confirmed and saved: past the plan and the AI steps while the plan waits, so a reload keeps the photo.
+  const planLater = f.planLater === true || (waitsForPlan && passed >= stepIndex("ai"));
   // A plan step shown once stays on the rail, answered, after paying; a server that never held the workspace has none.
   // Past it ("ai"), only a server with billing showed it: a self-hosted one keeps none.
   const hasPlanStep = waitsForPlan || passed === computer || (passed > computer && Boolean(f.billingUrl));
@@ -139,7 +142,7 @@ export function railState(f: {
     agent: f.agent,
     agentSeen: passed >= stepIndex("agents") || f.armed === true,
     waitsForPlan,
-    planLater: f.planLater === true,
+    planLater,
     aiSeen: passed >= stepIndex("ai"),
   });
   const reached = steps.indexOf(at);
@@ -154,6 +157,8 @@ export function railState(f: {
     step: step ?? "area",
     waitsForPlan,
     hasPlanStep,
+    /** The plan left for later ("Not now"): the photo with it still to do, into the right hand's DM. */
+    planLater,
     /** Every agent thinks (the AI step answered by its data, not left for later). */
     thinks: funnel.thinks === true,
     /** The AI step was left for later ("Continue without an AI"). */

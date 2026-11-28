@@ -312,6 +312,13 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
       setPicked(null);
     },
   });
+  // "Not now" on the plan, confirmed: kept as "ai" (past the plan and the AI steps while the plan waits), so a reload
+  // stays on the photo.
+  const planSkipped = useMutation({
+    meta: { silent: true },
+    mutationFn: (id: string) => api.orgs.saveOnboarding(id, { step: "ai" }),
+    onSuccess: (saved, id) => remember(id, saved),
+  });
   // The AI step answered (an AI connected, Continue, or "Continue without an AI"): kept as "ai", so a reload resumes on
   // the photo.
   const aiAnswered = useMutation({
@@ -883,6 +890,7 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
             onSkip={() => {
               setPlanLater(true);
               setPicked(null);
+              planSkipped.mutate(orgId);
             }}
             eyebrow={stepLine}
           />
@@ -905,12 +913,12 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
             }
             plan={hasPlanStep ? (boughtPlan.offer?.name ?? offer?.name ?? "") : null}
             // Left for later: the plan's row still to do, the first delivery waiting for it.
-            planWaiting={planLater && held}
+            planWaiting={rail.planLater && held}
             personal={personalNow}
             ai={rail.thinks ? (aiLabel ?? "") : null}
             leaving={open.isPending}
             // Without a plan, the right hand's DM, whose card leads with the plan; else the first agent's.
-            onNext={() => open.mutate(planLater && held ? "skipped" : "done")}
+            onNext={() => open.mutate(rail.planLater && held ? "skipped" : "done")}
           />
         ),
       };

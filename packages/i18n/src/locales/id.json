@@ -15996,7 +15996,8 @@
       "invalid": "Jawaban ini tidak sesuai format yang kami minta. Salin lagi permintaannya dan tempel seluruh jawaban AI-mu.",
       "picking": "Agen ini sedang dibuat. Tunggu sebentar.",
       "rateLimited": "Terlalu banyak percobaan untuk saat ini. Coba lagi sebentar lagi.",
-      "kept": "Agen pertamamu sudah dibuat, jadi agen ini tidak dibuat."
+      "kept": "Agen pertamamu sudah dibuat, jadi agen ini tidak dibuat.",
+      "failed": "Agen tidak dibuat. Coba lagi."
     },
     "proposal": {
       "changed": "Ini berubah setelah diterapkan: sesuaikan secara manual.",
