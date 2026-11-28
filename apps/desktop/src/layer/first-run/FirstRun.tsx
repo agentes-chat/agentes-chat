@@ -2,9 +2,9 @@
  * The first run, on the main window's app layer (ADR 0265 §2, §3): sign in to agentes.chat first, with the other ways
  * under it (running agentes.chat free on this computer in three steps, a company's server by its address, installing
  * one for a team) and a server found on this computer or the Tailscale network on top. A connect link
- * (`agenteschat://connect`) opens here too: the server in large type, nothing changes before Open. Choosing a server
- * loads it in the main window and the layer steps aside once the site painted. A pair link asks to connect this
- * computer instead: its own sheet (the `pairLink` route).
+ * (`agenteschat://connect`) opens here too, as a sheet: the server as its title, nothing changes before Open.
+ * Choosing a server loads it in the main window and the layer steps aside once the site painted. A pair link asks to
+ * connect this computer instead: its own sheet (the `pairLink` route).
  */
 import { CLOUD_SERVER, type ConnectLink, parseConnectLink } from "@agenteschat/client/lib/server";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -14,8 +14,10 @@ import type { LocalServerStatus } from "../../control/local-server";
 import { parsePairLink } from "../../control/pair";
 import { serverName } from "../../control/server";
 import { devFirstStart } from "../../dev/first-run-start";
+import { SheetFrame } from "../sheets/SheetFrame";
 import { Connect, Install, LinkSheet } from "./Company";
 import { type ServerWays, useDiscovery } from "./discovery";
+import { FirstSky } from "./Flow";
 import { RunHere } from "./RunHere";
 import { Welcome } from "./Welcome";
 import "./first-run.css";
@@ -271,19 +273,32 @@ export function FirstRun({
       return (
         <RunHere start={dev} onBack={back} onUse={finish} onConfirm={confirm} onLink={openLink} onBusy={setBusy} />
       );
-    case "link":
-      if (link)
-        return (
-          <LinkSheet
-            view={link.view}
-            own={own}
-            onRetry={() => void (link.raw ? openLink(link.raw) : link.parsed && confirm(link.parsed.server))}
-            onAccept={(server, page) => void finish(server, page)}
-            onCancel={cancelLink}
-          />
-        );
-      // Nothing to show yet (the link is being read): the window stays empty for that moment.
-      return <div className="dk-first" />;
+    case "link": {
+      if (!link)
+        // Nothing to show yet (the link is being read): the window stays empty for that moment.
+        return <div className="dk-first" />;
+      const sheet = (
+        <LinkSheet
+          view={link.view}
+          own={own}
+          onRetry={() => void (link.raw ? openLink(link.raw) : link.parsed && confirm(link.parsed.server))}
+          onAccept={(server, page) => void finish(server, page)}
+          onCancel={cancelLink}
+        />
+      );
+      // Its own route sits in the layer's sheet card already; in the first run it takes the same card, on the first
+      // run's sky as every step.
+      return linkOnly ? (
+        sheet
+      ) : (
+        <div className="dk-first">
+          <FirstSky />
+          <SheetFrame mode="full" mac={host.platform === "mac"}>
+            {sheet}
+          </SheetFrame>
+        </div>
+      );
+    }
     default:
       return (
         <Welcome

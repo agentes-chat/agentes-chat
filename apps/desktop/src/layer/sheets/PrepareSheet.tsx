@@ -16,7 +16,7 @@ import { useHost } from "../../app";
 import { allDone, type Grants, MAC_PERMISSIONS, type MacPermission, viaSettings } from "../../control/permissions";
 import { useMacGrants } from "../../ui/permissions";
 import { PrefRow } from "../../ui/settings";
-import { Sheet, SheetWaiting } from "./SheetFrame";
+import { Sheet, SheetIcon, SheetWaiting } from "./SheetFrame";
 
 const ICONS: Record<MacPermission, IconName> = { notifications: "bell", screen: "eye", disk: "drive" };
 
@@ -75,8 +75,8 @@ export function PrepareSheet({
       lead={t("desktop.sheets.prepare.lead")}
       help={
         tookEffect ? (
-          <span className="dk-sh__took" aria-live="polite">
-            <Icon name="check" size={14} />
+          <span className="dk-sh__took ac-iconline" aria-live="polite">
+            <Icon name="check" size={16} />
             <span>{t("desktop.prepare.tookEffect")}</span>
           </span>
         ) : (
@@ -85,11 +85,7 @@ export function PrepareSheet({
       }
       acts={
         <>
-          {!(grants && allDone(grants)) && (
-            <Button variant="ghost" onClick={finish}>
-              {t("desktop.sheets.prepare.later")}
-            </Button>
-          )}
+          {!(grants && allDone(grants)) && <Button onClick={finish}>{t("desktop.sheets.prepare.later")}</Button>}
           <Button variant="primary" onClick={finish}>
             {t("desktop.common.continue")}
           </Button>
@@ -107,14 +103,9 @@ export function PrepareSheet({
           return (
             <PrefRow
               key={p}
-              lead={
-                <span className="dk-logo dk-logo--soft">
-                  <Icon name={ICONS[p]} size={16} />
-                </span>
-              }
+              lead={<SheetIcon icon={ICONS[p]} />}
               title={title}
               desc={t(`desktop.sheets.prepare.${p}Desc`)}
-              top={waiting === p}
               end={
                 grant === "on" ? (
                   <span className="dk-sh__on">
@@ -122,9 +113,9 @@ export function PrepareSheet({
                     {t("desktop.prepare.on")}
                   </span>
                 ) : grant ? (
+                  // Bordered: Continue is the sheet's one primary button.
                   <Button
                     size="sm"
-                    variant="primary"
                     loading={pending === p}
                     disabled={pending !== null && pending !== p}
                     onClick={() => allow(p, grant)}

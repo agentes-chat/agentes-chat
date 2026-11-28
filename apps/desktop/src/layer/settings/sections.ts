@@ -1,5 +1,5 @@
 /**
- * Settings › This computer's sections (ADR 0265 §7): which ones this computer has now, and the one a route opens on.
+ * Settings › This computer's sections (ADR 0265 §6): which ones this computer has now, and the one a route opens on.
  * A route names a section, a row (`focus`: the site's and the popover's ways in), or both: a row decides the section
  * it lives in, so an older name ("updates" on the Overview) still lands on its row. Pure, so it is tested without the
  * app.

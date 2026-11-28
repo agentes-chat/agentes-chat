@@ -33,11 +33,13 @@ export function NowList({ homes, paused, now }: { homes: Home[]; paused: boolean
     const someone = homes.flatMap((h) => h.status?.agents ?? [])[0];
     return (
       <div className="dk-empty">
-        {someone ? (
-          <AgentFace agent={someone} size="sm" state={paused ? "waiting" : "idle"} />
-        ) : (
-          <BrandFace size="sm" />
-        )}
+        <span className="dk-tray__lead">
+          {someone ? (
+            <AgentFace agent={someone} size="sm" state={paused ? "waiting" : "idle"} />
+          ) : (
+            <BrandFace size="sm" />
+          )}
+        </span>
         <span className="dk-empty__text">
           <b>{paused ? t("desktop.tray.pausedEmptyTitle") : t("desktop.tray.calmTitle")}</b>
           <span>{paused ? t("desktop.tray.pausedEmptyBody") : t("desktop.tray.calmBody")}</span>
@@ -68,7 +70,9 @@ function AgentRow({ row, now }: { row: Row<Home>; now: number }) {
   const what = saidText(t, job, (iso) => clock(iso, i18n.language, new Date()));
   return (
     <div className="dk-now__row">
-      {agent ? <AgentFace agent={agent} size="sm" state={stateOf(job)} /> : <BrandFace size="sm" state="writing" />}
+      <span className="dk-tray__lead">
+        {agent ? <AgentFace agent={agent} size="sm" state={stateOf(job)} /> : <BrandFace size="sm" state="writing" />}
+      </span>
       <span className="dk-now__text">
         <span className="dk-now__what">
           {agent ? (
@@ -140,14 +144,17 @@ function BrowserRow({ home, browser }: { home: Home; browser: ControlBrowser }) 
   if (confirm) {
     return (
       <div className="dk-job dk-job--browser dk-job--confirm">
+        <span className="dk-job__av">
+          <AgentFace agent={agent} size="sm" state="waiting" />
+        </span>
         <span className="dk-job__text">
           <b>
             <span>{t("desktop.tray.browser.stopAsk", { agent: agent.name })}</span>
           </b>
           <small>{t("desktop.tray.browser.stopHint")}</small>
         </span>
-        <span className="dk-job__acts">
-          <Button size="sm" variant="ghost" disabled={busy} onClick={() => setConfirm(false)}>
+        <span className="dk-job__acts ac-acts">
+          <Button size="sm" disabled={busy} onClick={() => setConfirm(false)}>
             {t("desktop.common.cancel")}
           </Button>
           <Button size="sm" variant="primary" disabled={busy} onClick={() => void stop()}>
@@ -164,7 +171,8 @@ function BrowserRow({ home, browser }: { home: Home; browser: ControlBrowser }) 
       </span>
       <span className="dk-job__text">
         <b>
-          <span>
+          {/* Asking for help: its words in the colour of what needs the person, never a band behind the row. */}
+          <span data-tone={state.kind === "needs" ? "warn" : undefined}>
             {state.kind === "needs"
               ? t("desktop.tray.browser.needs", { agent: agent.name })
               : t("desktop.tray.browser.title", { agent: agent.name })}
@@ -175,31 +183,29 @@ function BrowserRow({ home, browser }: { home: Home; browser: ControlBrowser }) 
           <span className="dk-job__detail">{detail}</span>
         </small>
       </span>
-      <span className="dk-job__acts">
+      <span className="dk-job__acts ac-acts">
         {state.kind === "needs" ? (
-          <Button size="sm" variant="primary" onClick={() => open(state.link)}>
+          <Button size="sm" onClick={() => open(state.link)}>
             {t("desktop.tray.browser.open")}
           </Button>
         ) : (
-          <button
-            type="button"
-            className="dk-iconbtn"
+          <Button
+            size="sm"
+            variant="ghost"
+            icon="external"
             title={t("desktop.tray.browser.see")}
             aria-label={t("desktop.tray.browser.see")}
             onClick={() => open(state.link)}
-          >
-            <Icon name="external" size={14} />
-          </button>
+          />
         )}
-        <button
-          type="button"
-          className="dk-iconbtn"
+        <Button
+          size="sm"
+          variant="ghost"
+          icon="stop"
           title={t("desktop.tray.browser.stop")}
           aria-label={t("desktop.tray.browser.stop")}
           onClick={() => setConfirm(true)}
-        >
-          <Icon name="stop" size={14} />
-        </button>
+        />
       </span>
     </div>
   );
@@ -241,17 +247,16 @@ function AppUseRow({ home, use }: { home: Home; use: ControlAppUse }) {
           <span className="dk-job__detail">{t("desktop.tray.apps.detail")}</span>
         </small>
       </span>
-      <span className="dk-job__acts">
-        <button
-          type="button"
-          className="dk-iconbtn"
+      <span className="dk-job__acts ac-acts">
+        <Button
+          size="sm"
+          variant="ghost"
+          icon="stop"
           disabled={busy}
           title={t("desktop.tray.apps.stop")}
           aria-label={t("desktop.tray.apps.stop")}
           onClick={() => void stop()}
-        >
-          <Icon name="stop" size={14} />
-        </button>
+        />
       </span>
     </div>
   );

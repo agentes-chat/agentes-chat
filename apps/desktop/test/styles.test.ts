@@ -29,20 +29,47 @@ describe("equal side padding", () => {
   });
 });
 
+/** The declarations of the rule whose selector list holds `selector` (comments left out). */
+const ruleWith = (css: string) => (selector: string) =>
+  css
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .split("}")
+    .find((block) =>
+      block
+        .split("{")[0]
+        ?.split(",")
+        .map((s) => s.trim())
+        .includes(selector),
+    )
+    ?.split("{")[1];
+
 describe("a company's server: its found servers", () => {
-  test("its tiles and Use buttons sit in the column's edges, as the field above does", async () => {
-    const rule = ruleIn(await firstRunCss());
-    expect(rule(".dk-first__foundrow")).toContain("padding: 9px 0;");
-    expect(rule(".dk-first__foundrow + .dk-first__foundrow")).toContain("border-top: 1px solid var(--line);");
+  test("its marks and Use buttons sit in the column's edges, a hairline over and under each", async () => {
+    const rule = ruleWith(await firstRunCss());
+    expect(rule(".dk-first__rows")).toContain("border-top: 1px solid var(--line);");
+    expect(rule(".dk-first__row")).toContain("padding: 12px 0;");
+    expect(rule(".dk-first__row")).toContain("border-bottom: 1px solid var(--line);");
+    expect(rule(".dk-first__row")).not.toContain("background");
   });
 });
 
-describe("Run here's frame", () => {
-  test("the band, the step's column that scrolls, and the footer that stays", async () => {
+describe("The first run's frame (ADR 0265 §3)", () => {
+  test("the sky behind the whole window, the step on a card in its middle, scrolling when the window is short", async () => {
     const rule = ruleIn(await firstRunCss());
-    expect(rule(".dk-flow")).toContain("grid-template-rows: 168px minmax(0, 1fr) auto;");
-    expect(rule(".dk-flow__scroll")).toContain("overflow-y: auto;");
-    expect(rule(".dk-flow__foot")).toContain("border-top: 1px solid var(--line);");
+    expect(rule(".dk-first__sky")).toContain("position: absolute;");
+    expect(rule(".dk-first__sky")).toContain("inset: 0;");
+    expect(rule(".dk-first__stage")).toContain("overflow-y: auto;");
+    expect(rule(".dk-first__card")).toContain("margin: auto 0;");
+    expect(rule(".dk-first__card")).toContain("background: var(--raised);");
+    // The actions are the card's last row: no hairline of their own across the window.
+    expect(rule(".dk-flow__foot")).not.toContain("border-top");
+  });
+
+  test("the team drawn small at the card's top, shrunk whole from its bottom left: one ground line", async () => {
+    const rule = ruleIn(await firstRunCss());
+    expect(rule(".dk-first__art .ac-hosting__row")).toContain("transform: scale(0.6);");
+    expect(rule(".dk-first__art .ac-hosting__row")).toContain("transform-origin: 0 100%;");
+    expect(rule(".dk-first__art .ac-sky")).toContain("visibility: hidden;");
   });
 
   test("how the phone and the team get here: rows with a hairline, no card and no bar behind them (ADR 0265 §4)", async () => {
@@ -65,12 +92,13 @@ describe("Run here's frame", () => {
   });
 });
 
-describe("switch rows", () => {
-  test("a switch's label is regular weight, lighter than a field's label; other row titles stay bold", async () => {
+describe("row titles", () => {
+  test("one size and weight whatever control ends the row, a switch's too", async () => {
     const css = await Bun.file(new URL("../src/styles.css", import.meta.url).pathname).text();
     const rule = (selector: string) => css.split(`\n${selector} {`)[1]?.split("}")[0] ?? "";
+    expect(rule(".dk-crow__title")).toContain("font-size: 14px;");
     expect(rule(".dk-crow__title")).toContain("font-weight: 600;");
-    expect(rule(".dk-crow:has(> .dk-crow__end > .ac-switch) .dk-crow__title")).toContain("font-weight: 400;");
+    expect(css).not.toContain(".ac-switch) .dk-crow__title");
   });
 });
 

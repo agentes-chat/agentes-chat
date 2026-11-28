@@ -6,7 +6,7 @@
  * then goes on to Prepare on a Mac with a permission still off (route `prepare`), else the sheet steps aside.
  */
 import { errorText } from "@agenteschat/client/lib/errors";
-import { Avatar, Button, ComputerPortrait, Icon, type IconName } from "@agenteschat/ui";
+import { Button, type IconName } from "@agenteschat/ui";
 import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost, useSnapshot, useStore } from "../../app";
@@ -16,19 +16,13 @@ import { serverKind } from "../../control/server";
 import { toolsFound } from "../../control/this-mac";
 import { useLocalServer } from "../../hooks";
 import { needsPrepare } from "../../ui/permissions";
-import { Sheet, SheetProblem, Trail } from "./SheetFrame";
+import { PrefRow } from "../../ui/settings";
+import { ConnectArt, Sheet, SheetIcon, SheetProblem } from "./SheetFrame";
 
-function Line({ icon, title, children }: { icon: IconName; title: string; children: ReactNode }) {
-  return (
-    <li className="dk-sh__line">
-      <Icon name={icon} size={18} />
-      <span>
-        <b>{title}</b>
-        <small>{children}</small>
-      </span>
-    </li>
-  );
-}
+/** One thing agents get here: the sheets' row, its glyph in the rows' column, a title and one line under it. */
+const Line = ({ icon, title, children }: { icon: IconName; title: string; children: ReactNode }) => (
+  <PrefRow lead={<SheetIcon icon={icon} />} title={title} desc={children} />
+);
 
 export function ReadySheet({ target, onClose }: { target: PairTarget; onClose: () => void }) {
   const { t, i18n } = useTranslation();
@@ -86,22 +80,13 @@ export function ReadySheet({ target, onClose }: { target: PairTarget; onClose: (
     <Sheet
       screen="ready"
       step={prepareNext ? t("desktop.sheets.step", { at: 1, total: 2 }) : t("desktop.sheets.stepOnly")}
-      art={
-        <>
-          <span className="dk-sh__cast">
-            <Avatar kind="agent" name={org} appearance={{ color: "green" }} size="md" />
-            <Avatar kind="agent" name={org} appearance={{ color: "amber" }} size="md" />
-          </span>
-          <Trail />
-          <ComputerPortrait kind={host.platform} state="online" size={48} />
-        </>
-      }
+      art={<ConnectArt org={org} kind={host.platform} />}
       title={t("desktop.sheets.ready.title", { org })}
       lead={onlyOpens ? t("desktop.pair.offerOnlyIf", { org }) : t("desktop.sheets.ready.lead")}
       help={t("desktop.sheets.ready.help")}
       acts={
         <>
-          <Button variant="ghost" disabled={busy} onClick={onClose}>
+          <Button disabled={busy} onClick={onClose}>
             {t("desktop.pair.notNow")}
           </Button>
           {/* Never focused first: it opens by itself after sign-in, while the person may be typing. */}
@@ -111,7 +96,7 @@ export function ReadySheet({ target, onClose }: { target: PairTarget; onClose: (
         </>
       }
     >
-      <ul className="dk-sh__lines">
+      <div className="dk-sh__rows">
         <Line icon="globe" title={t("desktop.sheets.ready.browser")}>
           {t("desktop.sheets.ready.browserDesc")}
         </Line>
@@ -124,7 +109,7 @@ export function ReadySheet({ target, onClose }: { target: PairTarget; onClose: (
         <Line icon="power" title={t("desktop.sheets.ready.login")}>
           {t("desktop.sheets.ready.loginDesc")}
         </Line>
-      </ul>
+      </div>
       {failed && <SheetProblem text={failed} />}
     </Sheet>
   );

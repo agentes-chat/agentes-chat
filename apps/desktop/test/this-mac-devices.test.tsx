@@ -190,6 +190,8 @@ describe("the iPhone setup window", () => {
       expect(el.textContent).toContain("Sam Rivera · Personal Team");
       // Our phone app is in no store yet: no QR that would only open a web page on the iPhone.
       expect(el.querySelector(".dk-ip__qr")).toBeNull();
+      // Nor the wide card that has room for one: the sheets' own width.
+      expect(el.querySelector('[data-screen="iphone"]')?.hasAttribute("data-size")).toBe(false);
       expect(button(el, "Back")).toBeTruthy();
       expect(button(el, "Cancel")).toBeTruthy();
 

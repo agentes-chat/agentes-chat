@@ -128,14 +128,14 @@ export function Activity() {
         title={t("desktop.prefs.activity.title")}
         lead={t("desktop.prefs.activity.lead")}
         action={
-          <span className="ac-acts">
+          <>
             <Button size="sm" icon="copy" onClick={() => void copyDiagnostics()} disabled={scope.length === 0}>
               {t("desktop.prefs.activity.copyDiag")}
             </Button>
-            <Button size="sm" variant="link" onClick={() => setReporting(true)} disabled={scope.length === 0}>
+            <Button size="sm" onClick={() => setReporting(true)} disabled={scope.length === 0}>
               {t("desktop.report.button")}
             </Button>
-          </span>
+          </>
         }
       />
       {homes.length > 1 && (
@@ -179,7 +179,7 @@ export function Activity() {
               <PixelSpinner size={16} />
             ) : (
               // The cursor is the kept organization's: another page of it would land under the new one's lines.
-              <Button size="sm" variant="ghost" disabled={kept} onClick={() => void loadPage(cursor, true)}>
+              <Button size="sm" disabled={kept} onClick={() => void loadPage(cursor, true)}>
                 {t("desktop.prefs.activity.showMore")}
               </Button>
             )}

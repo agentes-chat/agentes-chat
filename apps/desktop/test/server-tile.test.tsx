@@ -119,10 +119,10 @@ test("reach's tile by its way (ADR 0265 §4): Tailscale's own icon, a link for t
   el.remove();
 });
 
-test("App settings › Servers and accounts: the server on the Tailscale network by Tailscale's icon, the Cloud by its glyph", () =>
+test("App settings › Servers and accounts: the server on the Tailscale network by Tailscale's icon, the Cloud by its glyph, then Another server", () =>
   servers(
     createFakeHost("app", "selfhost"),
-    (el) => el.querySelectorAll(".dk-crow").length >= 2,
+    (el) => el.querySelectorAll(".dk-crow").length >= 3,
     (el) => {
       const rows = [...el.querySelectorAll(".dk-crow")].map((row) => [
         row.querySelector(".dk-crow__title")?.textContent,
@@ -131,7 +131,11 @@ test("App settings › Servers and accounts: the server on the Tailscale network
       expect(rows).toEqual([
         ["agentes.tail1234.ts.net", "dk-tailscale"],
         ["agentes.chat", "ac-icon"],
+        ["Another server", "ac-icon"],
       ]);
+      // One more is added from its own row, as the Overview adds a workspace.
+      const add = [...el.querySelectorAll(".dk-crow")].at(-1);
+      expect(add?.querySelector(".dk-crow__end button")?.textContent).toBe("Add a server…");
       // Jev's key is a server's own: nothing about it for one this app only opens.
       expect(el.textContent).not.toContain("Jev");
     },
@@ -207,14 +211,16 @@ test("A company's server: what it finds on the Tailscale network by Tailscale's 
     await act(async () => row?.click());
     // Each found server shows as soon as its own check answers: both, then.
     await until(() => el.querySelectorAll(".dk-first__foundrow").length >= 2);
+    // Each by its bare mark in the rows' icon column, never on a tile (ADR 0265 §6).
     const rows = [...el.querySelectorAll(".dk-first__foundrow")].map((found) => [
       found.querySelector(".dk-first__foundtext small")?.textContent,
-      found.querySelector(".dk-logo--lg svg")?.getAttribute("class"),
+      found.querySelector(".dk-first__glyph svg")?.classList[0],
     ]);
     expect(rows).toEqual([
       ["agentes.chat is running here", "ac-icon"],
       ["On your team's network", "dk-tailscale"],
     ]);
+    expect(el.querySelector(".dk-first__foundrow .dk-logo")).toBeNull();
   } finally {
     await act(async () => root.unmount());
     el.remove();

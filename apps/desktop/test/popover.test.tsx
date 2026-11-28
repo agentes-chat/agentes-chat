@@ -91,7 +91,12 @@ const banners = (el: HTMLElement) =>
     actions: [...banner.querySelectorAll(".dk-banner__acts button")].map((b) => b.textContent),
   }));
 /** The first banner's icon, by its shapes, to compare with an icon drawn by name. */
-const bannerIcon = (el: HTMLElement) => el.querySelector(".dk-banner .dk-logo svg")?.innerHTML;
+const bannerIcon = (el: HTMLElement) => el.querySelector(".dk-banner .dk-banner__lead svg")?.innerHTML;
+/** The buttons of the banner titled `title`. */
+const bannerButtons = (el: HTMLElement, title: string) =>
+  [...el.querySelectorAll(".dk-banner")]
+    .find((banner) => banner.querySelector(".dk-banner__text b")?.textContent === title)
+    ?.querySelectorAll<HTMLButtonElement>(".dk-banner__acts button") ?? [];
 const iconMarkup = (name: IconName) => {
   const box = document.createElement("div");
   box.innerHTML = renderToStaticMarkup(<Icon name={name} size={16} />);
@@ -125,8 +130,8 @@ test("a new OS permission an agent's work waits on opens the app layer's ask, an
       line: "Agents need it to take screenshots of this Mac.",
       actions: ["Allow"],
     });
-    // Asked again from the menu after the sheet was closed.
-    const allow = [...el.querySelectorAll(".dk-banner__acts button")].find((b) => b.textContent === "Allow");
+    // Asked again from the menu after the sheet was closed (the folder request above it has an Allow of its own).
+    const allow = [...bannerButtons(el, "Waiting for Screen Recording")].find((b) => b.textContent === "Allow");
     await act(async () => (allow as HTMLElement).click());
     expect(asks()).toBe(2);
     await act(async () => runner?.setPermissions([]));
@@ -234,16 +239,47 @@ describe("the menu's banners say only what matters there", () => {
     );
   });
 
-  test("agentes.chat not starting here: its title, why and where to look, Copy details, the logs and Try again", () =>
+  test("agentes.chat not starting here: its row says so, and under it why, Copy details, Help, the logs and Try again", () =>
     withMenu(
-      (el) =>
-        expect(banners(el)).toContainEqual({
-          title: "agentes.chat isn't starting on this Mac",
-          line: "The details say why: copy them for whoever helps you, or look at the logs. Help",
-          actions: ["Copy details", "Show the logs", "Try again"],
-        }),
+      (el) => {
+        const state = el.querySelector(".dk-trayhere__text small");
+        expect(state?.textContent).toBe("Not starting");
+        expect(state?.getAttribute("data-tone")).toBe("danger");
+        // No banner says it again, and Start isn't at the row's end too: Try again is under it.
+        expect(banners(el).some((b) => b.title === "agentes.chat isn't starting on this Mac")).toBe(false);
+        expect([...el.querySelectorAll(".dk-trayhere__row button")].map((b) => b.textContent)).not.toContain(
+          "Start it",
+        );
+        expect(el.querySelector(".dk-trayhere__detail p")?.textContent).toBe(
+          "The details say why: copy them for whoever helps you, or look at the logs. Copy details · Help",
+        );
+        expect([...el.querySelectorAll(".dk-trayhere__acts button")].map((b) => b.textContent)).toEqual([
+          "Show the logs",
+          "Try again",
+        ]);
+      },
       createFakeHost("popover", "here", { here: { phase: "failing" } }),
-      (el) => banners(el).length > 0,
+      (el) => el.querySelector(".dk-req") && el.querySelector(".dk-trayhere__detail"),
+    ));
+
+  test("one filled button: the first thing that needs the person; every other button is bordered", () =>
+    withMenu(
+      async (el) => {
+        const filled = () => [...el.querySelectorAll(".dk-pop .ac-btn--primary")];
+        // A folder request first: its Allow, while Try again under the server here stays bordered.
+        expect(filled().map((b) => b.textContent)).toEqual(["Allow"]);
+        expect(filled()[0]?.closest(".dk-req")).toBeTruthy();
+        const deny = [...el.querySelectorAll(".dk-req button")].find((b) => b.textContent === "Not now");
+        await act(async () => (deny as HTMLElement).click());
+        await until(() => !el.querySelector(".dk-req"));
+        // Answered: the server here's Try again is the one left.
+        await until(() => filled().length > 0);
+        expect(filled().map((b) => b.textContent)).toEqual(["Try again"]);
+        expect(filled()[0]?.closest(".dk-trayhere__acts")).toBeTruthy();
+      },
+      // This Mac's permissions allowed: nothing else in line before the server here.
+      createFakeHost("popover", "here", { here: { phase: "failing" }, macReady: true }),
+      (el) => el.querySelector(".dk-req") && el.querySelector(".dk-trayhere__detail"),
     ));
 
   test("no internet: what already started keeps going", async () => {
@@ -254,8 +290,8 @@ describe("the menu's banners say only what matters there", () => {
         await act(async () => {
           for (const runner of host.runners.values()) runner.setOnline(false);
         });
-        await until(() => banners(el).some((b) => b.title === "No internet. Trying again…"));
-        expect(banners(el).find((b) => b.title === "No internet. Trying again…")?.line).toBe(
+        await until(() => banners(el).some((b) => b.title === "No internet"));
+        expect(banners(el).find((b) => b.title === "No internet")?.line).toBe(
           "What already started keeps running here and sends the result when the connection is back.",
         );
       }, host);
@@ -377,7 +413,7 @@ describe("the server here's Stop (ADR 0158)", () => {
       expect(state()?.textContent).toBe("Running");
       expect(state()?.getAttribute("data-tone")).toBe("ok");
       expect([...el.querySelectorAll(".dk-trayhere__row button")].some((b) => b.textContent === "Stop")).toBe(false);
-      await act(async () => (el.querySelector(".dk-trayhere__row .dk-iconbtn") as HTMLElement).click());
+      await act(async () => (el.querySelector(".dk-trayhere__row .dk-trayhere__morebtn") as HTMLElement).click());
       const menu = () => [...el.querySelectorAll(".dk-trayhere__more > button")].map((b) => b.textContent);
       expect(menu()).toEqual(["Restart", "Stop", "This Mac settings"]);
       const stop = [...el.querySelectorAll(".dk-trayhere__more > button")].find((b) => b.textContent === "Stop");

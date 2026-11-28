@@ -178,13 +178,14 @@ describe("Sign in first", () => {
         "Run free on this Mac",
         "Sign in to my company's server",
       ]);
-      expect(el.querySelector(".dk-welcome__col > .dk-first__foot:last-child")?.textContent).toBe(
+      expect(el.querySelector(".dk-welcome__card > .dk-first__foot:last-child")?.textContent).toBe(
         "Installing it for the team on a server? See how",
       );
       // Nothing found: nothing on top.
       expect(el.querySelector(".dk-welcome__found")).toBeNull();
-      // The team's sky beside it, the cloud's.
-      expect(el.querySelector(".dk-welcome__sky .ac-place")?.getAttribute("data-place")).toBe("cloud");
+      // The team's sky behind the card, and the team drawn on it (the cloud's scene, no place picked yet).
+      expect(el.querySelector(".dk-first__sky canvas")).not.toBeNull();
+      expect(el.querySelector(".dk-welcome__card .dk-first__art .ac-place")?.getAttribute("data-place")).toBe("cloud");
       await press("Continue with Google");
       await press("Continue with Apple");
       await press("Continue with email");
@@ -216,9 +217,11 @@ describe("Sign in first", () => {
         const found = el.querySelector(".dk-welcome__found") as HTMLElement;
         expect(found.querySelector("b")?.textContent).toBe("agentes.chat is on your network");
         expect(found.querySelector("small")?.textContent).toBe("agentes.tail1234.ts.net");
-        expect(found.querySelector(".dk-logo--lg svg")?.getAttribute("class")).toBe("dk-tailscale");
+        // Tailscale's own mark, bare in the rows' icon column: never a tile (ADR 0265 §6).
+        expect(found.querySelector(".dk-first__glyph svg.dk-tailscale")).not.toBeNull();
+        expect(found.querySelector(".dk-logo")).toBeNull();
         // On top: before the title.
-        expect(found.nextElementSibling?.tagName).toBe("H1");
+        expect(found.closest(".dk-welcome__top")?.nextElementSibling?.tagName).toBe("H1");
         await press("Sign in");
         await until(() => host.list.current === "https://agentes.tail1234.ts.net");
       },
@@ -275,11 +278,13 @@ function adding(cloud: boolean, chosen: (string | undefined)[]) {
 
 describe("A company's server", () => {
   test("its address in the frame, Sign in in the footer, what's wrong under the field, and Back", () =>
-    firstRun("first", async ({ el, press, title, step, foot, submit }) => {
+    firstRun("first", async ({ el, press, title, step, foot, submit, counter }) => {
       await press("Sign in to my company's server");
       expect(step()).toBe("company");
+      // Where the person is, over the title, as over Run here's steps.
+      expect(counter()).toBe("Your company's server");
       expect(title()).toBe("Sign in to a workspace that already exists");
-      expect(el.querySelector(".dk-flow__band .ac-place")?.getAttribute("data-place")).toBe("box");
+      expect(el.querySelector(".dk-first__card .dk-first__art .ac-place")?.getAttribute("data-place")).toBe("box");
       expect(foot()).toEqual(["Back", "Sign in"]);
       await act(async () => typeInto(el.querySelector(".dk-first__address input"), "not an address"));
       await submit("dk-first-connect");
@@ -331,15 +336,20 @@ describe("A company's server", () => {
     }
   });
 
-  test("a connect link alone: the server in large type, nothing before Continue, Cancel opens the first run", () =>
+  test("a connect link alone: the server as the sheet's title, nothing before Continue, Cancel opens the first run", () =>
     firstRun(
       "link",
       async ({ el, press, host, step }) => {
         // The server is checked first: its "Checking the server…" line takes the question's place until then.
-        await until(() => el.querySelector(".dk-linksheet__question:not(.dk-linksheet__checking)"));
-        expect(el.querySelector(".dk-linksheet__host")?.textContent).toBe("agentes.tail1234.ts.net");
+        await until(() => el.querySelector(".dk-linksheet__question"));
+        expect(el.querySelector("h1 .dk-linksheet__host")?.textContent).toBe("agentes.tail1234.ts.net");
         expect(el.querySelector(".dk-linksheet__question")?.textContent).toBe("Open the workspace you installed?");
-        expect([...el.querySelectorAll(".dk-linksheet__acts button")].map((b) => b.textContent)).toEqual([
+        // The question first, then what it means: the owner made now, and what a server on a Tailscale network is.
+        expect([...el.querySelectorAll(".dk-linksheet__body p")].map((p) => p.textContent)).toEqual([
+          "You create its owner account now.",
+          "It's on a Tailscale network: it only opens on devices connected to Tailscale with the same account.",
+        ]);
+        expect([...el.querySelectorAll(".dk-sh__acts button")].map((b) => b.textContent)).toEqual([
           "Cancel",
           "Continue",
         ]);
@@ -359,13 +369,13 @@ describe("A company's server", () => {
 });
 
 describe("Run on this Mac, in three steps", () => {
-  test("one frame: the band, the count, the title, the owner's fields and the usage line, Back and Continue", () =>
+  test("one frame: the card's drawing, the count, the title, the owner's fields and the usage line, Back and Continue", () =>
     firstRun(
       "first",
       async ({ el, press, step, title, lead, counter, foot, submit }) => {
         await press("Run free on this Mac");
         await until(() => step() === "owner");
-        expect(el.querySelector(".dk-flow__band .ac-place")?.getAttribute("data-place")).toBe("here");
+        expect(el.querySelector(".dk-first__card .dk-first__art .ac-place")?.getAttribute("data-place")).toBe("here");
         // Only on this Mac at first (Tailscale isn't on): two steps until the phone and the team are chosen.
         expect(counter()).toBe("Run on this Mac · 1 of 2");
         expect(title()).toBe("Who will be the owner?");
@@ -457,6 +467,8 @@ describe("Run on this Mac, in three steps", () => {
         expect(button("Open Tailscale and sign in")).toBeTruthy();
         expect(el.querySelector(".dk-way__now")?.textContent).toBe("Waiting for Tailscale…");
         expect(foot()).toEqual(["Back", "Do it later", "Continue"]);
+        // One filled button on the card, the way forward: Tailscale's own and the others are bordered.
+        expect([...el.querySelectorAll(".ac-btn--primary")].map((b) => b.textContent)).toEqual(["Continue"]);
         // Continue waits for Tailscale: it goes on by itself once it is on.
         expect(button("Continue")?.hasAttribute("disabled")).toBe(true);
         // Esc goes back a step.
@@ -555,13 +567,12 @@ describe("Run on this Mac, in three steps", () => {
         expect(reach.querySelector(".dk-honest")?.textContent).toBe(
           "We couldn't open it. Check that your tunnel is on and points to http://127.0.0.1:4310.",
         );
-        // Its own ways on, under the step: nothing else in the footer.
-        expect([...reach.querySelectorAll(".dk-first__askacts button")].map((b) => b.textContent)).toEqual([
-          "Try again",
-          "Change the address",
-          "Finish without it",
-        ]);
-        expect(foot()).toEqual([]);
+        // Its ways on are the footer's, Try again the main one; the step keeps only why, and the title says the setup
+        // is almost done.
+        expect(reach.querySelectorAll("button")).toHaveLength(0);
+        expect(foot()).toEqual(["Finish without it", "Change the address", "Try again"]);
+        expect(button("Try again")?.className).toContain("ac-btn--primary");
+        expect(screen.title()).toBe("Almost ready");
         // Try again: access alone, through the same address.
         await press("Try again");
         await until(() => reaches.length === 1 && !!button("Change the address"));
@@ -762,7 +773,7 @@ describe("Setting everything up", () => {
     await firstRun(
       "first",
       async (screen) => {
-        const { el, button, press, foot, step } = screen;
+        const { el, button, press, foot, step, title } = screen;
         await toSetup(screen);
         await until(() => button("Try again"));
         const failed = stepOf(el, "Turning agentes.chat on") as HTMLElement;
@@ -770,6 +781,8 @@ describe("Setting everything up", () => {
         expect(failed.querySelector(".dk-honest")?.textContent).toBe(
           "agentes.chat didn't start on this Mac. Copy details",
         );
+        // The title says how it ended, never that it is still getting ready.
+        expect(title()).toBe("Setup didn't finish");
         expect(foot()).toEqual(["Cancel", "Try again"]);
         expect(document.activeElement).toBe(button("Try again") ?? null);
         await press("Try again");
@@ -827,7 +840,7 @@ describe("Setting everything up", () => {
     firstRun(
       "first",
       async (screen) => {
-        const { el, press, host, foot } = screen;
+        const { el, press, host, foot, title } = screen;
         await toSetup(screen);
         await until(() => foot().includes("Continue"));
         const reach = stepOf(el, "Turning on access from anywhere") as HTMLElement;
@@ -835,6 +848,8 @@ describe("Setting everything up", () => {
         expect(reach.querySelector(".dk-fr__problem")?.textContent).toContain(
           "HTTPS is off on your Tailscale network. Turn it on",
         );
+        // Set up, with access still to see to.
+        expect(title()).toBe("Almost ready");
         expect(foot()).toEqual(["Continue"]);
         await press("Continue");
         await until(() => host.layer.route === null);
@@ -861,7 +876,7 @@ describe("Setting everything up", () => {
       async (screen) => {
         await toWhere(screen, { row: "Run free on this PC" });
         expect(screen.el.querySelector("#where-here")?.closest("label")?.textContent).toContain("Only on this PC");
-        expect(screen.el.querySelector(".dk-flow__band canvas.ac-computer")?.getAttribute("data-kind")).toBe("windows");
+        expect(screen.el.querySelector(".dk-first__art canvas.ac-computer")?.getAttribute("data-kind")).toBe("windows");
       },
       { here: { hold: "account", pace: 10 } },
     );
@@ -883,7 +898,7 @@ describe("Setting everything up", () => {
 });
 
 describe("Done, take it to your phone", () => {
-  test("the code beside its three steps, the address with Copy, Do it later and Open agentes.chat", async () => {
+  test("the code beside its three steps, the address with Copy, and Open agentes.chat the one way on", async () => {
     const copied: string[] = [];
     const clipboard = Object.getOwnPropertyDescriptor(window.navigator, "clipboard");
     Object.defineProperty(window.navigator, "clipboard", {
@@ -917,7 +932,8 @@ describe("Done, take it to your phone", () => {
           await press("Copy");
           await until(() => button("Copied"));
           expect(copied).toEqual(["https://ana-mac.tail1234.ts.net"]);
-          expect(foot()).toEqual(["Do it later", "Open agentes.chat"]);
+          // One button: opening agentes.chat is also how the phone is left for later.
+          expect(foot()).toEqual(["Open agentes.chat"]);
           await press("Open agentes.chat");
           await until(() => host.layer.route === null);
         },

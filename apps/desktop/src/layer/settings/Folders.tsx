@@ -103,7 +103,7 @@ export function Folders() {
         <PrefRow
           lead={
             <span className="dk-logo dk-logo--soft">
-              <Icon name="plus" size={16} />
+              <Icon name="plus" size={20} />
             </span>
           }
           title={t("desktop.settings.access.addTitle")}
@@ -126,7 +126,7 @@ export function Folders() {
         width={440}
       >
         <DialogFooter bar>
-          <Button variant="ghost" disabled={pending === "remove"} onClick={() => setRemoving(null)}>
+          <Button disabled={pending === "remove"} onClick={() => setRemoving(null)}>
             {t("desktop.common.cancel")}
           </Button>
           <Button variant="danger" loading={pending === "remove"} onClick={() => void run("remove", remove)}>
@@ -174,10 +174,9 @@ function FolderRow({
 
   return (
     <PrefRow
-      top
       lead={
         <span className="dk-logo dk-logo--soft">
-          <Icon name="drive" size={16} />
+          <Icon name="drive" size={20} />
         </span>
       }
       title={name}

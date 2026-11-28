@@ -1,6 +1,8 @@
 /*
- * How the phone and the team get here (`ReachWayPicker`, ADR 0265 §4): two rows with a hairline, a tile and the radio at
- * the end, no card; under the chosen row its part, aligned with the row's words.
+ * How the phone and the team get here (`ReachWayPicker`, ADR 0265 §4): two rows with a hairline, a bare mark in the
+ * rows' icon column and the radio at the end, no card; under the chosen row its part, starting where the row's words
+ * start. The first run's icon column is a 20 px slot and a 12 gap (words at 32); Settings' is a 32 px slot (words at
+ * 44), the mark centred in it.
  */
 .dk-way {
   display: flex;
@@ -13,46 +15,53 @@
 .dk-way__row {
   display: flex;
   align-items: center;
-  gap: 14px;
-  /* No side padding: the tile starts on the column's edge and the radio ends on it, as the buttons around do. */
-  padding: 14px 0;
+  gap: 12px;
+  /* No side padding: the mark starts on the column's edge and the radio ends on it, as the buttons around do. */
+  padding: 12px 0;
   cursor: pointer;
+}
+.dk-way__glyph {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  color: var(--muted);
+}
+svg.dk-way__mark {
+  width: 20px;
+  height: 20px;
 }
 .dk-way__text {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
 }
 .dk-way__text b {
-  font-size: 14.5px;
+  font-size: 14px;
+  line-height: 20px;
   font-weight: 600;
 }
 .dk-way__text small {
-  font-size: 13.5px;
+  font-size: 13px;
+  line-height: 18px;
   color: var(--muted);
+  text-wrap: pretty;
 }
-/* The chosen row's part starts under its words: past the 48 px tile and the gap. */
+/* The chosen row's part starts under its words: past the 20 px slot and the 12 gap. */
 .dk-way__part {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 12px;
-  padding: 0 0 18px 62px;
+  padding: 0 0 12px 32px;
 }
-.dk-way--compact .dk-way__row {
-  padding: 12px 0;
+/* Settings: the 32 px slot of its rows (the mark centred in it), the part from the words at 44. */
+.dk-way--compact .dk-way__glyph {
+  width: 32px;
 }
-.dk-way--compact .dk-way__text b {
-  font-size: 13.5px;
-}
-.dk-way--compact .dk-way__text small {
-  font-size: 12.5px;
-}
-/* Past the 32 px tile and the gap. */
 .dk-way--compact .dk-way__part {
-  padding: 0 0 14px 46px;
+  padding-left: 44px;
 }
 .dk-way__part .ac-field {
   align-self: stretch;
@@ -67,8 +76,9 @@
 .dk-way__line {
   margin: 0;
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 18px;
   color: var(--muted);
+  text-wrap: pretty;
 }
 .dk-way__line {
   display: flex;
@@ -79,32 +89,36 @@
   flex: none;
   color: var(--ok);
 }
+/* A command to copy inside a line: the line's own mono size. */
+.dk-way__note .dk-fr__cmd code {
+  font-size: 12px;
+}
 
 /* Waiting for Tailscale: the app and Tailscale joined by the pixel trail, what it waits for, what to do there. */
 .dk-way__wait {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
+/* A drawing: its two 48 px tiles (ADR 0265 §6) with no shadow, the trail between them. */
 .dk-way__hop {
   display: inline-flex;
   align-items: center;
-  gap: 14px;
-  margin: 4px 0 10px;
+  gap: 12px;
+  margin-bottom: 8px;
 }
-.dk-way__hoptile,
-.dk-way__hop .dk-logo--lg {
+.dk-way__hoptile {
   display: grid;
   place-items: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  background: var(--raised);
-  box-shadow: var(--e2), var(--top);
+  width: 48px;
+  height: 48px;
+  border-radius: 14px 14px 14px 4px;
+  background: var(--sunken);
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 .dk-way__trail {
   display: inline-flex;
-  gap: 5px;
+  gap: 4px;
 }
 .dk-way__trail i {
   width: 6px;
@@ -120,16 +134,19 @@
 .dk-way__now {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin: 0;
-  font-size: 14.5px;
+  font-size: 13px;
+  line-height: 18px;
   font-weight: 600;
+  color: var(--ink2);
 }
 .dk-way__how {
-  margin: 0 0 0 26px;
+  margin: 0;
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 18px;
   color: var(--muted);
+  text-wrap: pretty;
 }
 
 /* Where the tunnel points, under the address field, with Copy. */

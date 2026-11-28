@@ -1,9 +1,9 @@
 /**
- * Settings › This computer on the main window's app layer (ADR 0265 §7): a dialog over the workspace's page (a card of
+ * Settings › This computer on the main window's app layer (ADR 0265 §6): a dialog over the workspace's page (a card of
  * the layer's sheets, `SheetFrame`), its sections in a list beside the page: Overview, Folders and tools, Server on
  * this computer (only while the app runs it), Activity and App settings. The workspace's own settings stay on its
  * page. × , Esc and ⌘W close it; without the site behind it (offline, its server down, signed out) the same card fills
- * the window, stays, and a quiet line on top says what waits for the connection. Everything about this computer acts
+ * the window, stays, and a row on top says what waits for the connection. Everything about this computer acts
  * through its own runners and the app; nothing is granted from the site.
  */
 import { Button, Icon, type IconName } from "@agenteschat/ui";
@@ -15,10 +15,11 @@ import { type Home, orgName, pairedHomes } from "../../control/store";
 import { type UpdateCheck, useLocalServer, useUpdateCheck } from "../../hooks";
 import type { LayerSection, LayerState } from "../../host/types";
 import { type Essentials, useEssentials } from "../../ui/essentials";
+import { LeadSlot, PrefRow } from "../../ui/settings";
 import { SHEET_TITLE_ID } from "../sheets/SheetFrame";
 import { Access } from "./Access";
 import { Activity } from "./Activity";
-import { rowsNeedingYou } from "./AlwaysOn";
+import { Lead, rowsNeedingYou } from "./AlwaysOn";
 import { AppSettings } from "./AppSettings";
 import { Overview } from "./Overview";
 import { ServerHere } from "./Server";
@@ -222,22 +223,23 @@ export function Settings({ section, focus, shownAt }: { section?: LayerSection; 
         {shown.map(sectionItem)}
       </nav>
       <main className="dk-sx__body" key={open}>
-        {!site.there && awayName && (
-          <p className="dk-sx__away" role="status">
-            <Icon name="cloud" size={16} />
-            <span>
-              <b>{t("desktop.settings.away.title", { name: awayName })}</b> {t("desktop.settings.away.body")}
-            </span>
-            <button
-              type="button"
-              className="ac-link dk-link"
-              onClick={() => current && void host.chooseServer(current).catch(() => {})}
-            >
-              {t("desktop.common.retry")}
-            </button>
-          </p>
-        )}
-        {body}
+        <LeadSlot.Provider value>
+          {!site.there && awayName && (
+            <div className="dk-sx__away" role="status">
+              <PrefRow
+                lead={<Lead icon="cloud" />}
+                title={t("desktop.settings.away.title", { name: awayName })}
+                desc={t("desktop.settings.away.body")}
+                end={
+                  <Button size="sm" onClick={() => current && void host.chooseServer(current).catch(() => {})}>
+                    {t("desktop.common.retry")}
+                  </Button>
+                }
+              />
+            </div>
+          )}
+          {body}
+        </LeadSlot.Provider>
       </main>
       {/* With the site behind it; without it, nothing would be under (the settings stay). */}
       {site.there && (

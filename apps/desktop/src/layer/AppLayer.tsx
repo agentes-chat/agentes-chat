@@ -84,11 +84,11 @@ export function AppLayer() {
   if (!route || !state) return <div className="dk-layer" data-mode="hidden" />;
   const mac = host.platform === "mac";
   const shown = <RouteScreen key={routeKey(route)} route={route} seq={state.seq} onClose={hide} />;
-  // A sheet: a card over the site (a Mac with the site there), else the same card on the app's background. A connect
-  // link from the first run fills a card of its own size.
+  // A sheet: a card over the site (a Mac with the site there), else the same card on the app's background. Every card
+  // is as large as what it holds, a connect link from the first run too.
   if (isSheet(route))
     return (
-      <SheetFrame mode={mode === "sheet" ? "sheet" : "full"} mac={mac} fill={route.screen === "link"}>
+      <SheetFrame mode={mode === "sheet" ? "sheet" : "full"} mac={mac}>
         {shown}
       </SheetFrame>
     );

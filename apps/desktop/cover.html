@@ -18,21 +18,19 @@
   <body>
     <main class="cover" data-tauri-drag-region>
       <canvas class="cover__sky" aria-hidden="true"></canvas>
+      <!-- One stack for every state (ADR 0265): the picture, a title, one line, at most two buttons and a link. The
+           picture is the agent, or Tailscale's mark over a workspace on a private network this computer can't reach. -->
       <div class="cover__in">
-        <canvas class="cover__agent" aria-hidden="true"></canvas>
-        <p class="cover__word" aria-label="agentes.chat">agentes<span>.chat</span></p>
+        <div class="cover__pic" aria-hidden="true">
+          <canvas class="cover__agent"></canvas>
+          <span class="cover__tile"></span>
+        </div>
+        <h1 class="cover__title"><span class="cover__word" aria-label="agentes.chat">agentes<span>.chat</span></span></h1>
         <p class="cover__line" role="status" aria-live="polite"></p>
         <p class="cover__time" aria-hidden="true"></p>
         <div class="cover__acts"></div>
+        <div class="cover__more"></div>
       </div>
-      <!-- A workspace on a private network this computer can't reach now: what turns the network on (ADR 0265). -->
-      <section class="cover__card" hidden>
-        <span class="cover__tile" aria-hidden="true"></span>
-        <h2 class="cover__title"></h2>
-        <p class="cover__lead"></p>
-        <p class="cover__note" role="status" aria-live="polite"></p>
-        <div class="cover__cardacts"></div>
-      </section>
     </main>
     <script type="module" src="/src/cover/main.ts"></script>
   </body>

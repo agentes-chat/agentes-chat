@@ -4,7 +4,7 @@
  * same way from both; and what's wrong with an address, with the one thing that fixes it where the app can do it.
  */
 import { connectLink, isLoopback, type ServerCheck } from "@agenteschat/client/lib/server";
-import { Icon } from "@agenteschat/ui";
+import { ComputerIcon, Icon } from "@agenteschat/ui";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost } from "../../app";
@@ -22,6 +22,7 @@ import {
 } from "../../control/first-run";
 import { type LocalServerStatus, tailscaleFrom } from "../../control/local-server";
 import { useTailnet } from "../../hooks";
+import { TailscaleGlyph } from "../../ui/reach-way";
 
 const wait = (ms: number) => new Promise<"late">((r) => setTimeout(() => r("late"), ms));
 
@@ -120,6 +121,19 @@ export function useServerUse({ local, own, onUse, onConfirm, onLink }: ServerWay
     return claim ? onLink(claim) : submit(found.server);
   };
   return { checking, problem, setProblem, submit, pick, claimHere };
+}
+
+/**
+ * A found server's mark in the rows' icon column (20 px, no tile, ADR 0265 §6): this computer by what it is, one on the
+ * Tailscale network by Tailscale's own mark.
+ */
+export function ServerGlyph({ where }: { where: Found["where"] }) {
+  const host = useHost();
+  return (
+    <span className="dk-first__glyph" aria-hidden="true">
+      {where === "tailnet" ? <TailscaleGlyph /> : <ComputerIcon kind={host.platform} size={20} />}
+    </span>
+  );
 }
 
 const PROBLEM_HOSTLESS: ReadonlySet<ConnectProblem> = new Set(["invalid"]);

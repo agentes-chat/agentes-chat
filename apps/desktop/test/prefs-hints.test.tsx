@@ -119,7 +119,19 @@ const cardUnder = (root: ParentNode, title: string) =>
 /** The section list's entries, in order, by their words. */
 const navItems = (root: ParentNode) =>
   [...root.querySelectorAll(".dk-pnav button")].map((b) => b.querySelector(".dk-sx__label")?.textContent);
-const eraseButton = (root: ParentNode) => buttonIn(root, "Erase and start over…");
+/** The server's ⋯ beside Restart (or Start it here), opened: its items, in order. */
+async function serverMenu(el: HTMLElement) {
+  const more = el.querySelector<HTMLButtonElement>('.dk-phead button[aria-label="More"]');
+  more?.focus();
+  await act(async () => more?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
+  await until(() => document.querySelector('[role="menuitem"]'));
+  return [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')];
+}
+/** Erase and start over…, in the server's menu. */
+const eraseItem = async (el: HTMLElement) =>
+  (await serverMenu(el)).find((m) => m.textContent === "Erase and start over…");
+/** The filled buttons on screen: one at most, the screen's forward action. */
+const primaries = (root: ParentNode) => [...root.querySelectorAll(".ac-btn--primary")].map((b) => b.textContent);
 /** A failed erase: its line inside the dialog, which stays open with both buttons pressable again, and no toast. */
 const expectFailureInDialog = (dialog: HTMLElement, line: string) => {
   expect(document.querySelector('[role="dialog"]')).toBe(dialog);
@@ -174,7 +186,7 @@ describe("Settings › This computer: its sections", () => {
     expect(layerModeFor({ screen: "firstRun" }, true, "mac")).toBe("full");
   });
 
-  test("without the site: the same sections, a quiet line with Try again, and no way to close onto nothing", () =>
+  test("without the site: the same sections, a row on top with Try again, and no way to close onto nothing", () =>
     pane(
       "selfhost",
       <Settings />,
@@ -184,9 +196,16 @@ describe("Settings › This computer: its sections", () => {
         expect(el.querySelector(".dk-sx__title")?.textContent).toBe("This Mac");
         // Nothing would be under it: no ×.
         expect(el.querySelector(".dk-sx__close")).toBeNull();
-        expect(el.querySelector(".dk-sx__away")?.textContent).toBe(
-          "No connection with Acme. What belongs to this Mac works the same. Who can use it and the agents' names come back with the connection.Try again",
-        );
+        // A row like the others: what is missing, what still works, and Try again at its end.
+        const away = el.querySelector(".dk-sx__away") as HTMLElement;
+        expect(rows(away)).toEqual([
+          {
+            title: "No connection with Acme.",
+            hint: null,
+            line: "What belongs to this Mac works the same. Who can use it and the agents' names come back with the connection.",
+          },
+        ]);
+        expect(away.querySelector(".dk-crow__end button")?.textContent).toBe("Try again");
         // Esc and ⌘W keep the settings: nothing is behind them.
         const esc = new KeyboardEvent("keydown", { key: "Escape", cancelable: true });
         await act(async () => window.dispatchEvent(esc));
@@ -245,6 +264,9 @@ describe("Settings › This computer › Overview", () => {
         expect(rowEl(who, "Another workspace")?.querySelector(".dk-crow__end button")?.textContent).toBe(
           "Add a workspace…",
         );
+        // One filled button on the screen: the fix of what needs the person, not the workspaces to allow.
+        expect(primaries(el)).toEqual(["Allow"]);
+        expect(rowEl(always, "macOS permissions")?.querySelector(".ac-btn--primary")).not.toBeNull();
       },
     ));
 
@@ -256,11 +278,17 @@ describe("Settings › This computer › Overview", () => {
       (el) =>
         el.querySelector(".dk-sx__headtext .dk-sx__ok") &&
         rowEl(cardUnder(el, "Always ready") ?? el, "macOS permissions")?.querySelector(".dk-sx__on"),
-      (el) => {
+      async (el) => {
         expect(el.querySelector(".dk-sx__headtext > p")?.textContent).toBe("All set");
         const always = cardUnder(el, "Always ready") as HTMLElement;
         expect(rowEl(always, "macOS permissions")?.querySelector(".dk-sx__on")?.textContent).toBe("All on");
         expect(el.querySelector(".dk-sx__dot")).toBeNull();
+        // Nothing needs the person: the first workspace to allow is the one filled button, the next one is bordered.
+        const who = cardUnder(el, "Who uses this Mac") as HTMLElement;
+        await until(() => buttonIn(rowEl(who, "Oficina") ?? who, "Allow"));
+        expect(primaries(el)).toEqual(["Allow"]);
+        expect(rowEl(who, "Estúdio Norte")?.querySelector(".ac-btn--primary")?.textContent).toBe("Allow");
+        expect(rowEl(who, "Oficina")?.querySelector(".ac-btn--primary")).toBeNull();
       },
       { macReady: true },
     ));
@@ -337,32 +365,31 @@ describe("Settings › This computer › Overview", () => {
 });
 
 describe("Settings › This computer › Server on this computer", () => {
-  test("its state in words with Restart; reach off is one row with Turn on; backups and the quiet links", () =>
+  test("its state in words with Restart and its menu; reach off is one row with Turn on; backups with their links", () =>
     pane(
       "here",
       <Settings section="server" />,
-      (el) => el.querySelector(".dk-phead .dk-sx__ok") && eraseButton(el),
-      (el) => {
+      (el) => el.querySelector(".dk-phead .dk-sx__ok") && el.querySelector('.dk-phead button[aria-label="More"]'),
+      async (el) => {
         expect(el.querySelector(".dk-phead h2")?.textContent).toBe("agentes.chat on this Mac");
         expect(el.querySelector(".dk-phead .dk-lead")?.textContent).toBe("Running · only on this Mac");
         expect(el.querySelector(".dk-phead .ac-btn")?.textContent).toBe("Restart");
         // "Only on this Mac" said once: as the row's title, its line says what it means.
         expect(row(el, "Only on this Mac")?.line).toBe("Your phone and team can't open it.");
         expect(buttonIn(rowEl(el, "Only on this Mac") as HTMLElement, "Turn on")).toBeTruthy();
+        // While it runs, Turn on is the screen's one filled button.
+        expect(primaries(el)).toEqual(["Turn on"]);
         expect(row(el, "A copy also in")?.hint).toBe(
           "Each new backup is copied to this folder too, like a USB drive or iCloud Drive. The two newest stay there.",
         );
-        const links = [...(el.querySelector(".dk-sx__links")?.querySelectorAll("button") ?? [])].map(
-          (b) => b.textContent,
-        );
-        expect(links).toEqual([
-          "Back up now",
-          "Restore…",
-          "Show in Finder",
-          "Stop",
-          "Stop running it here…",
-          "Erase and start over…",
-        ]);
+        // What is done to the backups, as links under the nightly backup's row.
+        const backups = cardUnder(el, "Backups") as HTMLElement;
+        const backupLinks = [...backups.querySelectorAll(".dk-crow__under .dk-sx__rowlinks button")];
+        expect(backupLinks.map((b) => b.textContent)).toEqual(["Back up now", "Restore…", "Show in Finder"]);
+        // What stops it, in the menu beside Restart: the two that end it here in the danger colour.
+        const items = await serverMenu(el);
+        expect(items.map((m) => m.textContent)).toEqual(["Stop", "Stop running it here…", "Erase and start over…"]);
+        expect(items.map((m) => m.classList.contains("ac-menu__item--danger"))).toEqual([false, true, true]);
         expect(el.querySelector(".ac-chip")).toBeNull();
       },
     ));
@@ -539,9 +566,11 @@ describe("Settings › This computer › Server on this computer", () => {
     pane(
       "here",
       <Settings section="server" />,
-      (el) => eraseButton(el) && !eraseButton(el)?.disabled,
+      (el) => el.querySelector(".dk-phead .dk-sx__ok"),
       async (el, host) => {
-        await act(async () => eraseButton(el)?.click());
+        const erase = await eraseItem(el);
+        expect(erase?.getAttribute("aria-disabled")).toBeNull();
+        await act(async () => erase?.click());
         await until(() => document.querySelector('[role="dialog"]'));
         await act(async () => buttonIn(document.querySelector('[role="dialog"]') as HTMLElement, "Erase it")?.click());
         await until(() => !document.querySelector('[role="dialog"]'));
@@ -554,10 +583,11 @@ describe("Settings › This computer › Server on this computer", () => {
     pane(
       "here",
       <Settings section="server" />,
-      (el) => eraseButton(el),
+      (el) => el.querySelector(".dk-phead .dk-sx__ok"),
       async (el, host) => {
-        expect(eraseButton(el)?.closest(".dk-sx__links")?.textContent).toContain("Stop running it here…");
-        await act(async () => eraseButton(el)?.click());
+        const items = await serverMenu(el);
+        expect(items.map((m) => m.textContent)).toContain("Stop running it here…");
+        await act(async () => items.find((m) => m.textContent === "Erase and start over…")?.click());
         await until(() => document.querySelector('[role="dialog"]'));
         const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
         expect(dialog.textContent).toContain("Erase agentes.chat on this Mac?");
@@ -573,7 +603,7 @@ describe("Settings › This computer › Server on this computer", () => {
         expect((await host.localServer()).phase).toBe("stopped");
         await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
         expect(document.querySelector('[role="dialog"]')).toBe(dialog);
-        await until(() => !eraseButton(el) && !document.querySelector('[role="dialog"]'));
+        await until(() => !navItems(el).includes("Server on this Mac") && !document.querySelector('[role="dialog"]'));
         expect(document.querySelector(".dk-toast")?.textContent).toContain(
           "Erased. Its old data is in ~/agentes.chat erased 2026-11-14.",
         );
@@ -586,12 +616,14 @@ describe("Settings › This computer › Server on this computer", () => {
     pane(
       "here",
       <Settings section="server" />,
-      (el) => eraseButton(el),
+      (el) => el.querySelector('.dk-phead button[aria-label="More"]'),
       async (el) => {
-        expect(eraseButton(el)?.closest(".dk-crow")).toBeNull();
-        expect(eraseButton(el)?.closest(".dk-sx__links")).toBeTruthy();
-        expect(el.textContent).toContain("Start it here");
-        await act(async () => eraseButton(el)?.click());
+        // Start it here in the heading, its menu holding what is left: erasing it.
+        expect(buttonIn(el.querySelector(".dk-phead") as HTMLElement, "Start it here")).toBeTruthy();
+        expect(primaries(el)).toEqual(["Start it here"]);
+        const items = await serverMenu(el);
+        expect(items.map((m) => m.textContent)).toEqual(["Erase and start over…"]);
+        await act(async () => items[0]?.click());
         await until(() => document.querySelector('[role="dialog"]'));
         const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
         await act(async () => buttonIn(dialog, "Erase it")?.click());
@@ -603,7 +635,8 @@ describe("Settings › This computer › Server on this computer", () => {
         // Opened again later, it starts clean.
         await act(async () => buttonIn(dialog, "Cancel")?.click());
         await until(() => !document.querySelector('[role="dialog"]'));
-        await act(async () => eraseButton(el)?.click());
+        const again = await eraseItem(el);
+        await act(async () => again?.click());
         await until(() => document.querySelector('[role="dialog"]'));
         expect(document.querySelector('[role="dialog"] [role="alert"]')).toBeNull();
       },
@@ -619,9 +652,10 @@ describe("Settings › This computer › Server on this computer", () => {
     pane(
       "here",
       <Settings section="server" />,
-      (el) => eraseButton(el),
+      (el) => el.querySelector(".dk-phead .dk-sx__ok"),
       async (el) => {
-        await act(async () => eraseButton(el)?.click());
+        const erase = await eraseItem(el);
+        await act(async () => erase?.click());
         await until(() => document.querySelector('[role="dialog"]'));
         const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
         // Everything that goes and everything that stays, in that order.
@@ -651,9 +685,9 @@ describe("Settings › This computer › Server on this computer", () => {
     pane(
       "here",
       <Settings section="server" />,
-      (el) => eraseButton(el),
-      (el) => {
-        expect((eraseButton(el) as HTMLButtonElement).disabled).toBe(true);
+      (el) => el.querySelector('.dk-phead button[aria-label="More"]'),
+      async (el) => {
+        expect((await eraseItem(el))?.getAttribute("aria-disabled")).toBe("true");
       },
       { here: { phase: "updating" } },
     ));
@@ -832,9 +866,11 @@ describe("Settings › This computer › App settings", () => {
             line: null,
           },
         ]);
-        // The servers this app opens; Updates, About and the advanced limits after them.
-        expect(el.querySelector(".dk-sx__subhead h3")?.textContent).toBe("Advanced");
-        expect([...el.querySelectorAll(".dk-ctitle")].map((h) => h.textContent)).toContain("Updates");
+        // The servers this app opens; Updates, About and the advanced limits after them, Advanced a caption like the
+        // others.
+        const captions = [...el.querySelectorAll(".dk-ctitle")].map((h) => h.textContent);
+        expect(captions.indexOf("Updates")).toBeGreaterThan(captions.indexOf("Servers and accounts"));
+        expect(captions.indexOf("Advanced")).toBeGreaterThan(captions.indexOf("Updates"));
       },
     ));
 
@@ -933,20 +969,44 @@ describe("App settings › Updates", () => {
   });
   const latest = { version: "9.9.9", url: "https://app.agentes.chat/api/desktop/download/9.9.9/agentes.dmg" };
 
-  test("its state in words; Update and reopen alone, and the manual way keeps what stays", () =>
+  test("the version's row: its state in words, Update and reopen at its end, and the manual way keeps what stays", () =>
     pane(
       "selfhost",
       <Updates update={update({ latest, available: true })} />,
-      (el) => el.querySelector(".dk-ver__acts"),
+      (el) => rowEl(el, "Version 0.6.0")?.querySelector(".dk-crow__end button"),
       async (el, host) => {
-        expect(el.querySelector(".dk-ver .dk-sx__warn")?.textContent).toBe("Version 9.9.9 is available");
+        const version = rowEl(el, "Version 0.6.0") as HTMLElement;
+        expect(row(el, "Version 0.6.0")?.line).toBe("Version 9.9.9 is available · Not checked yet");
+        expect(version.querySelector(".dk-crow__text > small .dk-sx__warn")?.textContent).toBe(
+          "Version 9.9.9 is available",
+        );
         expect(el.querySelector(".ac-chip")).toBeNull();
-        const acts = el.querySelector(".dk-ver__acts") as HTMLElement;
-        expect(acts.textContent).toBe("Update and reopen");
+        // Update and reopen alone at the row's end, the screen's one filled button.
+        const end = version.querySelector(".dk-crow__end") as HTMLElement;
+        expect(end.textContent).toBe("Update and reopen");
+        expect(primaries(el)).toEqual(["Update and reopen"]);
         host.installUpdate = async () => false;
-        await act(async () => (acts.querySelector("button") as HTMLButtonElement).click());
+        await act(async () => (end.querySelector("button") as HTMLButtonElement).click());
         await until(() => el.textContent?.includes("Download version 9.9.9"));
         expect(el.querySelector(".dk-ver__acts .dk-help")?.textContent).toBe("Your servers and settings stay.");
+        // The row goes back to Check now: the download is the way now.
+        expect(rowEl(el, "Version 0.6.0")?.querySelector(".dk-crow__end")?.textContent).toBe("Check now");
+        expect(primaries(el)).toEqual(["Download version 9.9.9"]);
+      },
+    ));
+
+  test("up to date: said in the ok colour on the version's row, with Check now at its end", () =>
+    pane(
+      "selfhost",
+      <Updates update={update()} />,
+      (el) => rowEl(el, "Version 0.6.0") && rowEl(el, "System details"),
+      (el) => {
+        expect(row(el, "Version 0.6.0")?.line).toBe("Up to date · Not checked yet");
+        expect(rowEl(el, "Version 0.6.0")?.querySelector(".dk-sx__ok")?.textContent).toBe("Up to date");
+        expect(rowEl(el, "Version 0.6.0")?.querySelector(".dk-crow__end")?.textContent).toBe("Check now");
+        // One group: the version, installing at night and the system details, with no second card.
+        expect(cardUnder(el, "Updates")?.querySelectorAll(".dk-crow").length).toBe(3);
+        expect(primaries(el)).toEqual([]);
       },
     ));
 
@@ -989,7 +1049,8 @@ describe("App settings › Updates", () => {
           const details = rowEl(el, "System details") as HTMLElement;
           const line =
             "agentes.chat 0.6.0 · Linux · Ubuntu 26.04 LTS · wayland (GNOME) · WebKitGTK 2.50.4 · Intel (i915) · CPU (chosen) · AppImage";
-          expect(details.querySelector("small")?.textContent).toBe(line);
+          // On screen each "·" keeps to the part before it (a no-break space), so a wrapped line never starts with one.
+          expect(details.querySelector("small")?.textContent).toBe(line.replaceAll(" · ", "\u00a0· "));
           await act(async () => (details.querySelector("button") as HTMLButtonElement).click());
           await until(() => copied.length > 0);
           expect(copied).toEqual([line]);
@@ -1004,15 +1065,17 @@ describe("App settings › Updates", () => {
     pane(
       "selfhost",
       <Updates update={update({ latest, available: true })} />,
-      (el) => el.querySelector(".dk-ver__acts"),
+      (el) => rowEl(el, "Version 0.6.0")?.querySelector(".dk-crow__end button"),
       async (el) => {
-        const install = () => act(async () => (el.querySelector(".dk-ver__acts button") as HTMLButtonElement).click());
-        const bar = () => el.querySelector('.dk-upd [role="progressbar"]');
+        const end = () => rowEl(el, "Version 0.6.0")?.querySelector(".dk-crow__end");
+        const install = () => act(async () => end()?.querySelector("button")?.click());
+        // The download under the version's row, on its words' line.
+        const bar = () => rowEl(el, "Version 0.6.0")?.querySelector('.dk-crow__under .dk-upd [role="progressbar"]');
         await install();
         await until(() => Number(bar()?.getAttribute("aria-valuenow")) > 0);
         expect(el.querySelector(".dk-upd__label")?.textContent).toBe("Downloading…");
         await act(async () => (el.querySelector(".dk-upd button") as HTMLButtonElement).click());
-        await until(() => el.querySelector(".dk-ver__acts")?.textContent === "Update and reopen");
+        await until(() => end()?.textContent === "Update and reopen");
         expect(el.textContent).not.toContain("Update by hand");
         await install();
         await until(() => el.querySelector(".dk-upd__label")?.textContent === "Installing…");
@@ -1051,14 +1114,16 @@ describe("App settings › Advanced", () => {
       "selfhost",
       <Advanced />,
       (el) =>
-        el.querySelectorAll(".dk-card").length === 3 &&
-        !el.querySelector(".dk-sx__subhead button")?.hasAttribute("disabled"),
+        el.querySelectorAll(".dk-card").length === 4 &&
+        !(buttonIn(el, "Back to defaults") as HTMLButtonElement | undefined)?.disabled,
       async (el) => {
-        const defaults = el.querySelector<HTMLButtonElement>(".dk-sx__subhead button");
+        // Its own group: when to touch it, and Back to defaults at the row's end.
+        const advanced = cardUnder(el, "Advanced") as HTMLElement;
+        expect(rows(advanced)).toEqual([
+          { title: null, hint: null, line: "Only change this if the computer feels slow or busy." },
+        ]);
+        const defaults = advanced.querySelector<HTMLButtonElement>(".dk-crow__end button");
         expect(defaults?.textContent).toBe("Back to defaults");
-        expect(el.querySelector(".dk-sx__subhead .dk-lead")?.textContent).toBe(
-          "Only change this if the computer feels slow or busy.",
-        );
         await act(async () => defaults?.click());
         const idle = () =>
           [...el.querySelectorAll('[role="radiogroup"]')]

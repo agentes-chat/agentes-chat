@@ -14,8 +14,19 @@ import { Banner } from "../../ui/bits";
 import { useToast } from "../../ui/Toast";
 import { essentialIcon, essentialWords, fixLabel, fixPlan } from "./state";
 
-/** `reread`: the system's side read again once the fix ran (the list then says it's on). */
-export function EssentialBanner({ essential, reread }: { essential: Essential; reread: () => void }) {
+/**
+ * `reread`: the system's side read again once the fix ran (the list then says it's on). `strong`: the first thing on
+ * the popover that needs the person, whose button is the one filled button there.
+ */
+export function EssentialBanner({
+  essential,
+  reread,
+  strong = false,
+}: {
+  essential: Essential;
+  reread: () => void;
+  strong?: boolean;
+}) {
   const { t } = useTranslation();
   const host = useHost();
   const toast = useToast();
@@ -64,9 +75,16 @@ export function EssentialBanner({ essential, reread }: { essential: Essential; r
   return (
     <Banner
       icon={essentialIcon(essential)}
+      tone="warn"
       title={t(words.title)}
       actions={
-        <Button size="sm" variant="primary" loading={busy} disabled={busy} onClick={() => void run()}>
+        <Button
+          size="sm"
+          variant={strong ? "primary" : "default"}
+          loading={busy}
+          disabled={busy}
+          onClick={() => void run()}
+        >
           {t(fixLabel(fix))}
         </Button>
       }

@@ -1,6 +1,7 @@
 /**
  * Development only (`bun run dev` in a browser, the fake host): `?first=<state>` opens the first run straight on one of
- * its states, so each can be looked at and captured without clicking through. Not read in the app.
+ * its states (each on its card over the team's sky, `layer/first-run/Flow.tsx`), so each can be looked at and captured
+ * without clicking through. Not read in the app.
  *
  * - `welcome`, `company` (a company's server by its address), `install` (installing for the team on a server);
  * - Run here: `owner`, `where`, `net` (how the phone and the team get here, Tailscale's row), `address` (the same step

@@ -174,12 +174,16 @@ describe("pairing from the app", () => {
       );
       // The four lines, the coding tools found here by name.
       await until(() => el.textContent?.includes("Claude Code and Codex, already here."));
-      expect([...el.querySelectorAll(".dk-sh__line")].map((li) => li.textContent)).toEqual([
+      const lines = [...el.querySelectorAll(".dk-sh__rows > .dk-crow")];
+      expect(lines.map((row) => row.textContent)).toEqual([
         "The agents' own browserWithout your logins and passwords.",
         "Commands and coding toolsClaude Code and Codex, already here. They run as your user.",
         "Your folders only with your OKEach request shows in the chat and in the menu bar.",
         "Opens by itself when the Mac startsSo agents come back without you having to remember.",
       ]);
+      // Each line's glyph in the sheets' picture column, never on a tile.
+      expect(lines.every((row) => row.firstElementChild?.classList.contains("dk-sh__icon"))).toBe(true);
+      expect(el.querySelector(".dk-sh .dk-logo")).toBeNull();
       expect(el.querySelector(".dk-sh__help")?.textContent).toBe(
         "Change it any time in Settings\u00a0›\u00a0This Mac.",
       );
@@ -188,7 +192,9 @@ describe("pairing from the app", () => {
       expect(el.querySelector('[role="checkbox"]')).toBeNull();
       // No card inside the card.
       expect(el.querySelector(".dk-sh .dk-card")).toBeNull();
-      expect(button(el, "Not now")).toBeTruthy();
+      // One primary, the way forward; Not now is bordered beside it.
+      expect([...el.querySelectorAll(".dk-sh .ac-btn--primary")].map((b) => b.textContent)).toEqual(["Get it ready"]);
+      expect(button(el, "Not now")?.classList.contains("ac-btn--ghost")).toBe(false);
       expect(document.activeElement).not.toBe(button(el, "Get it ready"));
 
       await act(async () => button(el, "Get it ready")?.click());
@@ -295,6 +301,10 @@ describe("pairing from the app", () => {
         "If an update turns one off, we'll tell you right away.",
       );
       expect(button(el, "Do it later")).toBeTruthy();
+      // The rows' glyphs in the sheets' picture column, no tile; each Allow bordered: Continue is the one primary.
+      expect(el.querySelectorAll(".dk-sh__rows > .dk-crow > .dk-sh__icon").length).toBe(3);
+      expect(el.querySelector(".dk-sh .dk-logo")).toBeNull();
+      expect([...el.querySelectorAll(".dk-sh .ac-btn--primary")].map((b) => b.textContent)).toEqual(["Continue"]);
 
       // Notifications: the system's prompt once, read back at once; nothing to wait on in System Settings.
       await act(async () => button(rowOf(el, "Notifications"), "Allow")?.click());
@@ -424,16 +434,28 @@ describe("pairing from the app", () => {
         expect(rowOf(el, "From")?.textContent).toContain("agentes.tail1234.ts.net");
         expect(rowOf(el, "This Mac")?.textContent).toContain("Sam's MacBook Pro");
         expect(el.querySelector(".dk-sh__lead")?.textContent).toBe("If you didn't ask for this, choose Not now.");
+        // Where this setup is, as Get this Mac ready says it: every permission is on here, so it's the only step.
+        await until(() => el.querySelector(".dk-sh__step")?.textContent === "This Mac");
+        // Folders come later: the footer's note says where.
+        expect(el.querySelector(".dk-sh__help")?.textContent).toBe(
+          "No folders of yours yet. Add them later in Settings › Folders and tools.",
+        );
         expect(document.activeElement).not.toBe(button(el, "Connect"));
+        expect([...el.querySelectorAll(".dk-sh .ac-btn--primary")].map((b) => b.textContent)).toEqual(["Connect"]);
         await until(() => rowOf(el, "Codex"));
         expect(switches(el)).toMatchObject({ Commands: "true", Browser: "false" });
         expect(rowOf(el, "Commands")?.textContent).toContain("Commands can reach the rest of this Mac");
+        // Rows, not a card in the card, their glyphs and marks in the sheets' picture column.
+        expect(el.querySelector(".dk-sh .dk-card")).toBeNull();
+        expect(el.querySelector(".dk-sh .dk-logo")).toBeNull();
+        expect(rowOf(el, "Codex")?.firstElementChild?.classList.contains("dk-sh__icon")).toBe(true);
         await act(async () => toggle(el, "Browser"));
 
         await act(async () => button(el, "Connect")?.click());
         await until(() => el.textContent?.includes("Waiting for Sam Rivera to let it in…"));
         expect(button(el, "Cancel")).toBeTruthy();
         await until(() => el.querySelector("h1")?.textContent === "Connected to Estúdio Norte");
+        expect(el.querySelector(".dk-sh__lead")?.textContent).toBe("Its agents can work on this Mac now.");
         expect(await host.autostart()).toBe(true);
         await until(() => pairedWith(store, "o-norte"));
         const norte = () => pairedHomes(store.getSnapshot()).find((h) => h.status?.org?.id === "o-norte");
@@ -477,17 +499,23 @@ describe("pairing from the app", () => {
     await mount({ screen: "pairLink", server: FAKE_SERVER, code: FAKE_LINKS.denied }, layer, async (el, host) => {
       await until(() => button(el, "Connect"));
       await act(async () => button(el, "Connect")?.click());
-      await until(() => el.textContent?.includes("Sam Rivera didn't let it in. Nothing changed."));
-      expect(button(el, "Close")).toBeTruthy();
+      // What happened is the title, no longer the question; who asked and from where stay under it.
+      await until(() => el.querySelector("h1")?.textContent === "Sam Rivera didn't let it in");
+      expect(el.querySelector(".dk-sh__lead")?.textContent).toBe("Nothing changed on this Mac.");
+      expect(rowOf(el, "Asked by")?.textContent).toContain("Sam Rivera");
+      expect(button(el, "Close")?.classList.contains("ac-btn--primary")).toBe(true);
       expect(button(el, "Try again")).toBeUndefined();
       // Open at login only comes with a computer that joined.
       expect(await host.autostart()).toBe(false);
     });
     await mount({ screen: "pairLink", server: FAKE_SERVER, code: "WXYZWXYZ" }, layer, async (el, host) => {
-      await until(() => el.textContent?.includes("This link expired. Make a new one in Devices."));
-      expect(el.querySelector("h1")?.textContent).toContain("agentes.tail1234.ts.net");
+      await until(() => el.querySelector("h1")?.textContent === "This link expired");
+      expect(el.querySelector(".dk-sh__lead")?.textContent).toBe(
+        "Make a new one in Devices on agentes.tail1234.ts.net.",
+      );
       expect(button(el, "Connect")).toBeUndefined();
-      // Devices on the server that made the link, where a new one is made.
+      // Devices on the server that made the link, where a new one is made: the way forward, so the primary.
+      expect([...el.querySelectorAll(".dk-sh .ac-btn--primary")].map((b) => b.textContent)).toEqual(["Open Devices"]);
       const opened: string[] = [];
       host.openExternal = async (url) => void opened.push(url);
       await act(async () => button(el, "Open Devices")?.click());
@@ -500,7 +528,8 @@ describe("pairing from the app", () => {
     const away = "https://chat.example.com";
     await mount({ screen: "pairLink", server: away, code: FAKE_LINKS.live }, layer, async (el) => {
       await until(() => button(el, "Try again"));
-      expect(el.textContent).toContain("chat.example.com");
+      expect(el.querySelector("h1")?.textContent).toBe("Couldn't reach chat.example.com");
+      expect(el.querySelector(".dk-sh__lead")?.textContent).toBe("Check the connection and try again.");
       expect(button(el, "Cancel")).toBeTruthy();
     });
   });

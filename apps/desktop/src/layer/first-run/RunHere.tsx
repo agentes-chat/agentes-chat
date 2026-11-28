@@ -432,8 +432,10 @@ export function RunHere({
             </Field>
           </div>
           <label className="dk-first__check" htmlFor="here-usage">
-            <Checkbox id="here-usage" checked={usage} onCheckedChange={setUsage} />
-            <span>
+            <span className="dk-first__glyph">
+              <Checkbox id="here-usage" checked={usage} onCheckedChange={setUsage} />
+            </span>
+            <span className="dk-first__rowtext">
               {t("desktop.first.run.usage")}
               <small>{t("desktop.first.run.usageText")}</small>
             </span>
@@ -454,8 +456,10 @@ export function RunHere({
     };
     const pick = (value: LocalPlace, icon: ReactNode, title: string, text: string) => (
       <label className="dk-first__pick" htmlFor={`where-${value}`}>
-        {icon}
-        <span className="dk-first__picktext">
+        <span className="dk-first__glyph" aria-hidden="true">
+          {icon}
+        </span>
+        <span className="dk-first__rowtext">
           <b>{title}</b>
           <small>{text}</small>
         </span>
@@ -521,7 +525,7 @@ export function RunHere({
       lead={t("desktop.first.run.netLead")}
       onBack={settled ? undefined : goBack}
       quiet={
-        <Button variant="ghost" onClick={() => (settled ? void host.hideLayer().catch(() => {}) : startSetup("here"))}>
+        <Button onClick={() => (settled ? void host.hideLayer().catch(() => {}) : startSetup("here"))}>
           {t("desktop.first.run.later")}
         </Button>
       }

@@ -1,5 +1,5 @@
 /**
- * Settings › This computer › Overview (ADR 0265 §7): this computer's picture and name (renamed here for every
+ * Settings › This computer › Overview (ADR 0265 §6): this computer's picture and name (renamed here for every
  * workspace), whether something needs the person, the workspaces whose agents use it and the app's version; then
  * "Always ready", what keeps agents working here without anyone looking, and "Who uses this computer".
  */
@@ -131,7 +131,8 @@ export function Overview({ ctx }: { ctx: SettingsContext }) {
       <AlwaysOn essentials={essentials} chooseReach={() => ctx.show("server", "reach")} />
 
       <CardTitle>{t("desktop.settings.overview.who")}</CardTitle>
-      <WhoUses homes={homes} offers={offers} />
+      {/* The screen's one filled button: a fix above while something needs the person, else the first Allow. */}
+      <WhoUses homes={homes} offers={offers} primary={needs === 0} />
     </>
   );
 }

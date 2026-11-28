@@ -132,10 +132,19 @@ function connectionWords(t: (key: string) => string, home: Home): { text: string
 /**
  * The Overview's "Who uses this computer": one row per workspace the person is signed in to. A paired one pauses and
  * resumes with its switch, and its ⋯ opens it, says who can use this computer there (a dialog) and disconnects it; one
- * this computer doesn't work for yet shows Allow, which pairs it after the system's dialog. Add a workspace closes the
- * card. Who can use it is the server's, as the web sets it.
+ * this computer doesn't work for yet shows Allow, which pairs it after the system's dialog (filled on the first one
+ * when `primary`: nothing above needs the person). Add a workspace closes the card. Who can use it is the server's, as
+ * the web sets it.
  */
-export function WhoUses({ homes, offers }: { homes: Home[]; offers: PairTarget[] }) {
+export function WhoUses({
+  homes,
+  offers,
+  primary = false,
+}: {
+  homes: Home[];
+  offers: PairTarget[];
+  primary?: boolean;
+}) {
   const { t, i18n } = useTranslation();
   const host = useHost();
   const store = useStore();
@@ -287,7 +296,7 @@ export function WhoUses({ homes, offers }: { homes: Home[]; offers: PairTarget[]
             />
           );
         })}
-        {offers.map((o) => {
+        {offers.map((o, i) => {
           const key = targetKey(o);
           return (
             <PrefRow
@@ -299,7 +308,7 @@ export function WhoUses({ homes, offers }: { homes: Home[]; offers: PairTarget[]
               end={
                 <Button
                   size="sm"
-                  variant="primary"
+                  variant={primary && i === 0 ? "primary" : "default"}
                   loading={pending === key}
                   disabled={pending !== null && pending !== key}
                   onClick={() => void pair(o)}
@@ -313,7 +322,7 @@ export function WhoUses({ homes, offers }: { homes: Home[]; offers: PairTarget[]
         <PrefRow
           lead={
             <span className="dk-logo dk-logo--soft">
-              <Icon name="plus" size={16} />
+              <Icon name="plus" size={20} />
             </span>
           }
           title={t("desktop.prefs.thisMac.otherWorkspace")}
@@ -367,7 +376,7 @@ export function WhoUses({ homes, offers }: { homes: Home[]; offers: PairTarget[]
         width={440}
       >
         <DialogFooter bar>
-          <Button variant="ghost" onClick={() => setLeaving(null)} disabled={busy}>
+          <Button onClick={() => setLeaving(null)} disabled={busy}>
             {t("desktop.common.cancel")}
           </Button>
           <Button variant="danger" loading={busy} onClick={() => void leave()}>
@@ -713,7 +722,7 @@ export function PeoplePicker({
         )}
       </DialogBody>
       <DialogFooter bar>
-        <Button variant="ghost" onClick={onCancel} disabled={saving}>
+        <Button onClick={onCancel} disabled={saving}>
           {t("desktop.common.cancel")}
         </Button>
         <Button
@@ -917,7 +926,6 @@ function PhoneRow({
         ) : howTo ? (
           <Button
             size="sm"
-            variant="primary"
             onClick={() =>
               phone.platform === "ios"
                 ? openIphoneSetup(host)

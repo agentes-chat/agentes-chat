@@ -101,9 +101,7 @@ export function useReach(): ReachControl {
       width={440}
     >
       <DialogFooter bar>
-        <Button variant="ghost" onClick={() => setAsking(false)}>
-          {t("desktop.common.cancel")}
-        </Button>
+        <Button onClick={() => setAsking(false)}>{t("desktop.common.cancel")}</Button>
         <Button
           variant="danger"
           onClick={() => {
@@ -214,7 +212,6 @@ export function ReachChooser({
       <div className="dk-sx__chooseacts">
         <Button
           size="sm"
-          variant="ghost"
           disabled={control.reaching}
           onClick={() => {
             // What it said about this choice goes with it.
@@ -280,8 +277,11 @@ export function fixLabel(t: TFunction, fix: EssentialFix, mac: MacGrants | null,
   }
 }
 
-/** An essential's one fix, as a button that waits while it runs. */
-export function FixButton({ fix, ctx }: { fix: EssentialFix; ctx: FixContext }) {
+/**
+ * An essential's one fix, as a button that waits while it runs: `primary` (filled) for the screen's one forward action,
+ * bordered otherwise.
+ */
+export function FixButton({ fix, ctx, primary = false }: { fix: EssentialFix; ctx: FixContext; primary?: boolean }) {
   const { t } = useTranslation();
   const host = useHost();
   const toast = useToast();
@@ -325,7 +325,6 @@ export function FixButton({ fix, ctx }: { fix: EssentialFix; ctx: FixContext }) 
         return host.openSystemSettings(fix.page);
     }
   };
-  const primary = fix.kind !== "systemSettings";
   const reachFix = fix.kind === "reach" || fix.kind === "reachCheck" || fix.kind === "tailscaleStart";
   return (
     <Button

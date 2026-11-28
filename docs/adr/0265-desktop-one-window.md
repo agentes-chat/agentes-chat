@@ -51,6 +51,10 @@ cover, General, Servers and Updates, and some of it can be skipped once and neve
   side by side).
 - Google and Apple go through the browser as today (the desktop sign-in hand-off); the window says so and follows by
   itself.
+- Every screen of the first run is one card over the team's sky, which fills the window: the team drawn small at the
+  card's top, then the step, the title, what it asks and its buttons on the card's own edges (Back on the left, one
+  filled button on the right). The sheets (§1) and This Mac's settings (§6) are the same card over the site, so the app
+  reads as one set of dialogs with one type scale, one icon column per surface and no card inside a card.
 
 ### 3. Running agentes.chat on this computer in three steps
 

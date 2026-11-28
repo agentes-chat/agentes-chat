@@ -33,7 +33,8 @@ const idleChoices = (platform: Platform) => (platform === "linux" ? ["10", "20",
 
 /**
  * App settings › Advanced: the limits every workspace's agents keep on this computer (long jobs, open conversations)
- * and each workspace's agents' folder. One change sets every workspace.
+ * and each workspace's agents' folder. One change sets every workspace. It opens with its own caption and a row saying
+ * when to touch it, with Back to defaults at its end: a group like the page's others, not a heading of its own.
  */
 export function Advanced() {
   const { t } = useTranslation();
@@ -102,20 +103,21 @@ export function Advanced() {
   const disabled = homes.length === 0;
   return (
     <section data-focus="advanced">
-      <div className="dk-sx__subhead">
-        <div>
-          <h3>{t("desktop.settings.app.advanced")}</h3>
-          <p className="dk-lead">{t("desktop.prefs.advanced.lead")}</p>
-        </div>
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled={disabled}
-          onClick={() => void change(defaults, t("desktop.prefs.advanced.defaultsDone"))}
-        >
-          {t("desktop.prefs.advanced.defaults")}
-        </Button>
-      </div>
+      <CardTitle>{t("desktop.settings.app.advanced")}</CardTitle>
+      <PrefCard>
+        <PrefRow
+          desc={t("desktop.prefs.advanced.lead")}
+          end={
+            <Button
+              size="sm"
+              disabled={disabled}
+              onClick={() => void change(defaults, t("desktop.prefs.advanced.defaultsDone"))}
+            >
+              {t("desktop.prefs.advanced.defaults")}
+            </Button>
+          }
+        />
+      </PrefCard>
 
       <CardTitle>{t("desktop.prefs.advanced.longJobs")}</CardTitle>
       <PrefCard>
@@ -205,7 +207,7 @@ export function Advanced() {
             desc={h.status?.workspace && <span className="dk-path">{shortPath(h.status.workspace)}</span>}
             end={
               h.status?.workspace ? (
-                <Button size="sm" variant="ghost" onClick={() => void host.revealFolder(h.status?.workspace ?? "")}>
+                <Button size="sm" onClick={() => void host.revealFolder(h.status?.workspace ?? "")}>
                   {t("desktop.common.open")}
                 </Button>
               ) : undefined

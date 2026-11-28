@@ -1,7 +1,8 @@
 /*
  * The app layer's sheets (ADR 0265, SheetFrame.tsx). Sheet mode: a scrim over the site, its top strip dragging the
- * window, a card in the middle. Full mode: the same card on the app's background. The card is as tall as what it
- * holds, up to the window: then its body scrolls and its footer stays.
+ * window, and the card hanging just under that strip, as a Mac's sheets hang from the title bar: when the card grows
+ * or shrinks with its state, its top stays put. Full mode: the same card in the middle of the app's background. The
+ * card is as large as what it holds, up to the window: then its body scrolls and its footer stays.
  */
 .dk-shf {
   position: relative;
@@ -14,6 +15,13 @@
 /* A Mac: the window's buttons and the strip that drags it sit over the top 48pt. */
 .dk-shf[data-mac] {
   padding-top: calc(var(--layer-bar, 48px) + 8px);
+}
+.dk-shf[data-mode="sheet"] {
+  align-items: flex-start;
+}
+/* This computer's settings are a dialog, not a sheet: in the middle of the window, at a fixed size. */
+.dk-shf[data-mode="sheet"]:has(.dk-sx) {
+  align-items: center;
 }
 .dk-shf[data-mode="full"] {
   background: var(--bg);
@@ -46,17 +54,6 @@
   box-shadow: var(--e3), var(--top);
   animation: dk-shf-card-in 0.24s var(--out, ease-out) both;
 }
-/* A screen of its own size (a connect link from the first run): the card keeps the old sheet's size. */
-.dk-shf__card[data-fill] {
-  width: min(720px, 100%);
-  height: min(600px, 100%);
-  border-radius: 14px;
-  background: var(--bg);
-}
-.dk-shf__card[data-fill] > * {
-  flex: 1;
-  min-height: 0;
-}
 
 @keyframes dk-shf-in {
   from {
@@ -76,89 +73,143 @@
   }
 }
 
-/* What a card holds: the body (scrolls when the window is short), then the footer. */
+/*
+ * What a card holds: one column with one inset (24 on every edge), the body (scrolls when the window is short), then
+ * the footer. 560 for a sheet with rows, 440 for a message and its buttons, 780 for rows with a column beside them.
+ * Figures in words keep their own widths (an address, a phone's model).
+ */
 .dk-sh {
   width: 560px;
   max-width: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;
+  font-feature-settings: normal;
 }
-.dk-sh[data-wide] {
+.dk-sh[data-size="sm"] {
+  width: 440px;
+}
+.dk-sh[data-size="lg"] {
   width: 780px;
 }
 .dk-sh__body {
   flex: 0 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding: 26px 28px 0;
+  padding: 24px 24px 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
 }
-.dk-sh__step {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--faint);
+.dk-sh__body > * {
+  margin: 0;
 }
+/* The rhythm: 16 between blocks; the label 8 over the title, the lead 8 under it, the content 24 under the head. */
+.dk-sh__body > * + * {
+  margin-top: 16px;
+}
+.dk-sh__body > .dk-sh__step + .dk-sh__title,
+.dk-sh__body > .dk-sh__title + .dk-sh__lead {
+  margin-top: 8px;
+}
+.dk-sh__body > .dk-sh__title + :not(.dk-sh__lead),
+.dk-sh__body > .dk-sh__lead + * {
+  margin-top: 24px;
+}
+.dk-sh__body > .dk-sh__text + .dk-sh__text {
+  margin-top: 8px;
+}
+
+/* The head: the picture, where this setup is, the title in the display face, one lead. */
 .dk-sh__art {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 12px;
-  margin: 6px 0 14px;
+}
+/* The team and this computer on one ground line: the portrait's canvas keeps empty rows under the drawing. */
+.dk-sh__art > .ac-computer {
+  margin-bottom: calc(-1 * var(--art-bottom, 0px));
+}
+.dk-sh__art > .dk-sh__trail {
+  align-self: center;
 }
 .dk-sh__cast {
   display: inline-flex;
-  gap: 2px;
+  gap: 4px;
+}
+.dk-sh__step {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  color: var(--muted);
 }
 .dk-sh__title {
-  margin: 0;
   font-family: var(--font-display);
   font-weight: 300;
-  font-size: 26px;
+  font-size: 22px;
+  line-height: 28px;
   letter-spacing: -0.02em;
-  line-height: 1.12;
   text-wrap: balance;
   overflow-wrap: anywhere;
 }
 .dk-sh__lead {
-  margin: 4px 0 14px;
   color: var(--muted);
   font-size: 14.5px;
-  line-height: 1.5;
+  line-height: 21px;
+  text-wrap: balance;
+}
+/* A paragraph of the body (who asked, what to do in System Settings). */
+.dk-sh__text {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
   text-wrap: pretty;
 }
+/* A command as it was run, in the code face, inside a sentence. */
+.dk-sh__code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink2);
+  overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/*
+ * The footer, the card's last row: a note on the left, the buttons on the right, 8 apart. The note stays beside them
+ * while it fits on one line there, else it takes its own row above them; the buttons never change side.
+ */
 .dk-sh__foot {
   flex: none;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 18px 28px 20px;
+  column-gap: 16px;
+  row-gap: 12px;
+  padding: 24px;
 }
 .dk-sh__help {
-  max-width: 260px;
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: var(--faint);
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
   text-wrap: pretty;
-}
-.dk-sh[data-wide] .dk-sh__help {
-  max-width: 420px;
 }
 .dk-sh__acts {
   flex: none;
+  max-width: 100%;
   margin-left: auto;
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 
 /* The pixel trail: three squares fading toward this computer. */
 .dk-sh__trail {
   display: inline-flex;
-  gap: 5px;
+  gap: 4px;
 }
 .dk-sh__trail i {
   display: block;
@@ -173,66 +224,98 @@
   opacity: 0.4;
 }
 
-/* What getting this computer ready means: one line each, an icon and two lines of words, hairlines between them. */
-.dk-sh__lines {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-}
-.dk-sh__line {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 11px 0;
-  border-top: 1px solid var(--line);
-}
-.dk-sh__line:first-child {
-  border-top: 0;
-}
-.dk-sh__line > .ac-icon {
-  flex: none;
-  margin-top: 1px;
-  color: var(--muted);
-}
-.dk-sh__line > span {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-.dk-sh__line b {
-  font-size: 14px;
-  font-weight: 600;
-}
-.dk-sh__line small {
-  font-size: 13px;
-  color: var(--muted);
-}
-
 /*
- * Rows in a sheet are never a card in the card: the rows of a card (the permissions, a link's facts, the tools'
- * switches) sit between two hairlines.
+ * Rows (`PrefRow`), never a card in the card: a group between two hairlines, a hairline between rows. One column for
+ * their pictures in every sheet: a 20px slot with a bare glyph on the title's line, then 12, so every row's words, and
+ * every line under a row, start 32 from the edge. A row's control sits on the middle of its title and the line under
+ * it, wherever a line under the row (a wait, a warning) goes.
  */
-.dk-sh__rows,
-.dk-sh .dk-card {
-  padding: 0;
-  border-radius: 0;
-  background: none;
-  box-shadow: none;
+.dk-sh__rows {
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
-.dk-sh .dk-card + .dk-card {
-  margin-top: 0;
+.dk-sh .dk-sh__rows .dk-crow {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  column-gap: 12px;
+  row-gap: 8px;
+  align-items: center;
+  padding: 12px 0;
+}
+.dk-sh__icon {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.dk-sh .dk-sh__rows .dk-crow > .dk-sh__icon {
+  grid-area: 1 / 1;
+  align-self: start;
+}
+.dk-sh .dk-sh__rows .dk-crow > .dk-crow__text {
+  grid-area: 1 / 2;
+  gap: 0;
+}
+/* As wide as its widest state ("Allow", "On"), so the words beside it keep their lines when it changes. */
+.dk-sh .dk-sh__rows .dk-crow > .dk-crow__end {
+  grid-area: 1 / 3;
+  min-width: 80px;
+  margin-left: 0;
+  justify-content: flex-end;
+}
+.dk-sh .dk-sh__rows .dk-crow > .dk-crow__under {
+  grid-area: 2 / 2 / auto / -1;
+  padding-left: 0;
+}
+/* A switch's row too: every row title in a sheet is the same. */
+.dk-sh .dk-sh__rows .dk-crow .dk-crow__text .dk-crow__title {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+.dk-sh .dk-sh__rows .dk-crow__text small {
+  display: block;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+
+/* A link's facts (who asked, from where, this computer): a label and its value on one line each, no picture. */
+.dk-sh__rows.dk-sh__facts {
   border-top: 0;
+  border-bottom: 0;
 }
+.dk-sh .dk-sh__rows.dk-sh__facts .dk-crow {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+.dk-sh .dk-sh__rows.dk-sh__facts .dk-crow > .dk-crow__text {
+  grid-area: 1 / 1;
+}
+.dk-sh .dk-sh__rows.dk-sh__facts .dk-crow > .dk-crow__end {
+  grid-area: 1 / 2;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 20px;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.dk-sh .dk-sh__rows.dk-sh__facts .dk-crow .dk-crow__text .dk-crow__title {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* A group's caption over its rows, on their edge. */
 .dk-sh .dk-ctitle {
-  margin: 10px 0 4px;
-}
-.dk-sh .dk-under-card {
-  margin-top: 8px;
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 /* A permission that is on: the word in the ok colour, with its check (never a pill). */
@@ -241,64 +324,73 @@
   align-items: center;
   gap: 4px;
   font-size: 13px;
+  line-height: 18px;
   font-weight: 600;
   color: var(--ok);
 }
 
-.dk-sh__wait {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: 13.5px;
-  font-weight: 500;
-  line-height: 1.45;
-  color: var(--muted);
+/* Lines with a mark (waiting, a problem, a warning, it took effect): a 16px mark, 8, then the words. */
+.dk-sh__wait,
+.dk-sh__problem,
+.dk-sh__warn {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink2);
+  text-wrap: pretty;
 }
-.dk-sh__wait > :first-child {
-  flex: none;
-  margin-top: 2px;
-}
-.dk-sh__wait > span {
+.dk-sh__wait > :last-child {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 .dk-sh__wait small {
-  font-size: 12.5px;
-  font-weight: 400;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
 }
-/* Under a permission's row, in line with its words. */
-.dk-crow__under > .dk-sh__wait {
-  padding-bottom: 2px;
-}
-.dk-sh__body > .dk-sh__wait {
-  margin-top: 14px;
-}
-.dk-sh__problem {
-  margin-top: 12px;
-}
-.dk-sh__body > .dk-help {
-  margin-top: 2px;
-}
-.dk-sh__took {
-  display: inline-flex;
-  align-items: flex-start;
-  gap: 6px;
+.dk-sh__problem .ac-icon,
+.dk-sh__warn .ac-icon {
+  color: var(--warn);
 }
 .dk-sh__took .ac-icon {
-  flex: none;
   color: var(--ok);
 }
 
-/* The iPhone setup's steps take the body's height; its tip goes in the footer. */
-.dk-sh[data-screen="iphone"] .dk-ip {
-  margin-top: 8px;
+/* The iPhone setup: its steps in the sheets' type and picture column; what to paste framed by a hairline. */
+.dk-sh .dk-fr__steps {
+  gap: 16px;
 }
-/* A title with no lead under it (waiting, a problem): the same room before what follows. */
-.dk-sh__body > .dk-sh__title + :not(.dk-sh__lead) {
-  margin-top: 14px;
+.dk-sh .dk-fr__stepname {
+  gap: 8px;
 }
-/* The iPhone tip as the footer's line: its words on the sheet's edge, like the title's. */
+.dk-sh .dk-fr__stepname b {
+  line-height: 20px;
+}
+.dk-sh .dk-fr__stepname small,
+.dk-sh .dk-fr__stepline {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+}
+.dk-sh .dk-ip__cmd {
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--line);
+  font-size: 12px;
+  line-height: 18px;
+}
+.dk-sh .dk-code-inline {
+  padding: 0;
+  background: none;
+  font-size: 12px;
+}
+.dk-sh .dk-ip__qr svg {
+  outline: 1px solid var(--line);
+  outline-offset: -1px;
+}
+/* The iPhone tip as the footer's note: its words on the sheet's edge. */
 .dk-sh__help > .dk-ip__tip {
   padding-inline: 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
 }

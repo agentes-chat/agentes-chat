@@ -10,7 +10,6 @@ import type { ControlStatus } from "@agenteschat/adapters/runner-control";
 import {
   BRAIN_ICONS,
   Button,
-  Chip,
   Dialog,
   DialogBody,
   DialogFooter,
@@ -141,8 +140,8 @@ export function ToolAccounts({ homes, executors }: { homes: Home[]; executors: C
   const executorOf = (kind: DesktopKind) => (kind === "claude_code" ? executors.claude : executors.codex);
   const accountName = (a: RunnerAccountInfo) => a.email ?? t("desktop.prefs.accounts.noEmail");
   const logo = (kind: DesktopKind) => (
-    <span className="dk-logo">
-      <Icon name={BRAIN_ICONS[kind]} size={16} />
+    <span className="dk-logo dk-logo--soft">
+      <Icon name={BRAIN_ICONS[kind]} size={20} />
     </span>
   );
 
@@ -178,15 +177,13 @@ export function ToolAccounts({ homes, executors }: { homes: Home[]; executors: C
             <PrefRow
               lead={logo(kind)}
               title={t("desktop.prefs.accounts.thisMac")}
+              desc={t("desktop.prefs.accounts.thisMacHint", { tool: t(KINDS[kind].tool) })}
               end={
-                executorOf(kind)?.loggedIn === false ? (
-                  <Chip icon="alert" tone="waiting">
+                // Its state in words, in the waiting colour (never a pill).
+                executorOf(kind)?.loggedIn === false && (
+                  <span className="dk-sx__state" data-tone="warn">
                     {t("desktop.tools.loggedOut")}
-                  </Chip>
-                ) : (
-                  <small className="dk-help">
-                    {t("desktop.prefs.accounts.thisMacHint", { tool: t(KINDS[kind].tool) })}
-                  </small>
+                  </span>
                 )
               }
             />
@@ -196,24 +193,20 @@ export function ToolAccounts({ homes, executors }: { homes: Home[]; executors: C
                 <PrefRow
                   key={a.id}
                   lead={logo(kind)}
-                  title={
-                    <>
-                      {accountName(a)} {plan && <Chip icon="wallet">{plan}</Chip>}
-                      {!a.loggedIn && (
-                        <>
-                          {" "}
-                          <Chip icon="alert" tone="waiting">
-                            {t("desktop.tools.loggedOut")}
-                          </Chip>
-                        </>
-                      )}
-                    </>
+                  title={accountName(a)}
+                  desc={
+                    a.loggedIn ? (
+                      plan
+                    ) : (
+                      <span>
+                        <span className="dk-sx__warn">{t("desktop.tools.loggedOut")}</span>
+                        {` · ${t("desktop.prefs.accounts.loggedOutDesc")}`}
+                      </span>
+                    )
                   }
-                  desc={a.loggedIn ? undefined : t("desktop.prefs.accounts.loggedOutDesc")}
                   end={
                     <Button
                       size="sm"
-                      variant="ghost"
                       aria-label={t("desktop.prefs.accounts.removeLabel", { account: accountName(a) })}
                       onClick={() => setRemoving(a)}
                     >
@@ -262,7 +255,7 @@ export function ToolAccounts({ homes, executors }: { homes: Home[]; executors: C
         width={440}
       >
         <DialogFooter bar>
-          <Button variant="ghost" disabled={busy} onClick={() => setRemoving(null)}>
+          <Button disabled={busy} onClick={() => setRemoving(null)}>
             {t("desktop.common.cancel")}
           </Button>
           <Button variant="danger" loading={busy} onClick={() => void remove()}>
@@ -382,9 +375,7 @@ function AddAccountDialog({
         width={440}
       >
         <DialogFooter bar>
-          <Button variant="ghost" onClick={onClose}>
-            {t("desktop.common.cancel")}
-          </Button>
+          <Button onClick={onClose}>{t("desktop.common.cancel")}</Button>
           <Button
             variant="primary"
             onClick={() => {
@@ -441,9 +432,7 @@ function AddAccountDialog({
           ) : undefined
         }
       >
-        <Button variant="ghost" onClick={onClose}>
-          {t("desktop.common.cancel")}
-        </Button>
+        <Button onClick={onClose}>{t("desktop.common.cancel")}</Button>
       </DialogFooter>
     </Dialog>
   );

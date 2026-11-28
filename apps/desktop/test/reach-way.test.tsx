@@ -114,7 +114,7 @@ function typeInto(field: Element | null, value: string) {
 }
 
 describe("the two ways (ADR 0265 §4)", () => {
-  test("two rows with a hairline, a tile and a radio, Tailscale chosen; no card and no tag", () =>
+  test("two rows with a hairline, a bare mark and a radio, Tailscale chosen; no card, no tile and no tag", () =>
     picker(
       async ({ el, rows }) => {
         expect(rows()).toEqual([
@@ -125,9 +125,10 @@ describe("the two ways (ADR 0265 §4)", () => {
           "Free. A private network between your devices and your team's.",
           "A tunnel on this Mac that already leads here.",
         ]);
-        // Tailscale's own mark on its tile, a plain link icon on the other.
-        expect(el.querySelector('[data-way="tailscale"] .dk-logo .dk-tailscale')).not.toBeNull();
-        expect(el.querySelector('[data-way="address"] .dk-logo .ac-icon')).not.toBeNull();
+        // Tailscale's own mark in the rows' icon column, a plain link icon on the other: never on a tile.
+        expect(el.querySelector('[data-way="tailscale"] .dk-way__glyph svg.dk-tailscale')).not.toBeNull();
+        expect(el.querySelector('[data-way="address"] .dk-way__glyph .ac-icon')).not.toBeNull();
+        expect(el.querySelector(".dk-way__row .dk-logo")).toBeNull();
         expect(el.querySelector(".dk-way .dk-card, .dk-way .ac-chip")).toBeNull();
         expect(el.querySelector(".dk-way")?.getAttribute("role")).toBe("radiogroup");
         expect(el.querySelector(".dk-way")?.getAttribute("aria-label")).toBe("How the phone and the team get here");
@@ -173,6 +174,8 @@ describe("through Tailscale", () => {
       async ({ el, press, opened, part }) => {
         expect(el.querySelector(".dk-way__wait")).toBeNull();
         expect(part()?.textContent).toContain("Free, from Tailscale's own site.");
+        // Bordered: the screen's one filled button is its own way forward.
+        expect(part()?.querySelector(".ac-btn--primary")).toBeNull();
         await press("Download Tailscale");
         expect(opened).toEqual(["download"]);
         // The app and Tailscale joined by the trail, what it waits for in bold with the spinner, what to do there.

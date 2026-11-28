@@ -1,14 +1,18 @@
-/* The main window's cover (cover.rs): the boot sky with the agent, over the site. */
+/*
+ * The main window's cover (cover.rs): the boot sky over the site, and one centred stack for every state (ADR 0265):
+ * the picture, a title in the display face, one line, at most two buttons and a link. Its top stays put, so a line or
+ * buttons that arrive grow it downward and the picture never jumps.
+ */
 .cover {
   position: fixed;
   inset: 0;
   display: grid;
-  place-items: center;
+  place-items: start center;
   overflow: hidden;
   background: #0a3f9c;
   color: #fff;
   font:
-    500 13.5px / 1.5 "Onest Variable",
+    500 14.5px / 21px "Onest Variable",
     -apple-system,
     system-ui,
     sans-serif;
@@ -29,72 +33,134 @@
 }
 .cover__in {
   position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
+  width: min(440px, calc(100vw - 32px));
+  margin-top: max(24px, calc(50vh - 150px));
   text-align: center;
   pointer-events: none;
+}
+/* A soft shade of the sky's own deep tone behind the words, so they read wherever the sky is bright or busy. */
+.cover__in::before {
+  content: "";
+  position: absolute;
+  inset: -56px -96px;
+  z-index: -1;
+  background: radial-gradient(closest-side, rgba(4, 32, 63, 0.34), rgba(4, 32, 63, 0));
+}
+/* The picture: the agent, or Tailscale's mark (private.css), in one 72 px place. */
+.cover__pic {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
 }
 .cover__agent {
   width: 72px;
   height: 72px;
 }
-.cover__word {
-  margin: 0;
+.cover[data-private] .cover__agent,
+.cover:not([data-private]) .cover__tile {
+  display: none;
+}
+.cover__title {
+  margin: 16px 0 0;
   font-family: "Funnel Display", "Onest Variable", sans-serif;
   font-weight: 300;
-  font-size: 30px;
-  letter-spacing: -0.01em;
+  font-size: 22px;
+  line-height: 28px;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
   text-shadow: 0 1px 8px rgba(4, 32, 63, 0.5);
 }
 .cover__word span {
   opacity: 0.6;
 }
 .cover__line {
-  margin: 0;
-  min-height: 20px;
-  max-width: 46ch;
-  opacity: 0.85;
+  margin: 8px 0 0;
+  max-width: 44ch;
+  text-wrap: balance;
   text-shadow: 0 1px 6px rgba(4, 32, 63, 0.6);
 }
-/* How long the server here has been starting or updating, ticking (from 10 s). */
+.cover__line:empty {
+  margin: 0;
+}
+/* How long the server here has been starting or updating, ticking (from 10 s), or a word for a moment ("Copied"). */
 .cover__time {
-  margin: -8px 0 0;
-  font-size: 12.5px;
-  opacity: 0.7;
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 18px;
+  opacity: 0.85;
   font-variant-numeric: tabular-nums;
   text-shadow: 0 1px 6px rgba(4, 32, 63, 0.6);
 }
 .cover__time:empty {
   display: none;
 }
-/* The cover's buttons ("Start it", "Copy details", "Use another server", …): the only things on it that click. */
+/*
+ * The cover's buttons ("Start it", "Try again", "Use another server", …), on the kit's control ruler (`sm`: 32 tall,
+ * 12 in, a 10 corner, 13/600), the only things on it that click: the main one white on the sky and last, the other
+ * bordered and opaque enough that the sky's agents never show through its words. A third action is a link under them.
+ */
 .cover__acts {
   display: flex;
   gap: 8px;
+  margin-top: 24px;
   pointer-events: auto;
 }
 .cover__acts:empty {
   display: none;
 }
 .cover__acts button {
-  font: inherit;
-  font-weight: 600;
-  color: #0a3f9c;
-  background: #fff;
+  height: 32px;
+  padding: 0 12px;
   border: 0;
   border-radius: 10px;
-  padding: 7px 14px;
+  font:
+    600 13px / normal "Onest Variable",
+    -apple-system,
+    system-ui,
+    sans-serif;
+  white-space: nowrap;
   cursor: pointer;
-  box-shadow: 0 1px 8px rgba(4, 32, 63, 0.35);
-}
-.cover__acts button + button {
   color: #fff;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(6, 40, 104, 0.78);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
 }
-.cover__acts button:focus-visible {
+.cover__acts button[data-variant="primary"] {
+  color: #0a3f9c;
+  background: #fff;
+  box-shadow: 0 1px 8px rgba(4, 32, 63, 0.35);
+}
+.cover__more {
+  margin-top: 12px;
+  pointer-events: auto;
+}
+.cover__more:empty {
+  display: none;
+}
+.cover__more button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #fff;
+  font:
+    500 13px / 18px "Onest Variable",
+    -apple-system,
+    system-ui,
+    sans-serif;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.5);
+  text-underline-offset: 3px;
+  text-shadow: 0 1px 6px rgba(4, 32, 63, 0.6);
+  cursor: pointer;
+}
+.cover__acts button:focus-visible,
+.cover__more button:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 2px;
 }

@@ -1,6 +1,6 @@
 import { LICENSE_URL, PUBLIC_SOURCE_URL } from "@agenteschat/client/lib/about";
 import { DOCS_SITE } from "@agenteschat/i18n/docs";
-import { Button, Icon, InfoHint, Switch } from "@agenteschat/ui";
+import { Button, Switch } from "@agenteschat/ui";
 import { type ReactNode, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useHost } from "../../app";
@@ -9,10 +9,12 @@ import { readPref, type UpdateCheck, useAppInfo, useLocalServer } from "../../ho
 import { CardTitle, hintFor, PrefCard, PrefRow } from "../../ui/settings";
 import { useToast } from "../../ui/Toast";
 import { clock } from "../../ui/time";
+import { Lead } from "./AlwaysOn";
 import { writeAutoUpdate } from "./fixes";
 
 /**
- * App settings › Updates (ADR 0036 §9): one click downloads the signed update, with its progress and Cancel, installs
+ * App settings › Updates (ADR 0036 §9): one group, the version's row first with its state and Check now, or Update and
+ * reopen when one is out. One click downloads the signed update, with its progress and Cancel under that row, installs
  * it and reopens the app. When that can't happen (a release without the updater bundle, a failed or stalled download, a
  * Linux package) the download and, on a Mac, the manual steps come back.
  */
@@ -70,45 +72,80 @@ export function Updates({ update }: { update: UpdateCheck }) {
     else if (!result.available) toast(t("desktop.prefs.updates.latestAlready"));
   };
 
+  // Known newer and installable here: the version's row offers it, and shows its download under it while it runs.
+  const installNow = available && latest && !manual;
+  const checked = update.checkedAt
+    ? t("desktop.prefs.updates.lastCheck", { time: clock(new Date(update.checkedAt).toISOString(), i18n.language) })
+    : t("desktop.prefs.updates.neverChecked");
+
   return (
     <section data-focus="updates">
       <CardTitle>{t("desktop.prefs.updates.title")}</CardTitle>
       <PrefCard>
-        <div className="dk-ver">
-          <span className="dk-ver__big ac-num">{update.version ?? "…"}</span>
-          <span className="dk-ver__text">
-            <span className="ac-hintline">
+        <PrefRow
+          lead={<Lead icon="download" />}
+          title={t("desktop.settings.app.version", { version: update.version ?? "…" })}
+          hint={
+            local.run ? hintFor(t, t("desktop.prefs.updates.title"), t("desktop.server.updatesWithApp")) : undefined
+          }
+          desc={
+            <span>
               {/* Its state in words, in its colour (never a pill). */}
               {required ? (
                 <span className="dk-sx__warn">{t("desktop.prefs.updates.required")}</span>
               ) : available && latest ? (
                 <span className="dk-sx__warn">{t("desktop.prefs.updates.newer", { version: latest.version })}</span>
               ) : (
-                <span className="dk-sx__on">
-                  <Icon name="check" size={16} />
-                  {t("desktop.prefs.updates.upToDate")}
-                </span>
+                <span className="dk-sx__ok">{t("desktop.prefs.updates.upToDate")}</span>
               )}
-              {local.run && (
-                <InfoHint name={t("common.about", { label: t("desktop.prefs.updates.title") })}>
-                  {t("desktop.server.updatesWithApp")}
-                </InfoHint>
-              )}
+              {` · ${checked}`}
             </span>
-            <small className="dk-help">
-              {update.checkedAt
-                ? t("desktop.prefs.updates.lastCheck", {
-                    time: clock(new Date(update.checkedAt).toISOString(), i18n.language),
-                  })
-                : t("desktop.prefs.updates.neverChecked")}
-            </small>
-          </span>
-          <Button size="sm" loading={update.checking} onClick={() => void checkNow()}>
-            {t("desktop.prefs.updates.checkNow")}
-          </Button>
-        </div>
-      </PrefCard>
-      <PrefCard>
+          }
+          end={
+            installNow ? (
+              !installing && (
+                <Button size="sm" variant="primary" icon="download" onClick={() => void install()}>
+                  {t("desktop.prefs.updates.install")}
+                </Button>
+              )
+            ) : (
+              <Button size="sm" loading={update.checking} onClick={() => void checkNow()}>
+                {t("desktop.prefs.updates.checkNow")}
+              </Button>
+            )
+          }
+          under={
+            installNow &&
+            installing && (
+              <div className="dk-upd" aria-live="polite">
+                <div className="dk-upd__line">
+                  <span className="dk-upd__label">
+                    {whole ? t("desktop.prefs.updates.installing") : t("desktop.prefs.updates.downloading")}
+                  </span>
+                  {!whole && (
+                    <Button
+                      size="sm"
+                      className="dk-upd__cancel"
+                      onClick={() => void host.cancelUpdate().catch(() => {})}
+                    >
+                      {t("desktop.common.cancel")}
+                    </Button>
+                  )}
+                </div>
+                <div
+                  className="dk-bar"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={progress?.total ? percent : undefined}
+                  aria-label={t("desktop.prefs.updates.downloading")}
+                >
+                  <span style={{ width: `${percent}%` }} />
+                </div>
+              </div>
+            )
+          }
+        />
         <PrefRow
           htmlFor="auto-update"
           title={t("desktop.prefs.updates.autoInstall")}
@@ -128,9 +165,10 @@ export function Updates({ update }: { update: UpdateCheck }) {
         {details && (
           <PrefRow
             title={t("desktop.prefs.updates.systemDetails")}
-            desc={details}
+            // Each separator stays with the part before it, so a wrapped line never starts with one.
+            desc={details.replaceAll(" · ", "\u00a0· ")}
             end={
-              <Button variant="ghost" size="sm" icon="copy" onClick={() => void copyDetails(details)}>
+              <Button size="sm" icon="copy" onClick={() => void copyDetails(details)}>
                 {t("desktop.common.copy")}
               </Button>
             }
@@ -140,40 +178,6 @@ export function Updates({ update }: { update: UpdateCheck }) {
 
       {available && latest && (
         <>
-          {!manual && (
-            <PrefCard padded>
-              {installing ? (
-                <div className="dk-upd" aria-live="polite">
-                  <div className="dk-upd__line">
-                    <span className="dk-upd__label">
-                      {whole ? t("desktop.prefs.updates.installing") : t("desktop.prefs.updates.downloading")}
-                    </span>
-                    {!whole && (
-                      <Button className="dk-upd__cancel" onClick={() => void host.cancelUpdate().catch(() => {})}>
-                        {t("desktop.common.cancel")}
-                      </Button>
-                    )}
-                  </div>
-                  <div
-                    className="dk-bar"
-                    role="progressbar"
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={progress?.total ? percent : undefined}
-                    aria-label={t("desktop.prefs.updates.downloading")}
-                  >
-                    <span style={{ width: `${percent}%` }} />
-                  </div>
-                </div>
-              ) : (
-                <div className="dk-ver__acts">
-                  <Button variant="primary" icon="download" onClick={() => void install()}>
-                    {t("desktop.prefs.updates.install")}
-                  </Button>
-                </div>
-              )}
-            </PrefCard>
-          )}
           {manual && (
             <>
               <CardTitle>{t("desktop.prefs.updates.howTitle")}</CardTitle>

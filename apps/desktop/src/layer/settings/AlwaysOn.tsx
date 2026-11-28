@@ -11,6 +11,7 @@ import { useHost } from "../../app";
 import type { Essential, EssentialId, EssentialState } from "../../control/essentials";
 import type { ReachWay } from "../../control/local-server";
 import { MAC_PERMISSIONS } from "../../control/permissions";
+import type { ServerKind } from "../../control/server";
 import { useLocalServer } from "../../hooks";
 import type { Essentials } from "../../ui/essentials";
 import { ServerTile } from "../../ui/here";
@@ -43,18 +44,29 @@ const TITLE: Record<RowId, string> = {
   autoLogin: "desktop.server.keepAutoLogin",
 };
 
-/** A row's lead: the essential's icon on a soft tile. */
+/** A row's lead: its glyph at 20 px, bare in the rows' 32 px slot (ADR 0265 §6). */
 export function Lead({ icon }: { icon: IconName }) {
   return (
     <span className="dk-logo dk-logo--soft">
-      <Icon name={icon} size={16} />
+      <Icon name={icon} size={20} />
     </span>
   );
 }
 
-/** Reach's lead by the way people get here (ADR 0265 §4): Tailscale's own tile, or a link for the person's address. */
+/** Reach's lead by the way people get here (ADR 0265 §4): Tailscale's own mark, or a link for the person's address. */
 export function ReachLead({ way }: { way: ReachWay | null }) {
   return way?.kind === "address" ? <Lead icon="link" /> : <ServerTile kind="tailnet" small />;
+}
+
+const SERVER_ICON: Record<Exclude<ServerKind, "tailnet">, IconName> = {
+  cloud: "cloud",
+  here: "computer",
+  own: "globe",
+};
+
+/** A server's lead by where it runs: Tailscale's mark on the person's network, else its glyph like every row's. */
+export function ServerLead({ kind }: { kind: ServerKind }) {
+  return kind === "tailnet" ? <ServerTile kind="tailnet" small /> : <Lead icon={SERVER_ICON[kind]} />;
 }
 
 /** "On" in the ok colour, with its check: a state in words, never a pill. */
@@ -127,6 +139,8 @@ export function AlwaysOn({ essentials, chooseReach }: { essentials: Essentials; 
   const ctx: FixContext = { local, reach, mac: mac ? grants : null, reread: essentials.reread, chooseReach };
   const rows = essentialRows(essentials.list);
   if (rows.length === 0) return null;
+  // One filled button on the screen: the fix of the first row that needs the person; the others are bordered.
+  const first = rows.find((r) => r.state === "off" && !r.optional && r.essential.fix)?.id;
   const permsOff = MAC_PERMISSIONS.filter((p) => essentials.list.find((e) => e.id === p)?.state === "off");
   const offNames = listNames(
     permsOff.map((p) => t(`desktop.prepare.${p}`)),
@@ -155,7 +169,7 @@ export function AlwaysOn({ essentials, chooseReach }: { essentials: Essentials; 
                 state === "checking" ? (
                   <PixelSpinner size={14} />
                 ) : off && essential.fix ? (
-                  <FixButton fix={essential.fix} ctx={ctx} />
+                  <FixButton fix={essential.fix} ctx={ctx} primary={id === first} />
                 ) : state === "on" ? (
                   <OnText>
                     {id === "permissions"

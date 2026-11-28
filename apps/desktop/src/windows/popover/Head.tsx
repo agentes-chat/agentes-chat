@@ -23,7 +23,9 @@ export function PopHead({ name, portrait, line }: { name: string; portrait: Comp
           : t("desktop.tray.allSet");
   return (
     <header className="dk-trayhead">
-      <MacPortrait state={portrait} size={48} />
+      <span className="dk-trayhead__pic">
+        <MacPortrait state={portrait} size={48} />
+      </span>
       <span className="dk-trayhead__text">
         <b>{name}</b>
         <small data-tone={HEAD_TONE[line.kind]}>{words}</small>
@@ -37,7 +39,9 @@ export function BrandHead({ name, waiting }: { name: string; waiting: number }) 
   const { t } = useTranslation();
   return (
     <header className="dk-trayhead">
-      <BrandFace size="md" />
+      <span className="dk-trayhead__pic">
+        <BrandFace size="md" />
+      </span>
       <span className="dk-trayhead__text">
         <b>{name}</b>
         <small data-tone={waiting > 0 ? "warn" : "muted"}>

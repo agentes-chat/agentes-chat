@@ -187,10 +187,15 @@ export function Stepper({
   );
 }
 
-/** A raised note at the top of the popover (paused, offline, update, a request). */
+/**
+ * A note on the popover (paused, offline, an update, an essential; ADR 0265 §7): a row of its grid, flat on the
+ * card. Its glyph in the lead column on the title's first line, in `tone`'s colour (never a tile); its words from the
+ * text edge; its buttons under them, or, with no line under the title, its one button at the row's end.
+ */
 export function Banner({
   icon,
   lead,
+  tone,
   title,
   children,
   actions,
@@ -199,26 +204,28 @@ export function Banner({
   icon?: IconName;
   /** In place of the icon (a pixel orbit, an agent). */
   lead?: ReactNode;
+  /** The glyph's colour: `warn` when it needs the person, muted otherwise. */
+  tone?: "warn" | "danger" | "ok";
   title: ReactNode;
   children?: ReactNode;
   actions?: ReactNode;
   shimmer?: boolean;
 }) {
   return (
-    <div className="dk-banner">
-      <div className="dk-banner__head">
-        <span className="dk-logo dk-logo--soft">{lead ?? (icon ? <Icon name={icon} size={16} /> : null)}</span>
-        <span className="dk-banner__text">
-          <b className={shimmer ? "dk-shimmer" : undefined}>{title}</b>
-          {children && <small>{children}</small>}
-        </span>
-      </div>
+    <div className="dk-banner" data-inline={(!children && !!actions) || undefined}>
+      <span className="dk-banner__lead" data-tone={tone}>
+        {lead ?? (icon ? <Icon name={icon} size={16} /> : null)}
+      </span>
+      <span className="dk-banner__text">
+        <b className={shimmer ? "dk-shimmer" : undefined}>{title}</b>
+        {children && <small>{children}</small>}
+      </span>
       {actions && <div className="dk-banner__acts">{actions}</div>}
     </div>
   );
 }
 
-/** A row of the popover's menu. */
+/** A row of the popover's menu: its glyph (or an organization's tile) in the lead column, every label on one edge. */
 export function MenuRow({
   icon,
   lead,
@@ -249,7 +256,7 @@ export function MenuRow({
       disabled={disabled}
       onClick={onClick}
     >
-      {lead ?? (icon && <Icon name={icon} size={16} />)}
+      {(lead || icon) && <span className="dk-mi__lead">{lead ?? (icon && <Icon name={icon} size={16} />)}</span>}
       <span className="dk-mi__label">{children}</span>
       {trailing && <span className="dk-mi__end">{trailing}</span>}
     </button>

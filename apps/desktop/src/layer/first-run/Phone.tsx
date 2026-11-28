@@ -2,7 +2,8 @@
  * "Done, take it to your phone" (ADR 0265 §3): once agentes.chat runs here and people reach it, the phone's code beside
  * its steps (Tailscale on the phone too when it is the way here; an address of the person's own needs nothing more,
  * ADR 0265 §4), and the address people use with Copy. The code is a one-time sign-in made with this window's own
- * session (`phoneLink`), asked again before it runs out while it shows.
+ * session (`phoneLink`), asked again before it runs out while it shows. One button: Open agentes.chat, which is also
+ * how the phone is left for later.
  */
 import { Button, Icon, PixelSpinner, QrCode } from "@agenteschat/ui";
 import { useEffect, useState } from "react";
@@ -88,11 +89,7 @@ export function Phone({ onDone }: { onDone: () => void }) {
       screen="done"
       step={t("desktop.first.run.flow")}
       title={t("desktop.first.run.doneTitle")}
-      quiet={
-        <Button variant="ghost" onClick={onDone}>
-          {t("desktop.first.run.later")}
-        </Button>
-      }
+      // One way on: opening agentes.chat is also how the phone is left for later.
       action={
         <Button variant="primary" autoFocus onClick={onDone}>
           {t("desktop.first.run.open")}
@@ -136,7 +133,9 @@ export function Phone({ onDone }: { onDone: () => void }) {
       )}
       {link && (
         <p className="dk-first__addr">
-          <Icon name="lock" size={14} />
+          <span className="dk-first__glyph" aria-hidden="true">
+            <Icon name="lock" size={16} />
+          </span>
           <span>
             <Trans
               i18nKey="desktop.first.run.address"

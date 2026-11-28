@@ -4,7 +4,9 @@
  * from 10 s and, from 30 s, that it takes longer than expected. Access from anywhere through Tailscale waits on the
  * person on Tailscale's page with no time limit: it says what is left ("One click left"), with that page a button away
  * and a way to finish without it. Through an address of the person's own (ADR 0265 §4) it checks that the address
- * leads here; when it doesn't, it says why in plain words, with Try again, "Change the address" and "Finish without it".
+ * leads here; when it doesn't, it says why in plain words under its step, and the footer holds "Finish without it",
+ * "Change the address" and Try again. The title says how it ended: almost ready (done, with access to see to), or
+ * that it didn't finish.
  */
 import { Button, Icon, PixelSpinner, useNow } from "@agenteschat/ui";
 import { useEffect, useRef, useState } from "react";
@@ -98,22 +100,40 @@ export function HereSetup({
     return () => window.removeEventListener("keydown", onKey);
   }, [end, reachOnly, onCancel, onContinue]);
 
+  // An address that didn't lead here: its ways on are the footer's (Try again the main one).
+  const addressActs = end === "done" && address !== null;
+  // How it ended, in the title: set up with access still to see to, or not finished.
+  const reachWarned = changes.some((c) => c.step === "reach" && c.state === "warn");
+  const titleKey =
+    end === "done" && reachWarned
+      ? "desktop.here.settingAlmost"
+      : end === "failed"
+        ? "desktop.here.settingFailed"
+        : "desktop.here.setting";
   return (
     <Flow
       screen="setup"
       step={t("desktop.first.run.flow")}
-      title={t("desktop.here.setting")}
+      title={t(titleKey)}
       titleRef={title}
       quiet={
-        end === "done" || reachOnly ? undefined : (
+        addressActs ? (
+          <>
+            <Button onClick={onFinish}>{t("desktop.first.run.askSkip")}</Button>
+            <Button onClick={onChangeAddress}>{t("desktop.first.run.changeAddress")}</Button>
+          </>
+        ) : end === "done" || reachOnly ? undefined : (
           <Button loading={end === "stopping"} onClick={onCancel}>
             {t("desktop.common.cancel")}
           </Button>
         )
       }
       action={
-        // An address that didn't lead here has its own ways on, under its step.
-        end === "done" && address ? undefined : end === "done" ? (
+        addressActs ? (
+          <Button variant="primary" icon="refresh" autoFocus onClick={onRetryReach}>
+            {t("desktop.common.retry")}
+          </Button>
+        ) : end === "done" ? (
           <Button variant="primary" autoFocus onClick={onContinue}>
             {t("desktop.common.continue")}
           </Button>
@@ -175,7 +195,8 @@ export function HereSetup({
                     <span>
                       <Trans i18nKey="desktop.first.run.ask" components={{ b: <b /> }} />
                     </span>
-                    <span className="dk-first__askacts">
+                    {/* The step's own two ways, bordered: the footer keeps Cancel for the whole setup. */}
+                    <span className="dk-first__askacts ac-acts">
                       <Button
                         size="sm"
                         icon="external"
@@ -183,9 +204,9 @@ export function HereSetup({
                       >
                         {t("desktop.first.run.askOpen")}
                       </Button>
-                      <button type="button" className="ac-link dk-link" onClick={onSkipReach}>
+                      <Button size="sm" onClick={onSkipReach}>
                         {t("desktop.first.run.askSkip")}
-                      </button>
+                      </Button>
                     </span>
                   </span>
                 )}
@@ -193,21 +214,11 @@ export function HereSetup({
                   <ReachProgress stage={stage} />
                 )}
                 {step === "reach" && reachProblem && !address && <ReachProblem problem={reachProblem} text="fail" />}
+                {/* Why the address didn't lead here; its ways on are the footer's. */}
                 {step === "reach" && address && end === "done" && (
                   <span className="dk-first__ask">
                     <span className="dk-honest" role="alert">
                       {t(address.key, address.values)}
-                    </span>
-                    <span className="dk-first__askacts">
-                      <Button size="sm" icon="refresh" autoFocus onClick={onRetryReach}>
-                        {t("desktop.common.retry")}
-                      </Button>
-                      <button type="button" className="ac-link dk-link" onClick={onChangeAddress}>
-                        {t("desktop.first.run.changeAddress")}
-                      </button>
-                      <button type="button" className="ac-link dk-link" onClick={onFinish}>
-                        {t("desktop.first.run.askSkip")}
-                      </button>
                     </span>
                   </span>
                 )}

@@ -1,9 +1,10 @@
 /**
  * A company's server (ADR 0265 §2): by its address (the one opened in the browser), what discovery found on this
  * computer and the Tailscale network, and how to install one for the team on a server, in the first run's frame. A
- * connect link (`agenteschat://connect`) shows here too, the server in large type: nothing changes before Open.
+ * connect link (`agenteschat://connect`) shows as a sheet: the server as its title, the question under it, nothing
+ * changed before Open.
  */
-import { Button, ComputerPortrait, Icon, Input, PixelSpinner } from "@agenteschat/ui";
+import { Button, ComputerPortrait, Input, PixelSpinner } from "@agenteschat/ui";
 import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost } from "../../app";
@@ -12,9 +13,8 @@ import { tailscaleFrom } from "../../control/local-server";
 import { serverKind, serverName } from "../../control/server";
 import { useTailnet } from "../../hooks";
 import { CommandCopy } from "../../ui/bits";
-import { ServerTile } from "../../ui/here";
-import { SHEET_TITLE_ID } from "../sheets/SheetFrame";
-import { type Discovery, ProblemLine, type ServerWays, useServerUse } from "./discovery";
+import { Sheet, SheetWaiting } from "../sheets/SheetFrame";
+import { type Discovery, ProblemLine, ServerGlyph, type ServerWays, useServerUse } from "./discovery";
 import { Flow } from "./Flow";
 import "./first-run.css";
 
@@ -61,6 +61,7 @@ export function Connect({
     <Flow
       screen="company"
       place="box"
+      step={t("desktop.first.companyFlow")}
       title={t("desktop.connect.title")}
       lead={t("desktop.connect.lead")}
       onBack={onBack}
@@ -102,76 +103,87 @@ export function Connect({
       </form>
       {found.length > 0 && (
         <section className="dk-first__found" aria-label={t("desktop.connect.found")}>
-          <h2 className="dk-first__label">{t("desktop.connect.found")}</h2>
-          {found.map((f) => {
-            const mine = f.where === "here" || own.all.includes(f.server);
-            const claim = f.problem === "no-owner" ? use.claimHere(f.server) : null;
-            // Used as is; one with a problem only when the app can take it from there (its owner page here).
-            const usable = !f.problem || claim !== null;
-            return (
-              <div key={f.server} className="dk-first__foundrow">
-                <ServerTile kind={f.where} />
-                <span className="dk-first__foundtext">
-                  {/* This computer by its name; its address only when more than one answers here. */}
-                  <b>{mine ? t("desktop.link.chipHere") : serverName(f.server)}</b>
-                  <small>
-                    {f.problem && !claim
-                      ? t(PROBLEM_TEXT[f.problem], { host: mine ? t("desktop.link.thisServer") : serverName(f.server) })
-                      : f.where === "tailnet"
-                        ? t("desktop.connect.foundTailnet")
-                        : hereCount > 1
-                          ? `${t("desktop.connect.foundHere")} · ${serverName(f.server)}`
-                          : claim
-                            ? t("desktop.connect.foundNoOwner")
-                            : t("desktop.connect.foundHere")}
-                  </small>
-                </span>
-                {usable && (
-                  <Button
-                    size="sm"
-                    disabled={use.checking !== null}
-                    loading={use.checking === f.server}
-                    onClick={() => void use.pick(f)}
-                  >
-                    {claim ? t("desktop.connect.setUp") : t("desktop.connect.use")}
-                  </Button>
-                )}
-              </div>
-            );
-          })}
+          {/* The list's caption, with looking again at its end: the one action about the whole list. */}
+          <div className="dk-first__caption">
+            <h2 className="dk-first__label">{t("desktop.connect.found")}</h2>
+            {!looking && (
+              <Button size="sm" onClick={again}>
+                {t("desktop.connect.lookAgain")}
+              </Button>
+            )}
+          </div>
+          <div className="dk-first__rows">
+            {found.map((f) => {
+              const mine = f.where === "here" || own.all.includes(f.server);
+              const claim = f.problem === "no-owner" ? use.claimHere(f.server) : null;
+              // Used as is; one with a problem only when the app can take it from there (its owner page here).
+              const usable = !f.problem || claim !== null;
+              return (
+                <div key={f.server} className="dk-first__row dk-first__foundrow">
+                  <ServerGlyph where={f.where} />
+                  <span className="dk-first__rowtext dk-first__foundtext">
+                    {/* This computer by its name; its address only when more than one answers here. */}
+                    <b>{mine ? t("desktop.link.chipHere") : serverName(f.server)}</b>
+                    <small>
+                      {f.problem && !claim
+                        ? t(PROBLEM_TEXT[f.problem], {
+                            host: mine ? t("desktop.link.thisServer") : serverName(f.server),
+                          })
+                        : f.where === "tailnet"
+                          ? t("desktop.connect.foundTailnet")
+                          : hereCount > 1
+                            ? `${t("desktop.connect.foundHere")} · ${serverName(f.server)}`
+                            : claim
+                              ? t("desktop.connect.foundNoOwner")
+                              : t("desktop.connect.foundHere")}
+                    </small>
+                  </span>
+                  {usable && (
+                    <Button
+                      size="sm"
+                      disabled={use.checking !== null}
+                      loading={use.checking === f.server}
+                      onClick={() => void use.pick(f)}
+                    >
+                      {claim ? t("desktop.connect.setUp") : t("desktop.connect.use")}
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </section>
       )}
       {looking ? (
         <p className="dk-first__looking" aria-live="polite">
-          <PixelSpinner size={14} color="sky" />
+          <PixelSpinner size={16} color="sky" />
           <span className="dk-shimmer">{t("desktop.connect.looking")}</span>
         </p>
       ) : (
-        <p className="dk-first__hint dk-first__lookagain">
-          {found.length === 0 && <>{t("desktop.connect.noneFound")} </>}
-          <button type="button" className="ac-link dk-link" onClick={again}>
-            {t("desktop.connect.lookAgain")}
-          </button>
-        </p>
+        found.length === 0 && (
+          <p className="dk-first__hint dk-first__lookagain">
+            {t("desktop.connect.noneFound")}{" "}
+            <button type="button" className="ac-link dk-link" onClick={again}>
+              {t("desktop.connect.lookAgain")}
+            </button>
+          </p>
+        )
       )}
       {tailnet?.state === "off" && (
-        <p className="dk-first__hint ac-iconline">
-          <Icon name="globe" size={14} />
-          <span>
-            {t("desktop.connect.tailnetOff")}
-            {tailscaleFrom(host.platform, tailnet) === "app" && (
-              <>
-                {" "}
-                <button
-                  type="button"
-                  className="ac-link dk-link"
-                  onClick={() => void host.openTailscale("app").catch(() => {})}
-                >
-                  {t("desktop.here.openTailscale")}
-                </button>
-              </>
-            )}
-          </span>
+        <p className="dk-first__hint">
+          {t("desktop.connect.tailnetOff")}
+          {tailscaleFrom(host.platform, tailnet) === "app" && (
+            <>
+              {" "}
+              <button
+                type="button"
+                className="ac-link dk-link"
+                onClick={() => void host.openTailscale("app").catch(() => {})}
+              >
+                {t("desktop.here.openTailscale")}
+              </button>
+            </>
+          )}
         </p>
       )}
       <p className="dk-first__hint">
@@ -205,6 +217,7 @@ export function Install({ onBack, onConnect }: { onBack: () => void; onConnect: 
     <Flow
       screen="install"
       place="box"
+      step={t("desktop.first.companyFlow")}
       title={t("desktop.install.title")}
       lead={t("desktop.install.lead")}
       onBack={onBack}
@@ -236,9 +249,10 @@ export function Install({ onBack, onConnect }: { onBack: () => void; onConnect: 
 }
 
 /**
- * A server in large type, asked about before anything changes. The agentes.chat this computer runs reads as such (at
- * its local or its Tailscale address alike), never as an address; one on a Tailscale network says what that means.
- * Shown in a sheet's card over the site, or in the middle of the window.
+ * A server asked about before anything changes, as the other sheets ask (ADR 0265): the server as the title, the
+ * question as the lead, then what it means, and the buttons in the footer. The agentes.chat this computer runs reads as
+ * such (at its local or its Tailscale address alike), never as an address; one on a Tailscale network says what that
+ * means, in words (no tile). Shown in the sheet's card over the site, or in the same card in the first run.
  */
 export function LinkSheet({
   view,
@@ -258,31 +272,27 @@ export function LinkSheet({
   const mine = server !== null && (own.all.includes(server) || serverKind(server) === "here");
   const kind = server ? serverKind(server) : null;
   const name = server ? (mine ? t("desktop.link.thisServer") : serverName(server)) : "";
+  const cancel = <Button onClick={onCancel}>{t("desktop.common.cancel")}</Button>;
+  // What a server on a Tailscale network means, after what the sheet asks or says.
+  const tailnetHelp =
+    kind === "tailnet" && !mine ? <p className="dk-first__hint">{t("desktop.link.tailnetHelp")}</p> : null;
+  let title: ReactNode = <span className="dk-linksheet__host">{name}</span>;
+  let lead: ReactNode;
   let body: ReactNode;
+  let art: ReactNode;
   let acts: ReactNode;
   if (view.kind === "notALink") {
-    body = (
-      <p className="dk-linksheet__question" id={SHEET_TITLE_ID}>
-        {t("desktop.link.notALink")}
-      </p>
-    );
+    title = t("desktop.link.notALink");
     acts = (
       <Button variant="primary" autoFocus onClick={onCancel}>
         {t("desktop.common.close")}
       </Button>
     );
   } else if (view.kind === "checking" || view.kind === "front") {
-    body = (
-      <p className="dk-linksheet__question dk-linksheet__checking" aria-live="polite">
-        <PixelSpinner size={14} color="sky" />
-        <span className="dk-shimmer">{t("desktop.link.checking")}</span>
-      </p>
-    );
+    body = <SheetWaiting>{t("desktop.link.checking")}</SheetWaiting>;
     acts = (
       <>
-        <Button variant="ghost" onClick={onCancel}>
-          {t("desktop.common.cancel")}
-        </Button>
+        {cancel}
         <Button variant="primary" disabled>
           {t("desktop.link.connect")}
         </Button>
@@ -292,18 +302,18 @@ export function LinkSheet({
     body = <ProblemLine problem={view.problem} host={name} />;
     acts = (
       <>
-        <Button variant="ghost" onClick={onCancel}>
-          {t("desktop.common.cancel")}
-        </Button>
+        {cancel}
         <Button variant="primary" icon="refresh" autoFocus onClick={onRetry}>
           {t("desktop.common.retry")}
         </Button>
       </>
     );
   } else {
+    lead = <span className="dk-linksheet__question">{t(`desktop.link.${view.question}`)}</span>;
+    // A server installed and waiting for its owner: the one drawing, the server itself.
+    if (view.question === "questionClaim") art = <ComputerPortrait kind="linux" state="online" size={48} />;
     body = (
       <>
-        <p className="dk-linksheet__question">{t(`desktop.link.${view.question}`)}</p>
         {view.question === "questionClaim" && <p className="dk-first__hint">{t("desktop.link.claimLead")}</p>}
         {view.leave && (
           <p className="dk-first__hint">
@@ -316,9 +326,7 @@ export function LinkSheet({
     );
     acts = (
       <>
-        <Button variant="ghost" onClick={onCancel}>
-          {t("desktop.common.cancel")}
-        </Button>
+        {cancel}
         <Button variant="primary" autoFocus onClick={() => onAccept(view.server, view.page)}>
           {view.button === "connect" ? t("desktop.link.open") : t(`desktop.link.${view.button}`)}
         </Button>
@@ -326,24 +334,15 @@ export function LinkSheet({
     );
   }
   return (
-    <div className="dk-first dk-linksheet" data-step="link">
-      <div className="dk-linksheet__main">
-        {view.kind === "ask" && view.question === "questionClaim" && (
-          <ComputerPortrait kind="linux" state="online" size={96} className="dk-linksheet__art" />
-        )}
-        {server && (
-          <div className="dk-linksheet__server">
-            {/* On a Tailscale network: Tailscale's own tile over its address, never a tag beside it. */}
-            {kind === "tailnet" && !mine && <ServerTile kind="tailnet" />}
-            <span className="dk-linksheet__host" id={SHEET_TITLE_ID}>
-              {name}
-            </span>
+    <div className="dk-linksheet" data-step="link">
+      <Sheet screen="link" art={art} title={title} lead={lead} acts={acts}>
+        {(body || tailnetHelp) && (
+          <div className="dk-linksheet__body">
+            {body}
+            {tailnetHelp}
           </div>
         )}
-        {kind === "tailnet" && !mine && <p className="dk-first__hint">{t("desktop.link.tailnetHelp")}</p>}
-        {body}
-      </div>
-      <div className="dk-linksheet__acts">{acts}</div>
+      </Sheet>
     </div>
   );
 }

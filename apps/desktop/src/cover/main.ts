@@ -7,8 +7,9 @@
  * update shows its time from 10 s, and Copy details once it takes longer than expected. The window opens the server
  * here at its loopback address, never through the tailnet (ADR 0265 §5), so Tailscale is never its reason. A server
  * out of reach offers another one; a workspace on a private network (a Tailscale address) while Tailscale is off here
- * shows a card that turns it on (the system's Tailscale, ADR 0265 §4: its Mac app opens, or its download page),
- * never a command.
+ * says so with the button that turns it on (the system's Tailscale, ADR 0265 §4: its Mac app opens, or its download
+ * page), never a command. Every state is the same stack (cover.html): the picture, a title (the wordmark while it
+ * loads, what happened when the person has something to do), one line, at most two buttons and a link.
  */
 
 import { checkServer, isTailnet, serverHost } from "@agenteschat/client/lib/server";
@@ -51,16 +52,16 @@ const words = strings.cover;
 const platform = platformOf(navigator.userAgent);
 const device = strings.device[platform];
 const root = document.querySelector<HTMLElement>(".cover");
+const heading = document.querySelector<HTMLElement>(".cover__title");
 const line = document.querySelector<HTMLElement>(".cover__line");
 const time = document.querySelector<HTMLElement>(".cover__time");
 const sky = document.querySelector<HTMLCanvasElement>(".cover__sky");
 const agent = document.querySelector<HTMLCanvasElement>(".cover__agent");
 const acts = document.querySelector<HTMLElement>(".cover__acts");
-const card = document.querySelector<HTMLElement>(".cover__card");
-const cardTitle = document.querySelector<HTMLElement>(".cover__title");
-const cardLead = document.querySelector<HTMLElement>(".cover__lead");
-const cardNote = document.querySelector<HTMLElement>(".cover__note");
-const cardActs = document.querySelector<HTMLElement>(".cover__cardacts");
+const moreAct = document.querySelector<HTMLElement>(".cover__more");
+const tile = document.querySelector<HTMLElement>(".cover__tile");
+/** The wordmark, as cover.html first paints it: the title while nothing needs the person. */
+const wordmark = heading?.querySelector(".cover__word")?.cloneNode(true) ?? null;
 document.documentElement.lang = systemLocale();
 
 let shownAt = performance.now();
@@ -82,8 +83,8 @@ let aside: { text: string; until: number } | null = null;
 let network: { at: number; fix: NetworkFix | null } | null = null;
 const NETWORK_READ_MS = 10_000;
 
-function sayAside(text: string) {
-  aside = { text, until: performance.now() + 2500 };
+function sayAside(text: string, ms = 2500) {
+  aside = { text, until: performance.now() + ms };
   tick();
 }
 
@@ -115,7 +116,8 @@ if (agent) {
       const s = agent.width;
       const inner = s * 0.84;
       ctx.clearRect(0, 0, s, s);
-      const pose = idlePose(now / 1000, seed, { every: 10 });
+      // Calm faces only: a cross or a spiral would read as something broken while it waits.
+      const pose = idlePose(now / 1000, seed, { every: 10, expressions: ["happy", "wink"] });
       drawAgent(ctx, (s - inner) / 2, s - inner + s * 0.04, inner, {
         color: "sky",
         eyes: "round",
@@ -132,21 +134,42 @@ function say(text: string) {
   if (line) line.textContent = text;
 }
 
-/** The cover's buttons: label and what it does; the first is the main one. */
-function buttons(list: [string, () => void][]) {
-  if (!acts) return;
-  const now = list.map(([label]) => label).join("|");
+/** The stack's title: what happened, when the person has something to do; the wordmark otherwise. */
+function title(text: string | null) {
+  if (!heading) return;
+  if (text === null) {
+    if (wordmark && !heading.querySelector(".cover__word")) heading.replaceChildren(wordmark.cloneNode(true));
+  } else if (heading.querySelector(".cover__word") || heading.textContent !== text) {
+    heading.textContent = text;
+  }
+}
+
+/** A cover action: its label and what it does. */
+type Act = [string, () => void];
+
+function button(label: string, run: () => void, variant?: "primary") {
+  const node = document.createElement("button");
+  node.type = "button";
+  node.textContent = label;
+  if (variant) node.dataset.variant = variant;
+  node.addEventListener("click", run);
+  return node;
+}
+
+/**
+ * The cover's buttons: at most two, bordered, with `main` (the one that moves forward) white and last; `link`, a third
+ * way, as a link under them.
+ */
+function buttons(list: Act[], main?: Act, link?: Act) {
+  if (!acts || !moreAct) return;
+  const now = [...list, ...(main ? [main] : []), ...(link ? [link] : [])].map(([label]) => label).join("|");
   if (acts.dataset.now === now) return;
   acts.dataset.now = now;
   acts.replaceChildren(
-    ...list.map(([label, run]) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.textContent = label;
-      button.addEventListener("click", run);
-      return button;
-    }),
+    ...list.map(([label, run]) => button(label, run)),
+    ...(main ? [button(main[0], main[1], "primary")] : []),
   );
+  moreAct.replaceChildren(...(link ? [button(link[0], link[1])] : []));
 }
 
 /**
@@ -167,7 +190,8 @@ function tick() {
   const clock = stepClock(ms, waitSince.state === "migrating" ? UPDATE_SLOW_MS : STEP_SLOW_MS);
   if (time)
     time.textContent = clock.slow ? `${strings.here.slow} · ${elapsedClock(ms)}` : clock.time ? elapsedClock(ms) : "";
-  buttons(clock.slow ? [[words.copy, copyDiagnostics], ...(overHere ? [report] : [])] : []);
+  if (clock.slow) buttons([[words.copy, copyDiagnostics]], undefined, overHere ? report : undefined);
+  else buttons([]);
 }
 
 /** Shown again (cover.rs `show`): the sky fills again, nothing is said yet. */
@@ -177,6 +201,7 @@ function shown() {
   waitSince = null;
   stuckSteps = 0;
   tooOld = null;
+  title(null);
   say("");
   tick();
   buttons([]);
@@ -273,7 +298,7 @@ function sendReport() {
     },
   );
 }
-const report: [string, () => void] = [strings.report.button, sendReport];
+const report: Act = [strings.report.button, sendReport];
 
 /** Another server of the app's list than the one open (and the server here), to open instead. */
 async function otherServer(status: LocalServerStatus | null): Promise<string | null> {
@@ -290,6 +315,7 @@ function showHere(state: NonNullable<ReturnType<typeof coverHere>>, status: Loca
   hidePrivate();
   if (state === "starting" || state === "migrating") {
     if (waitSince?.state !== state) waitSince = { state, at: performance.now() };
+    title(null);
     say(fill(state === "starting" ? words.starting : words.migrating));
     tick();
     return;
@@ -299,21 +325,22 @@ function showHere(state: NonNullable<ReturnType<typeof coverHere>>, status: Loca
   if (state === "stopped") {
     // Stopped to stay stopped (Stop): until when, Start now, and another server of the list meanwhile.
     const until = status.held && status.heldUntil ? clockTime(status.heldUntil) : null;
+    title(fill(words.stopped));
     say(
-      until ? fillIn(words.heldUntil, { device, time: until }) : status.held ? fill(words.held) : fill(words.stopped),
+      until
+        ? fillIn(words.heldUntil, { device, time: until })
+        : status.held
+          ? fill(words.held)
+          : fill(strings.server.stoppedBody),
     );
-    buttons([
-      [status.held ? words.startNow : words.start, start],
-      ...(other
-        ? ([[fillIn(words.openOther, { server: serverName(other) }), () => openServer(other)]] as [
-            string,
-            () => void,
-          ][])
-        : []),
-    ]);
+    const others: Act[] = other
+      ? [[fillIn(words.openOther, { server: serverName(other) }), () => openServer(other)]]
+      : [];
+    buttons(others, [status.held ? words.startNow : words.start, start]);
   } else {
-    say(fill(words.failing));
-    buttons([[words.retry, start], [words.copy, copyDiagnostics], report]);
+    title(fill(words.failing));
+    say("");
+    buttons([[words.copy, copyDiagnostics]], [words.retry, start], report);
   }
 }
 
@@ -330,25 +357,7 @@ async function readNetwork(fresh = false): Promise<NetworkFix | null> {
   return fix;
 }
 
-/** The card's buttons: the way to another workspace, then the one that turns the network on. */
-function cardButtons(list: [string, () => void, "ghost" | "primary"][]) {
-  if (!cardActs) return;
-  const now = list.map(([label]) => label).join("|");
-  if (cardActs.dataset.now === now) return;
-  cardActs.dataset.now = now;
-  cardActs.replaceChildren(
-    ...list.map(([label, run, variant]) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.dataset.variant = variant;
-      button.textContent = label;
-      button.addEventListener("click", run);
-      return button;
-    }),
-  );
-}
-
-/** Tailscale's mark on the card's tile, drawn once. */
+/** Tailscale's mark on its tile, the stack's picture over a private network, drawn once. */
 function drawMark(tile: Element) {
   if (tile.firstChild) return;
   const ns = "http://www.w3.org/2000/svg";
@@ -367,46 +376,28 @@ function drawMark(tile: Element) {
   tile.append(svg);
 }
 
-/** Says `text` under the card's line for a moment (Tailscale's page didn't open). */
-let noteTimer: ReturnType<typeof setTimeout> | undefined;
-function note(text: string) {
-  if (!cardNote) return;
-  cardNote.textContent = text;
-  clearTimeout(noteTimer);
-  noteTimer = setTimeout(() => {
-    if (cardNote) cardNote.textContent = "";
-  }, 5000);
-}
+/** Says `text` in the time's place for a moment (Tailscale's page didn't open), never over the line. */
+const note = (text: string) => sayAside(text, 5000);
 
-/** The card over a workspace on a private network: its name, what is off here, and what turns it on. */
+/** Over a workspace on a private network: its name, what is off here, and what turns it on, in the same stack. */
 async function showPrivate(server: string, fix: NetworkFix) {
-  if (!root || !card) return;
+  if (!root) return;
   const list = await invoke<ServerWorkspaces[]>("workspaces_get").catch(() => null);
-  const title = privateTitle(list?.find((w) => w.server === server)?.orgs);
-  const { line: lineKey, button } = networkWords(fix);
-  const tile = card.querySelector(".cover__tile");
+  const named = privateTitle(list?.find((w) => w.server === server)?.orgs);
+  const { line: lineKey, button: turnOnKey } = networkWords(fix);
   if (tile) drawMark(tile);
-  if (cardTitle) {
-    cardTitle.textContent =
-      title.key === "privateTitle" ? fillIn(words.privateTitle, { org: title.org ?? "" }) : words.privateTitleAny;
-  }
-  if (cardLead) cardLead.textContent = fillIn(words[lineKey], { device });
-  const actions: [string, () => void, "ghost" | "primary"][] = [[words.useOther, otherWorkspace, "ghost"]];
-  if (button) actions.push([words[button], () => turnOn(fix), "primary"]);
-  cardButtons(actions);
-  say("");
-  buttons([]);
-  card.hidden = false;
+  title(named.key === "privateTitle" ? fillIn(words.privateTitle, { org: named.org ?? "" }) : words.privateTitleAny);
+  say(fillIn(words[lineKey], { device }));
+  buttons([[words.useOther, otherWorkspace]], turnOnKey ? [words[turnOnKey], () => turnOn(fix)] : undefined);
   root.setAttribute("data-private", "");
 }
 
 function hidePrivate() {
-  if (card) card.hidden = true;
   root?.removeAttribute("data-private");
 }
 
 /**
- * The card's button: the system's Tailscale opens (its Mac app) or its official download page does. Once the network
+ * Its main button: the system's Tailscale opens (its Mac app) or its official download page does. Once the network
  * is on here and the server answers, the page loads.
  */
 function turnOn(fix: NetworkFix) {
@@ -416,8 +407,8 @@ function turnOn(fix: NetworkFix) {
   else if (fix.act === "download") openPage("download");
 }
 
-const showAnyway: [string, () => void] = [words.showAnyway, () => void invoke("cover_hide").catch(() => {})];
-const another: [string, () => void] = [words.otherServer, otherWorkspace];
+const showAnyway: Act = [words.showAnyway, () => void invoke("cover_hide").catch(() => {})];
+const another: Act = [words.otherServer, otherWorkspace];
 
 /**
  * Each time a server of the list opens, whether this app still speaks its app API (`GET /api/instance`, as when it was
@@ -432,15 +423,17 @@ async function checkVersion() {
   void invoke("cover_hold").catch(() => {});
   const host = serverName(server);
   const connect = strings.connect;
-  say(fillIn(problem === "app-too-old" ? connect.appTooOld : connect.serverTooOld, { host }));
-  const updates: [string, () => void] = [
+  title(fillIn(problem === "app-too-old" ? connect.appTooOld : connect.serverTooOld, { host }));
+  say("");
+  const updates: Act = [
     connect.checkUpdates,
     () =>
       void invoke("layer_show", { route: { screen: "settings", section: "overview", focus: "updates" } }).catch(
         () => {},
       ),
   ];
-  buttons(problem === "app-too-old" ? [updates, another, showAnyway] : [another, showAnyway]);
+  if (problem === "app-too-old") buttons([another], updates, showAnyway);
+  else buttons([], another, showAnyway);
 }
 
 async function check() {
@@ -470,15 +463,16 @@ async function check() {
   if (waited < CHECK_MS) return;
   if (!(await reachable(server))) {
     unreachable = true;
-    // A workspace on a private network while the network is off here: the card that turns it on (ADR 0265).
+    // A workspace on a private network while the network is off here: what turns it on (ADR 0265).
     const fix = navigator.onLine && isTailnet(server) ? await readNetwork() : null;
     if (fix) {
       await showPrivate(server, fix);
       return;
     }
     hidePrivate();
+    title(null);
     say(unreachableText(server));
-    buttons([[words.otherServer, otherWorkspace]]);
+    buttons([another]);
     return;
   }
   hidePrivate();
@@ -501,8 +495,10 @@ function stuck(waited: number) {
     void invoke("cover_retry", { fresh: next.action === "fresh", why }).catch(() => {});
     return;
   }
+  title(null);
   say(words.stuck);
-  buttons([
+  buttons(
+    [showAnyway],
     [
       words.retry,
       () => {
@@ -511,8 +507,7 @@ function stuck(waited: number) {
       },
     ],
     [words.copy, copyDiagnostics],
-    showAnyway,
-  ]);
+  );
 }
 
 /** "15:32": the hour and minute in the person's own way. */

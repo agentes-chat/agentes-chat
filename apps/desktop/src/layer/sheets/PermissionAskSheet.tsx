@@ -6,7 +6,7 @@
  * leaves the wait (the tray keeps it).
  */
 import { Button, ComputerPortrait } from "@agenteschat/ui";
-import { useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost, useSnapshot, useStore } from "../../app";
 import { type PermissionAsk, permissionAsks, permissionOn } from "../../control/permissions";
@@ -16,6 +16,22 @@ import { Sheet } from "./SheetFrame";
 
 /** How long the sheet waits for this web view to hear of a wait the tray saw, before it goes. */
 const ASK_LATE_MS = 3000;
+
+/** Stands in for the command in its sentence, so the command can be set apart in the language's own word order. */
+const COMMAND = "\u0000";
+
+/** The sentence with the command that macOS refused in the code face, where the language put it. */
+function withCommand(sentence: string, command: string): ReactNode {
+  const at = sentence.indexOf(COMMAND);
+  if (at < 0) return sentence;
+  return (
+    <>
+      {sentence.slice(0, at)}
+      <code className="dk-sh__code">{command}</code>
+      {sentence.slice(at + COMMAND.length)}
+    </>
+  );
+}
 
 export function PermissionAskSheet({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
@@ -59,9 +75,12 @@ export function PermissionAskSheet({ onClose }: { onClose: () => void }) {
   const trigger = ask.need.trigger;
   const asked = !trigger
     ? null
-    : ask.agent
-      ? t("devices.permission.askedBy", { agent: ask.agent, trigger })
-      : t("devices.permission.asked", { trigger });
+    : withCommand(
+        ask.agent
+          ? t("devices.permission.askedBy", { agent: ask.agent, trigger: COMMAND })
+          : t("devices.permission.asked", { trigger: COMMAND }),
+        trigger,
+      );
   // Screen Recording and Full Disk Access: the app reads them itself, and macOS applies them once the app opens again.
   const readable = p === "screen" || p === "disk";
   return (
@@ -70,10 +89,9 @@ export function PermissionAskSheet({ onClose }: { onClose: () => void }) {
       art={<ComputerPortrait kind={host.platform} state="online" size={48} />}
       title={t("desktop.permissionAsk.title", { permission })}
       lead={t(`desktop.permissionAsk.why.${p}`)}
-      help={readable ? t("desktop.prepare.reopen") : undefined}
       acts={
         <>
-          <Button variant="ghost" disabled={pending !== null} onClick={onClose}>
+          <Button disabled={pending !== null} onClick={onClose}>
             {t("desktop.permissionAsk.later")}
           </Button>
           {!readable && (
@@ -100,8 +118,11 @@ export function PermissionAskSheet({ onClose }: { onClose: () => void }) {
         </>
       }
     >
-      {asked && <p className="dk-help">{asked}</p>}
-      <p className="dk-help">{t("desktop.prepare.diskHow")}</p>
+      {/* Who asked, what to do in System Settings and, for the ones macOS applies after a restart, what comes then:
+          the body's own lines, so the footer keeps only its buttons. */}
+      {asked && <p className="dk-sh__text">{asked}</p>}
+      <p className="dk-sh__text">{t("desktop.prepare.diskHow")}</p>
+      {readable && <p className="dk-sh__text">{t("desktop.prepare.reopen")}</p>}
     </Sheet>
   );
 }

@@ -1,5 +1,5 @@
 /**
- * Settings › This computer › App settings (ADR 0265 §7): the app's own choices. Its notifications; the app itself
+ * Settings › This computer › App settings (ADR 0265 §6): the app's own choices. Its notifications; the app itself
  * (language, opening at login, the menu bar icon, the notch, Linux's compatibility mode); with the server here, whether
  * people reach it from their devices and its usage statistics; the servers and accounts this app opens; updates and
  * About; and, while agents work here, the advanced limits.
@@ -291,7 +291,7 @@ export function AppSettings({ ctx }: { ctx: SettingsContext }) {
         width={440}
       >
         <DialogFooter bar>
-          <Button variant="ghost" onClick={() => setAskReopen(false)} disabled={reopening}>
+          <Button onClick={() => setAskReopen(false)} disabled={reopening}>
             {t("desktop.common.cancel")}
           </Button>
           <Button variant="primary" loading={reopening} onClick={() => void reopenNow()}>
@@ -325,7 +325,6 @@ function HereChoices() {
       <CardTitle>{t("desktop.server.title")}</CardTitle>
       <PrefCard>
         <PrefRow
-          top
           title={t("desktop.here.reach")}
           hint={hintFor(t, t("desktop.here.reach"), t("desktop.here.reachText"))}
           htmlFor="here-reach"

@@ -152,7 +152,7 @@ export function IphoneSheet({ onClose }: { onClose: () => void }) {
   const phone = iphoneHere(home?.status?.phones);
   const reason = phone?.state === "ready" ? undefined : phone?.reason;
   const restart = useIphoneRestart(phone ? { key: phone.serial, reason } : null);
-  const { states, current, done } = iphoneSteps(setup, phone, restart === "restarting");
+  const { states, current } = iphoneSteps(setup, phone, restart === "restarting");
   const mac = home?.status?.machine;
   // The server here's home points at its loopback, which a phone can't open: its public address instead.
   const server = home ? deviceServer(home, local) : null;
@@ -558,15 +558,18 @@ export function IphoneSheet({ onClose }: { onClose: () => void }) {
     }
   };
 
+  // Once our phone app is in the App Store: a QR beside the steps, and the wide card that has room for it.
+  const qr = PHONE_APP_IN_STORE.ios && server && orgId && mac ? iphoneStepsUrl(server, orgId, mac.id) : null;
+
   return (
     <Sheet
       screen="iphone"
-      wide
+      size={qr ? "lg" : undefined}
       title={t("devices.iphone.title")}
       lead={t("desktop.iphone.lead")}
       help={
         <span className="dk-ip__tip ac-hintline">
-          <b>{t("desktop.iphone.tip")}</b>
+          <span>{t("desktop.iphone.tip")}</span>
           <InfoHint name={tip.name}>{tip.text}</InfoHint>
         </span>
       }
@@ -576,9 +579,9 @@ export function IphoneSheet({ onClose }: { onClose: () => void }) {
             {t("devices.done")}
           </Button>
         ) : (
+          // Nothing to go on with until the iPhone has done its part: both ways out are bordered.
           <>
             <Button
-              variant="ghost"
               onClick={() =>
                 void host.showLayer({ screen: "settings", section: "folders", focus: "phone" }).catch(() => {})
               }
@@ -590,7 +593,7 @@ export function IphoneSheet({ onClose }: { onClose: () => void }) {
         )
       }
     >
-      <div className="dk-ip" style={PHONE_APP_IN_STORE.ios ? undefined : NO_QR}>
+      <div className="dk-ip" style={qr ? undefined : NO_QR}>
         <div className="dk-ip__main">
           <ol className="dk-fr__steps" aria-label={t("desktop.iphone.progress")}>
             {IPHONE_SETUP_STEPS.map((step) => {
@@ -607,9 +610,9 @@ export function IphoneSheet({ onClose }: { onClose: () => void }) {
                     {state === "active" ? (
                       <PixelSpinner size={16} color="sky" />
                     ) : state === "done" ? (
-                      <Icon name="check" size={16} />
+                      <Icon name="check" size={18} />
                     ) : state === "needs" ? (
-                      <Icon name="alert" size={16} />
+                      <Icon name="alert" size={18} />
                     ) : (
                       <span className="dk-fr__stepdot" />
                     )}
@@ -636,7 +639,7 @@ export function IphoneSheet({ onClose }: { onClose: () => void }) {
                         {line(step)}
                         {step === current && step !== "developerMode" && (stalled || (looking && plugged)) && (
                           <span className="dk-ip__stall ac-iconline">
-                            <Icon name="info" size={14} />
+                            <Icon name="info" size={16} />
                             <span>{stall(step)}</span>
                           </span>
                         )}
@@ -647,16 +650,6 @@ export function IphoneSheet({ onClose }: { onClose: () => void }) {
               );
             })}
           </ol>
-          <div
-            className="dk-bar"
-            role="progressbar"
-            aria-label={t("desktop.iphone.progress")}
-            aria-valuemin={0}
-            aria-valuemax={IPHONE_SETUP_STEPS.length}
-            aria-valuenow={done}
-          >
-            <span style={{ width: `${(done / IPHONE_SETUP_STEPS.length) * 100}%` }} />
-          </div>
           {current === null && phone && (
             <p className="dk-ip__ready ac-iconline" role="status">
               <Icon name="check" size={16} />
@@ -664,10 +657,10 @@ export function IphoneSheet({ onClose }: { onClose: () => void }) {
             </p>
           )}
         </div>
-        {PHONE_APP_IN_STORE.ios && server && orgId && mac && (
+        {qr && (
           <aside className="dk-ip__side">
-            <div className="dk-card dk-ip__qr" data-padded="">
-              <QrCode text={iphoneStepsUrl(server, orgId, mac.id)} label={t("desktop.iphone.qrLabel")} />
+            <div className="dk-ip__qr">
+              <QrCode text={qr} label={t("desktop.iphone.qrLabel")} />
               <p>{t("desktop.iphone.qr")}</p>
             </div>
           </aside>

@@ -1,24 +1,36 @@
 /**
- * Settings › This computer › Server on this computer (ADR 0265 §7): agentes.chat as the app runs it here. Its state
+ * Settings › This computer › Server on this computer (ADR 0265 §6): agentes.chat as the app runs it here. Its state
  * and Restart on top; "Reach from anywhere": its address for people with Copy and the way it goes (Tailscale or the
  * person's own address, ADR 0265 §4, changed with the picker inline), the phone's QR code (a one-time sign-in made
  * with the window's own session, asked again while it shows) and inviting someone from the team; while something keeps
- * reach from working, only that with its one fix (the phone and the invite would lead nowhere); off, one row with Turn on, which opens the same picker; its backups (every night, a
- * copy elsewhere); and a quiet line of what is done less often (Back up now, Restore…, Stop, Stop running here…, Erase
- * and start over…), each asking first as before. Its versions and Jev's key live in App settings › About.
+ * reach from working, only that with its one fix (the phone and the invite would lead nowhere); off, one row with Turn
+ * on, which opens the same picker; its backups (every night, with Back up now, Restore… and Show in Finder under it; a
+ * copy elsewhere). What is done rarely and stops it (Stop, Stop running here…, Erase and start over…) is in the menu
+ * beside Restart, each asking first. Its versions and Jev's key live in App settings › About.
  */
 import { heldWhole } from "@agenteschat/client/lib/format";
-import { Alert, Button, Dialog, DialogBody, DialogFooter, QrCode, Select, Switch } from "@agenteschat/ui";
-import { useEffect, useState } from "react";
+import {
+  Alert,
+  Button,
+  Dialog,
+  DialogBody,
+  DialogFooter,
+  Menu,
+  MenuItem,
+  QrCode,
+  Select,
+  Switch,
+} from "@agenteschat/ui";
+import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost } from "../../app";
 import type { LocalServerStatus, PhoneLink } from "../../control/local-server";
 import { useLocalServer, usePending } from "../../hooks";
-import { CopyDetails, ServerTile } from "../../ui/here";
+import { CopyDetails } from "../../ui/here";
 import { CardTitle, hintFor, PrefCard, PrefHead, PrefRow } from "../../ui/settings";
 import { useToast } from "../../ui/Toast";
 import { backupsFolder, clock, folderLabel, nightAt, shortPath } from "../../ui/time";
-import { Lead, ReachLead } from "./AlwaysOn";
+import { Lead, ReachLead, ServerLead } from "./AlwaysOn";
 import { essentialLine, FixButton, type FixContext, ReachChooser, ReachRows, useReach } from "./fixes";
 import type { SettingsContext } from "./Settings";
 
@@ -55,6 +67,7 @@ function Running({ local, ctx }: { local: LocalServerStatus; ctx: SettingsContex
   // The backup "Restore…" goes back to, while its dialog is open.
   const [restoring, setRestoring] = useState<string | null>(null);
   const [noPassword, setNoPassword] = useState(false);
+  const erase = useEraseHere(local, busy !== null);
   const address = local.publicUrl ?? local.url ?? "";
   const running = local.phase === "running";
   const up = running || local.phase === "starting" || local.phase === "updating";
@@ -157,41 +170,51 @@ function Running({ local, ctx }: { local: LocalServerStatus; ctx: SettingsContex
           </>
         }
         action={
-          up ? (
-            <Button
-              size="sm"
-              loading={busy === "restart"}
-              disabled={busy !== null}
-              onClick={() => void act("restart", () => host.restartLocalServer())}
-            >
-              {t("desktop.server.restart")}
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              variant="primary"
-              icon="play"
-              loading={busy === "start"}
-              onClick={() => void act("start", () => host.startLocalServer())}
-            >
-              {t("desktop.server.start")}
-            </Button>
-          )
+          <>
+            {up ? (
+              <Button
+                size="sm"
+                loading={busy === "restart"}
+                disabled={busy !== null}
+                onClick={() => void act("restart", () => host.restartLocalServer())}
+              >
+                {t("desktop.server.restart")}
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="primary"
+                icon="play"
+                loading={busy === "start"}
+                onClick={() => void act("start", () => host.startLocalServer())}
+              >
+                {t("desktop.server.start")}
+              </Button>
+            )}
+            <MoreMenu>
+              {up && (
+                <MenuItem icon="stop" disabled={busy !== null} onSelect={() => setStopAsk(true)}>
+                  {t("desktop.server.stop")}
+                </MenuItem>
+              )}
+              <MenuItem icon="power" danger onSelect={() => setStopping(true)}>
+                {t("desktop.server.stopHere")}
+              </MenuItem>
+              {erase.item}
+            </MoreMenu>
+          </>
         }
       />
 
       {local.phase === "failing" && (
         <PrefCard>
           <PrefRow
+            lead={<Lead icon="alert" />}
             desc={t("desktop.server.failingWhy")}
             end={
               <>
                 <CopyDetails />
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => void host.revealFolder(logsFolder(local.dir)).catch(() => {})}
-                >
+                <Button size="sm" onClick={() => void host.revealFolder(logsFolder(local.dir)).catch(() => {})}>
                   {t("desktop.server.showLogs")}
                 </Button>
               </>
@@ -216,7 +239,7 @@ function Running({ local, ctx }: { local: LocalServerStatus; ctx: SettingsContex
               }
               end={
                 trouble ? (
-                  trouble.fix && <FixButton fix={trouble.fix} ctx={fixCtx} />
+                  trouble.fix && <FixButton fix={trouble.fix} ctx={fixCtx} primary={running} />
                 ) : peopleUrl ? (
                   <Button size="sm" icon="copy" onClick={() => void copyAddress()}>
                     {t("desktop.common.copy")}
@@ -246,14 +269,15 @@ function Running({ local, ctx }: { local: LocalServerStatus; ctx: SettingsContex
             />
           ) : (
             <PrefRow
-              lead={<ServerTile kind="here" small />}
+              lead={<ServerLead kind="here" />}
               title={t("desktop.settings.app.onlyHere")}
               desc={t("desktop.settings.server.onlyHereDesc")}
               end={
                 !choosing && (
                   <Button
                     size="sm"
-                    variant="primary"
+                    // The screen's one filled button while it runs; stopped, Start above is.
+                    variant={running ? "primary" : "default"}
                     loading={reach.reaching}
                     disabled={!running}
                     onClick={() => {
@@ -274,12 +298,12 @@ function Running({ local, ctx }: { local: LocalServerStatus; ctx: SettingsContex
             <PrefRow
               lead={<Lead icon="personAdd" />}
               title={t("desktop.settings.server.invite")}
-              desc={
-                throughAddress ? (
-                  t("desktop.settings.server.inviteDescAddress")
-                ) : (
-                  <span>
-                    {t("desktop.settings.server.inviteDesc")}{" "}
+              desc={t(
+                throughAddress ? "desktop.settings.server.inviteDescAddress" : "desktop.settings.server.inviteDesc",
+              )}
+              under={
+                !throughAddress && (
+                  <span className="dk-sx__rowlinks">
                     <button
                       type="button"
                       className="ac-link dk-link"
@@ -344,6 +368,40 @@ function Running({ local, ctx }: { local: LocalServerStatus; ctx: SettingsContex
                 onCheckedChange={(on) => setBackups(on, backups.copyTo)}
               />
             }
+            under={
+              <span className="dk-sx__rowlinks">
+                <button
+                  type="button"
+                  className="ac-link dk-link"
+                  disabled={!up || busy !== null}
+                  onClick={() =>
+                    void act("backup", async () => {
+                      const file = await host.backupLocalServer();
+                      toast(t("desktop.server.backedUp", { file: shortPath(file) }), "check");
+                    })
+                  }
+                >
+                  {t("desktop.server.backup")}
+                </button>
+                <button
+                  type="button"
+                  className="ac-link dk-link"
+                  disabled={!lastBackup || busy !== null}
+                  onClick={() => setRestoring(lastBackup?.path ?? null)}
+                >
+                  {t("desktop.server.restore")}
+                </button>
+                <button
+                  type="button"
+                  className="ac-link dk-link"
+                  onClick={() =>
+                    void host.revealFolder(lastBackup ? backupsFolder(local.dir) : local.dir).catch(() => {})
+                  }
+                >
+                  {host.platform === "mac" ? t("desktop.server.reveal") : t("desktop.server.revealFiles")}
+                </button>
+              </span>
+            }
           />
           <PrefRow
             lead={<Lead icon="cloud" />}
@@ -361,7 +419,7 @@ function Running({ local, ctx }: { local: LocalServerStatus; ctx: SettingsContex
             end={
               <>
                 {backups.copyTo && (
-                  <Button size="sm" variant="ghost" onClick={() => setBackups(backups.nightly, null)}>
+                  <Button size="sm" onClick={() => setBackups(backups.nightly, null)}>
                     {t("desktop.server.copyToStop")}
                   </Button>
                 )}
@@ -374,47 +432,8 @@ function Running({ local, ctx }: { local: LocalServerStatus; ctx: SettingsContex
         </PrefCard>
       </section>
 
-      <div className="dk-sx__links">
-        <button
-          type="button"
-          className="ac-link dk-link"
-          disabled={!up || busy !== null}
-          onClick={() =>
-            void act("backup", async () => {
-              const file = await host.backupLocalServer();
-              toast(t("desktop.server.backedUp", { file: shortPath(file) }), "check");
-            })
-          }
-        >
-          {t("desktop.server.backup")}
-        </button>
-        <button
-          type="button"
-          className="ac-link dk-link"
-          disabled={!lastBackup || busy !== null}
-          onClick={() => setRestoring(lastBackup?.path ?? null)}
-        >
-          {t("desktop.server.restore")}
-        </button>
-        <button
-          type="button"
-          className="ac-link dk-link"
-          onClick={() => void host.revealFolder(lastBackup ? backupsFolder(local.dir) : local.dir).catch(() => {})}
-        >
-          {host.platform === "mac" ? t("desktop.server.reveal") : t("desktop.server.revealFiles")}
-        </button>
-        {up && (
-          <button type="button" className="ac-link dk-link" disabled={busy !== null} onClick={() => setStopAsk(true)}>
-            {t("desktop.server.stop")}
-          </button>
-        )}
-        <button type="button" className="ac-link dk-link dk-danger-text" onClick={() => setStopping(true)}>
-          {t("desktop.server.stopHere")}
-        </button>
-        <EraseHere local={local} disabled={busy !== null} />
-      </div>
-
       {reach.dialog}
+      {erase.dialog}
       <Dialog
         open={restoring !== null}
         onOpenChange={(o) => !o && busy !== "restore" && setRestoring(null)}
@@ -436,7 +455,7 @@ function Running({ local, ctx }: { local: LocalServerStatus; ctx: SettingsContex
           />
         </DialogBody>
         <DialogFooter bar>
-          <Button variant="ghost" onClick={() => setRestoring(null)} disabled={busy === "restore"}>
+          <Button onClick={() => setRestoring(null)} disabled={busy === "restore"}>
             {t("desktop.common.cancel")}
           </Button>
           <Button variant="danger" loading={busy === "restore"} onClick={() => restoring && void restore(restoring)}>
@@ -453,7 +472,7 @@ function Running({ local, ctx }: { local: LocalServerStatus; ctx: SettingsContex
         width={440}
       >
         <DialogFooter bar>
-          <Button variant="ghost" onClick={() => setStopAsk(false)} disabled={busy === "stop"}>
+          <Button onClick={() => setStopAsk(false)} disabled={busy === "stop"}>
             {t("desktop.common.cancel")}
           </Button>
           <Button
@@ -490,7 +509,7 @@ function Running({ local, ctx }: { local: LocalServerStatus; ctx: SettingsContex
         width={440}
       >
         <DialogFooter bar>
-          <Button variant="ghost" onClick={() => setStopping(false)} disabled={busy === "stop"}>
+          <Button onClick={() => setStopping(false)} disabled={busy === "stop"}>
             {t("desktop.common.cancel")}
           </Button>
           <Button
@@ -512,9 +531,9 @@ function Running({ local, ctx }: { local: LocalServerStatus; ctx: SettingsContex
 }
 
 /**
- * The phone's QR code beside its one line of steps: a one-time sign-in the server here makes with the window's own
- * session, only while people reach it (Tailscale shares it, or the person's address leads here: `address`, which
- * needs no Tailscale on the phone), asked again every few minutes while it shows.
+ * The phone's one line of steps with its QR code at the row's end: a one-time sign-in the server here makes with the
+ * window's own session, only while people reach it (Tailscale shares it, or the person's address leads here:
+ * `address`, which needs no Tailscale on the phone), asked again every few minutes while it shows.
  */
 function PhoneRow({ address }: { address: boolean }) {
   const { t } = useTranslation();
@@ -547,15 +566,7 @@ function PhoneRow({ address }: { address: boolean }) {
   }, [host]);
   return (
     <PrefRow
-      lead={
-        link ? (
-          <span className="dk-sx__qr">
-            <QrCode text={link.link} label={t("desktop.settings.server.qrLabel")} />
-          </span>
-        ) : (
-          <Lead icon="phone" />
-        )
-      }
+      lead={<Lead icon="phone" />}
       title={t("desktop.server.phone")}
       desc={
         why === "signed_out"
@@ -563,6 +574,13 @@ function PhoneRow({ address }: { address: boolean }) {
           : why === "not_served"
             ? t("desktop.server.phoneOff")
             : t(address ? "desktop.settings.server.phoneDescAddress" : "desktop.settings.server.phoneDesc")
+      }
+      end={
+        link && (
+          <span className="dk-sx__qr">
+            <QrCode text={link.link} label={t("desktop.settings.server.qrLabel")} />
+          </span>
+        )
       }
     />
   );
@@ -574,32 +592,34 @@ function StoppedHere({ local }: { local: LocalServerStatus }) {
   const host = useHost();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
+  const erase = useEraseHere(local, busy);
   return (
     <>
       <PrefHead
         title={t("desktop.server.title")}
         lead={t("desktop.server.notHere", { path: shortPath(local.dir) })}
         action={
-          <Button
-            size="sm"
-            variant="primary"
-            icon="play"
-            loading={busy}
-            onClick={() => {
-              setBusy(true);
-              void host
-                .startLocalServer()
-                .catch(() => toast(t("desktop.common.error"), "alert"))
-                .finally(() => setBusy(false));
-            }}
-          >
-            {t("desktop.server.startHere")}
-          </Button>
+          <>
+            <Button
+              size="sm"
+              variant="primary"
+              icon="play"
+              loading={busy}
+              onClick={() => {
+                setBusy(true);
+                void host
+                  .startLocalServer()
+                  .catch(() => toast(t("desktop.common.error"), "alert"))
+                  .finally(() => setBusy(false));
+              }}
+            >
+              {t("desktop.server.startHere")}
+            </Button>
+            <MoreMenu>{erase.item}</MoreMenu>
+          </>
         }
       />
-      <div className="dk-sx__links">
-        <EraseHere local={local} disabled={busy} />
-      </div>
+      {erase.dialog}
     </>
   );
 }
@@ -608,10 +628,11 @@ function StoppedHere({ local }: { local: LocalServerStatus }) {
 const MOVING: ReadonlySet<LocalServerStatus["phase"]> = new Set(["starting", "updating", "restarting"]);
 
 /**
- * "Erase and start over…": one question, then the server here stops, its folder moves whole to `eraseTo` (its data
- * kept there) and the first run offers a new setup. A folder that couldn't move leaves it stopped, data in place.
+ * "Erase and start over…", an item of the server's menu: one question, then the server here stops, its folder moves
+ * whole to `eraseTo` (its data kept there) and the first run offers a new setup. A folder that couldn't move leaves it
+ * stopped, data in place. The dialog renders beside the menu, which closes as it opens.
  */
-function EraseHere({ local, disabled }: { local: LocalServerStatus; disabled: boolean }) {
+function useEraseHere(local: LocalServerStatus, disabled: boolean): { item: ReactNode; dialog: ReactNode } {
   const { t } = useTranslation();
   const host = useHost();
   const toast = useToast();
@@ -636,43 +657,58 @@ function EraseHere({ local, disabled }: { local: LocalServerStatus; disabled: bo
         );
       }
     });
+  const item = (
+    <MenuItem
+      icon="trash"
+      danger
+      disabled={disabled || !local.eraseTo || MOVING.has(local.phase)}
+      onSelect={() => {
+        setFailed(null);
+        setAsking(true);
+      }}
+    >
+      {t("desktop.server.erase")}
+    </MenuItem>
+  );
+  const dialog = (
+    <Dialog
+      open={asking}
+      onOpenChange={(o) => !o && busy === null && setAsking(false)}
+      title={t("desktop.server.eraseTitle")}
+      // The date in the folder's name stays on one line.
+      description={t("desktop.server.eraseBody", { path: heldWhole(shortPath(local.eraseTo ?? "")) })}
+      closeLabel={t("desktop.common.close")}
+      width={440}
+    >
+      {failed && (
+        <DialogBody>
+          <Alert>{failed}</Alert>
+        </DialogBody>
+      )}
+      <DialogFooter bar>
+        <Button onClick={() => setAsking(false)} disabled={busy !== null}>
+          {t("desktop.common.cancel")}
+        </Button>
+        <Button variant="danger" loading={busy !== null} onClick={() => void erase()}>
+          {t("desktop.server.eraseConfirm")}
+        </Button>
+      </DialogFooter>
+    </Dialog>
+  );
+  return { item, dialog };
+}
+
+/** What is done rarely to the server here, in a menu beside its first button (a ghost ⋯ reaching the page's edge). */
+function MoreMenu({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   return (
-    <>
-      <button
-        type="button"
-        className="ac-link dk-link dk-danger-text"
-        disabled={disabled || !local.eraseTo || MOVING.has(local.phase)}
-        onClick={() => {
-          setFailed(null);
-          setAsking(true);
-        }}
-      >
-        {t("desktop.server.erase")}
-      </button>
-      <Dialog
-        open={asking}
-        onOpenChange={(o) => !o && busy === null && setAsking(false)}
-        title={t("desktop.server.eraseTitle")}
-        // The date in the folder's name stays on one line.
-        description={t("desktop.server.eraseBody", { path: heldWhole(shortPath(local.eraseTo ?? "")) })}
-        closeLabel={t("desktop.common.close")}
-        width={440}
-      >
-        {failed && (
-          <DialogBody>
-            <Alert>{failed}</Alert>
-          </DialogBody>
-        )}
-        <DialogFooter bar>
-          <Button variant="ghost" onClick={() => setAsking(false)} disabled={busy !== null}>
-            {t("desktop.common.cancel")}
-          </Button>
-          <Button variant="danger" loading={busy !== null} onClick={() => void erase()}>
-            {t("desktop.server.eraseConfirm")}
-          </Button>
-        </DialogFooter>
-      </Dialog>
-    </>
+    <Menu
+      align="end"
+      label={t("desktop.common.more")}
+      trigger={<Button size="sm" variant="ghost" iconOnly icon="more" aria-label={t("desktop.common.more")} />}
+    >
+      {children}
+    </Menu>
   );
 }
 

@@ -125,9 +125,9 @@ export const desktopEn = {
     resumed: "Agents are back",
     reconnect: "Reconnect",
     reconnecting: "Reconnecting…",
-    offlineTitle: "No internet. Trying again…",
+    offlineTitle: "No internet",
     offlineBody: "What already started keeps running here and sends the result when the connection is back.",
-    unreachable: "Can't reach {{host}}. Trying again…",
+    unreachable: "Can't reach {{host}}",
     unreachableBody: "What already started keeps running here and sends the result when the server is back.",
     pausedUntil: "Paused until {{time}}",
     pausedUntilResume: "Paused until you resume",
@@ -241,6 +241,8 @@ export const desktopEn = {
     /** Adding a workspace, under "Sign in to agentes.chat": a new one instead. */
     addNew: "Want a new workspace?",
     addNewLink: "Create one",
+    /** Over the titles of a company's server and of installing one, as "Run on this Mac" is over Run here's. */
+    companyFlow: "Your company's server",
     /** The first screen (ADR 0265 §2): sign in first, the other ways under it, a server found on top. */
     welcome: {
       title: "Welcome to agentes.chat",
@@ -444,6 +446,9 @@ export const desktopEn = {
     usageText:
       "Counts such as people, agents, machine sizes, AI tokens used, how much data the agents' browsers send and receive, and how fast the apps open and run. Never messages, files, names or sites.",
     setting: "Getting everything ready",
+    /** The setup's title once it ended with access still to see to, and once a step failed. */
+    settingAlmost: "Almost ready",
+    settingFailed: "Setup didn't finish",
     step: {
       database: "Making room for your data",
       databaseNote: "first time only",
@@ -535,9 +540,6 @@ export const desktopEn = {
     removeBody: "The server and your account there stay as they are.",
     removeAgents: "Agents of its workspaces stop working on this {{device}}.",
     removed: "{{host}} left this app",
-    /** Under each server: its workspaces, as the app reads them with its sign-in (ADR 0154). */
-    workspaces_one: "{{count}} workspace",
-    workspaces_other: "{{count}} workspaces",
     signedOut: "Not signed in",
     /** A server's state and its ways out, in its row (ADR 0158). */
     offline: "Offline since {{time}}",
@@ -691,11 +693,14 @@ export const desktopEn = {
     foldersLater: "No folders of yours yet. Add them later in Settings\u00a0›\u00a0Folders and tools.",
     /** A link from the web asks to connect this computer: who asked, from which server. */
     linkTitle: "Connect this {{device}} to {{org}}?",
+    /** The same while the link's server is read, before its workspace is known. */
+    connectTitle: "Connect this {{device}}?",
     askedBy: "Asked by",
     from: "From",
     linkBody: "If you didn't ask for this, choose Not now.",
     waiting: "Waiting for {{by}} to let it in…",
     done: "Connected to {{org}}",
+    doneLead: "Its agents can work on this {{device}} now.",
     /** Once it's in: one switch, off, that lets the whole workspace use it (Preferences › This Mac holds the rest). */
     share: "Let the whole workspace use it",
     /** A workspace with its own computer opens websites through this one's internet (ADR 0237); on by default. */
@@ -714,9 +719,15 @@ export const desktopEn = {
     shareOff: "Only you for now",
     shareHint: "Everyone's agents in {{org}} can run tasks on it, as your user.",
     addFolders: "Add folders",
-    expired: "This link expired. Make a new one in Devices.",
     openDevices: "Open Devices",
-    denied: "{{by}} didn't let it in. Nothing changed.",
+    /** A link that can't go on: what happened as the sheet's title, what to do under it. */
+    expiredTitle: "This link expired",
+    expiredLead: "Make a new one in Devices on {{server}}.",
+    deniedTitle: "{{by}} didn't let it in",
+    deniedLead: "Nothing changed on this {{device}}.",
+    unreachableTitle: "Couldn't reach {{server}}",
+    unreachableLead: "Check the connection and try again.",
+    failedTitle: "Couldn't connect this {{device}}",
     /** Preferences › General › This Mac: one switch per workspace. */
     letOrg: "Let {{org}}'s agents use this {{device}}",
     canUse: "Agents can use it",
@@ -1268,6 +1279,10 @@ export const desktopEn = {
       advanced: "Advanced",
       /** The server here's reach, from App settings: off, it is only on this computer. */
       onlyHere: "Only on this {{device}}",
+      /** Updates' first row: this app's version. */
+      version: "Version {{version}}",
+      /** The last row of Servers and accounts, beside Add a server…. */
+      otherServer: "Another server",
     },
   },
   iphone: {

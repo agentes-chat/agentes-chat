@@ -1,11 +1,13 @@
 /**
- * The menu bar popover (ADR 0265 §7). On top, this computer: its portrait, its name and how it is in a line of its
- * colour ("1 thing needs you", "All set", paused, offline); under it the first of its essentials that needs the person,
- * with its one fix, then the other banners (an update, paused, out of reach, a permission an agent waits on), the server
- * here's card when it runs here, folder requests, and "Now" (one row per agent, an agent in its browser as its browser
- * row). Below, always in view: Pause the agents, Open agentes.chat, This computer's settings (the main window's app
- * layer) and Quit. With nothing of this computer at work: the app's face, the server open in the window and what waits
- * there. This window also owns the tray icon's state, the essentials' notifications and count for the site, answers the
+ * The menu bar popover (ADR 0265 §7), as a menu bar extra: one grid for every row (a 24 px lead column, one text edge,
+ * one end edge) and hairlines between groups, in the order of what needs the person. On top, this computer: its
+ * portrait, its name and how it is in a line of its colour ("1 thing needs you", "All set", paused, offline). Then
+ * folder requests; the notes that need the person (a permission an agent waits on, the first of its essentials with
+ * its one fix, refused, an update it must take); the server here's row when it runs here, then out of reach, paused,
+ * a tool turned on and a new version; and "Now" (one row per agent, an agent in its browser as its browser row).
+ * Below, always in view: Pause the agents, Open agentes.chat, This computer's settings (the main window's app layer)
+ * and Quit. With nothing of this computer at work: the app's face, the server open in the window and what waits there.
+ * This window also owns the tray icon's state, the essentials' notifications and count for the site, answers the
  * site's questions about this computer, raises the notifications for folder requests and runs the night's update (it
  * lives, hidden, for as long as the app runs).
  */
@@ -58,7 +60,7 @@ import { AUTO_UPDATE_PREF, autoUpdateOn, installNight } from "../control/version
 import { agentOf, readPref, useLocalServer, useOnShown, usePending, useUpdateCheck, writePref } from "../hooks";
 import type { BadgeCounts } from "../host/types";
 import { settingsRouteOf } from "../layer/routes";
-import { AgentFace, Banner, Count, MenuRow, OrgTile } from "../ui/bits";
+import { AgentFace, Banner, MenuRow, OrgTile } from "../ui/bits";
 import { useEssentials, useEssentialsWatch } from "../ui/essentials";
 import { needsPrepare } from "../ui/permissions";
 import { useToast } from "../ui/Toast";
@@ -523,7 +525,7 @@ export function Popover() {
             <h2>{t("desktop.tray.quitTitle")}</h2>
             <p>{local.run ? t("desktop.tray.quitHereBody") : t("desktop.tray.quitBody")}</p>
             <div className="dk-confirm__foot">
-              <Button variant="ghost" size="sm" onClick={() => setConfirmQuit(false)}>
+              <Button size="sm" onClick={() => setConfirmQuit(false)}>
                 {t("desktop.common.cancel")}
               </Button>
               <Button variant="primary" size="sm" onClick={() => void host.quit()}>
@@ -577,7 +579,7 @@ export function Popover() {
         lead={lead}
         expanded={pauseFor === key}
         onClick={() => setPauseFor((v) => (v === key ? null : key))}
-        trailing={<Icon name={pauseFor === key ? "chevronDown" : "chevronRight"} size={14} />}
+        trailing={<Icon name={pauseFor === key ? "chevronDown" : "chevronRight"} size={16} />}
       >
         {label}
       </MenuRow>
@@ -601,175 +603,230 @@ export function Popover() {
     <BrandHead name={current ? serverName(current) : t("desktop.tray.label")} waiting={counts.waiting} />
   );
 
+  // One filled button on the popover (ADR 0265 §7): the first thing, in the order below, that needs the person.
+  // Every other button is the bordered default.
+  const hereNeeds = local.run && (local.phase === "failing" || (local.phase === "stopped" && !local.held));
+  const required = update.state.required || outdated;
+  const firstNeed = picks[0]
+    ? `pick:${picks[0].homeId}`
+    : requests[0]
+      ? `request:${requests[0].request.requestId}`
+      : asks[0]
+        ? `ask:${askKey(asks[0])}`
+        : fallen
+          ? "essential"
+          : refused
+            ? "refused"
+            : required
+              ? "required"
+              : tooOld === "app-too-old"
+                ? "tooOld"
+                : hereNeeds
+                  ? "here"
+                  : pause
+                    ? "pause"
+                    : null;
+  const variant = (key: string) => (firstNeed === key ? "primary" : "default");
+
   return (
     <div className="dk-pop-shell" style={shell}>
       <main className="dk-pop dk-tray" ref={card} aria-label={t("desktop.tray.label")}>
         <div className="dk-pop__body" data-more={more || undefined}>
-          {head}
-          {fallen && <EssentialBanner key={fallen.id} essential={fallen} reread={essentials.reread} />}
-
-          {tooOld && current && (
-            <Banner
-              icon="alert"
-              title={t(tooOld === "app-too-old" ? "desktop.connect.appTooOld" : "desktop.connect.serverTooOld", {
-                host: serverName(current),
-              })}
-              actions={
-                tooOld === "app-too-old" && (
-                  <Button size="sm" variant="primary" onClick={() => openPrefs("updates")}>
-                    {t("desktop.connect.checkUpdates")}
-                  </Button>
-                )
-              }
-            />
-          )}
-          {incompatible && (
-            <Banner icon="alert" title={t("desktop.tray.incompatibleTitle")}>
-              {t("desktop.tray.incompatibleBody")}
-            </Banner>
-          )}
-          {(update.state.required || outdated) && (
-            <Banner
-              icon="download"
-              title={t("desktop.tray.requiredTitle")}
-              actions={
-                <Button size="sm" variant="primary" onClick={() => openPrefs("updates")}>
-                  {t("desktop.tray.updateSee")}
-                </Button>
-              }
-            >
-              {t("desktop.tray.requiredBody")}
-            </Banner>
-          )}
-          {refused && (
-            <Banner
-              icon="alert"
-              title={t("desktop.tray.refusedTitle", { org: orgName(refused) })}
-              actions={
-                <>
-                  <Button size="sm" variant="primary" icon="refresh" onClick={() => reconnectMac(refused)}>
-                    {t("desktop.tray.reconnectMac")}
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => openPrefs("general")}>
-                    {t("desktop.tray.settings")}
-                  </Button>
-                </>
-              }
-            >
-              {t("desktop.tray.refusedBody")}
-            </Banner>
-          )}
-          {allOffline && !refused && !outdated && (
-            <Banner
-              lead={<PixelSpinner size={16} />}
-              title={
-                navigator.onLine
-                  ? t("desktop.tray.unreachable", { host: serverName(homeServer(homes[0] as Home) ?? current ?? "") })
-                  : t("desktop.tray.offlineTitle")
-              }
-              actions={
-                <Button
-                  size="sm"
-                  icon="refresh"
-                  loading={pending === "reconnect"}
-                  disabled={pending !== null}
-                  onClick={reconnect}
-                >
-                  {t("desktop.tray.reconnect")}
-                </Button>
-              }
-            >
-              {navigator.onLine ? t("desktop.tray.unreachableBody") : t("desktop.tray.offlineBody")}
-            </Banner>
-          )}
-          {pause && (
-            <Banner
-              icon="pause"
-              title={
-                pause.until
-                  ? t("desktop.tray.pausedUntil", { time: clock(pause.until, i18n.language) })
-                  : t("desktop.tray.pausedUntilResume")
-              }
-              actions={
-                <>
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    icon="play"
-                    loading={pending === "resume"}
-                    disabled={pending !== null}
-                    onClick={resume}
-                  >
-                    {t("desktop.tray.resumeNow")}
-                  </Button>
-                  {pause.until && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      loading={pending === "plus"}
-                      disabled={pending !== null}
-                      onClick={() => void run("plus", plusHour)}
-                    >
-                      {t("desktop.tray.plusHour")}
-                    </Button>
-                  )}
-                </>
-              }
-            >
-              {allPaused
-                ? t("desktop.tray.pausedBody")
-                : t("desktop.tray.pausedSomeBody", { orgs: joinNames(pausedHomes.map(orgName), t) })}
-            </Banner>
-          )}
-          {!update.state.required && update.state.available && update.state.latest && (
-            <Banner
-              icon="download"
-              title={t("desktop.tray.updateTitle", { version: update.state.latest.version })}
-              actions={
-                <Button size="sm" variant="primary" onClick={() => openPrefs("updates")}>
-                  {t("desktop.tray.updateSee")}
-                </Button>
-              }
-            />
-          )}
-
-          {homes.map((h) => h.allowed && <AllowedBanner key={h.homeId} home={h} />)}
-
-          {asks.map((a) => (
-            <Banner
-              key={askKey(a)}
-              icon="lock"
-              title={t("desktop.permissionAsk.trayTitle", {
-                permission: t(`devices.permission.names.${a.need.permission}`),
-              })}
-              actions={
-                <Button size="sm" variant="primary" onClick={openAsk}>
-                  {t("desktop.pair.allow")}
-                </Button>
-              }
-            >
-              {t(`desktop.permissionAsk.why.${a.need.permission}`)}
-            </Banner>
-          ))}
-
-          {local.run && <HereCard local={local} also={also} onSettings={() => openPrefs("server")} />}
+          {/* Groups in the order of what needs the person, a hairline between them (empty ones take no room). */}
+          <div className="dk-tray__group">{head}</div>
 
           {requests.length + picks.length > 0 && (
-            <section className="dk-psec">
+            <section className="dk-tray__group dk-psec">
               <div className="dk-pcap">
-                {t("desktop.tray.requests")} <Count n={requests.length + picks.length} />
+                {t("desktop.tray.requests")}
+                <span className="dk-pcap__count">{requests.length + picks.length}</span>
               </div>
               {picks.map((h) => (
-                <PickCard key={h.homeId} home={h} now={now} />
+                <PickCard key={h.homeId} home={h} now={now} strong={firstNeed === `pick:${h.homeId}`} />
               ))}
               {requests.map(({ home, request }) => (
-                <RequestCard key={request.requestId} home={home} request={request} now={now} />
+                <RequestCard
+                  key={request.requestId}
+                  home={home}
+                  request={request}
+                  now={now}
+                  strong={firstNeed === `request:${request.requestId}`}
+                />
               ))}
             </section>
           )}
 
+          <div className="dk-tray__group">
+            {asks.map((a) => (
+              <Banner
+                key={askKey(a)}
+                icon="lock"
+                tone="warn"
+                title={t("desktop.permissionAsk.trayTitle", {
+                  permission: t(`devices.permission.names.${a.need.permission}`),
+                })}
+                actions={
+                  <Button size="sm" variant={variant(`ask:${askKey(a)}`)} onClick={openAsk}>
+                    {t("desktop.pair.allow")}
+                  </Button>
+                }
+              >
+                {t(`desktop.permissionAsk.why.${a.need.permission}`)}
+              </Banner>
+            ))}
+            {fallen && (
+              <EssentialBanner
+                key={fallen.id}
+                essential={fallen}
+                reread={essentials.reread}
+                strong={firstNeed === "essential"}
+              />
+            )}
+            {refused && (
+              <Banner
+                icon="alert"
+                tone="warn"
+                title={t("desktop.tray.refusedTitle", { org: orgName(refused) })}
+                actions={
+                  <>
+                    <Button size="sm" onClick={() => openPrefs("general")}>
+                      {t("desktop.tray.settings")}
+                    </Button>
+                    <Button size="sm" variant={variant("refused")} icon="refresh" onClick={() => reconnectMac(refused)}>
+                      {t("desktop.tray.reconnectMac")}
+                    </Button>
+                  </>
+                }
+              >
+                {t("desktop.tray.refusedBody")}
+              </Banner>
+            )}
+            {required && (
+              <Banner
+                icon="download"
+                tone="warn"
+                title={t("desktop.tray.requiredTitle")}
+                actions={
+                  <Button size="sm" variant={variant("required")} onClick={() => openPrefs("updates")}>
+                    {t("desktop.tray.updateSee")}
+                  </Button>
+                }
+              >
+                {t("desktop.tray.requiredBody")}
+              </Banner>
+            )}
+            {tooOld && current && (
+              <Banner
+                icon="alert"
+                tone="warn"
+                title={t(tooOld === "app-too-old" ? "desktop.connect.appTooOld" : "desktop.connect.serverTooOld", {
+                  host: serverName(current),
+                })}
+                actions={
+                  tooOld === "app-too-old" && (
+                    <Button size="sm" variant={variant("tooOld")} onClick={() => openPrefs("updates")}>
+                      {t("desktop.connect.checkUpdates")}
+                    </Button>
+                  )
+                }
+              />
+            )}
+            {incompatible && (
+              <Banner icon="alert" tone="warn" title={t("desktop.tray.incompatibleTitle")}>
+                {t("desktop.tray.incompatibleBody")}
+              </Banner>
+            )}
+          </div>
+
+          <div className="dk-tray__group">
+            {local.run && (
+              <HereCard
+                local={local}
+                also={also}
+                onSettings={() => openPrefs("server")}
+                strong={firstNeed === "here"}
+              />
+            )}
+            {allOffline && !refused && !outdated && (
+              <Banner
+                lead={<PixelSpinner size={16} />}
+                shimmer
+                title={
+                  navigator.onLine
+                    ? t("desktop.tray.unreachable", {
+                        host: serverName(homeServer(homes[0] as Home) ?? current ?? ""),
+                      })
+                    : t("desktop.tray.offlineTitle")
+                }
+                actions={
+                  <Button
+                    size="sm"
+                    icon="refresh"
+                    loading={pending === "reconnect"}
+                    disabled={pending !== null}
+                    onClick={reconnect}
+                  >
+                    {t("desktop.tray.reconnect")}
+                  </Button>
+                }
+              >
+                {navigator.onLine ? t("desktop.tray.unreachableBody") : t("desktop.tray.offlineBody")}
+              </Banner>
+            )}
+            {pause && (
+              <Banner
+                icon="pause"
+                title={
+                  pause.until
+                    ? t("desktop.tray.pausedUntil", { time: clock(pause.until, i18n.language) })
+                    : t("desktop.tray.pausedUntilResume")
+                }
+                actions={
+                  <>
+                    {pause.until && (
+                      <Button
+                        size="sm"
+                        loading={pending === "plus"}
+                        disabled={pending !== null}
+                        onClick={() => void run("plus", plusHour)}
+                      >
+                        {t("desktop.tray.plusHour")}
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant={variant("pause")}
+                      icon="play"
+                      loading={pending === "resume"}
+                      disabled={pending !== null}
+                      onClick={resume}
+                    >
+                      {t("desktop.tray.resumeNow")}
+                    </Button>
+                  </>
+                }
+              >
+                {allPaused
+                  ? t("desktop.tray.pausedBody")
+                  : t("desktop.tray.pausedSomeBody", { orgs: joinNames(pausedHomes.map(orgName), t) })}
+              </Banner>
+            )}
+            {homes.map((h) => h.allowed && <AllowedBanner key={h.homeId} home={h} />)}
+            {!update.state.required && update.state.available && update.state.latest && (
+              <Banner
+                icon="download"
+                title={t("desktop.tray.updateTitle", { version: update.state.latest.version })}
+                actions={
+                  <Button size="sm" onClick={() => openPrefs("updates")}>
+                    {t("desktop.tray.updateSee")}
+                  </Button>
+                }
+              />
+            )}
+          </div>
+
           {works && (
-            <section className="dk-traynow">
+            <section className="dk-tray__group dk-traynow">
               <span className="dk-tray__label">{t("desktop.tray.now")}</span>
               <NowList homes={homes} paused={!!pause} now={now} />
             </section>
@@ -778,12 +835,7 @@ export function Popover() {
         </div>
 
         <nav className="dk-pop__foot dk-tray__menu" aria-label={t("desktop.tray.label")}>
-          {pause && (
-            <MenuRow icon="play" disabled={pending !== null} onClick={resume}>
-              {t("desktop.tray.resume")}
-            </MenuRow>
-          )}
-          {/* Some workspaces still running: each can be paused on its own. */}
+          {/* Paused, Resume is the note's: the menu offers Pause only while some workspace still runs. */}
           {works && !allPaused && (
             <>
               <MenuRow
@@ -823,7 +875,7 @@ export function Popover() {
             {t("desktop.tray.settings")}
           </MenuRow>
           <span className="dk-tray__sep" />
-          <MenuRow icon="stop" onClick={quit} trailing={keys("Q")}>
+          <MenuRow icon="power" onClick={quit} trailing={keys("Q")}>
             {t("desktop.tray.quit")}
           </MenuRow>
         </nav>
@@ -861,7 +913,7 @@ function AllowedBanner({ home }: { home: Home }) {
           <Button size="sm" disabled={busy} onClick={() => void undo()}>
             {t("desktop.tray.allowedUndo")}
           </Button>
-          <Button size="sm" variant="ghost" disabled={busy} onClick={() => store.dismissAllowed(home.homeId)}>
+          <Button size="sm" disabled={busy} onClick={() => store.dismissAllowed(home.homeId)}>
             {t("desktop.tray.allowedOk")}
           </Button>
         </>
@@ -875,8 +927,10 @@ function AllowedBanner({ home }: { home: Home }) {
 /**
  * Someone asked from the apps for a folder here (`access.pick`): the person here picks it in the system's folder
  * picker, for the agent named or every agent of that organization here, or says not now. Nothing is allowed unpicked.
+ * Flat on the popover's grid (ADR 0265 §7): who in the lead column, the rest from the text edge. `strong`: the first
+ * thing that needs the person, whose button is the popover's one filled button.
  */
-function PickCard({ home, now }: { home: Home; now: number }) {
+function PickCard({ home, now, strong }: { home: Home; now: number; strong: boolean }) {
   const { t } = useTranslation();
   const host = useHost();
   const store = useStore();
@@ -914,9 +968,11 @@ function PickCard({ home, now }: { home: Home; now: number }) {
     }
   };
   return (
-    <div className="dk-banner dk-req">
+    <div className="dk-req">
       <div className="dk-req__who">
-        {agent ? <AgentFace agent={agent} size="sm" state="waiting" /> : <OrgTile logo={home.logo} size="sm" />}
+        <span className="dk-tray__lead">
+          {agent ? <AgentFace agent={agent} size="sm" state="waiting" /> : <OrgTile logo={home.logo} size="sm" />}
+        </span>
         <span className="dk-req__whotext">
           <b>
             {agent
@@ -929,14 +985,10 @@ function PickCard({ home, now }: { home: Home; now: number }) {
           </small>
         </span>
       </div>
-      <div className="dk-req__quote">{t("desktop.tray.pickBody")}</div>
+      <p className="dk-req__quote">{t("desktop.tray.pickBody")}</p>
       <div className="dk-banner__acts">
-        <Button size="sm" variant="primary" icon="drive" loading={busy} onClick={() => void choose()}>
-          {t("desktop.tray.pickChoose")}
-        </Button>
         <Button
           size="sm"
-          variant="ghost"
           disabled={busy}
           onClick={() => {
             store.dismissPick(home.homeId);
@@ -945,13 +997,36 @@ function PickCard({ home, now }: { home: Home; now: number }) {
         >
           {t("desktop.tray.deny")}
         </Button>
+        <Button
+          size="sm"
+          variant={strong ? "primary" : "default"}
+          icon="drive"
+          loading={busy}
+          onClick={() => void choose()}
+        >
+          {t("desktop.tray.pickChoose")}
+        </Button>
       </div>
     </div>
   );
 }
 
-/** An agent asks for a folder: Liberar (this agent or all) or Agora não. The click is on the machine. */
-function RequestCard({ home, request, now }: { home: Home; request: ControlAccessRequest; now: number }) {
+/**
+ * An agent asks for a folder: Liberar (this agent or all) or Agora não. The click is on the machine. Flat on the
+ * popover's grid (ADR 0265 §7): the agent and the folder in the lead column, their words, the reason, who it is for
+ * and the answer from the text edge. `strong`: as `PickCard`'s.
+ */
+function RequestCard({
+  home,
+  request,
+  now,
+  strong,
+}: {
+  home: Home;
+  request: ControlAccessRequest;
+  now: number;
+  strong: boolean;
+}) {
   const { t } = useTranslation();
   const host = useHost();
   const store = useStore();
@@ -993,9 +1068,11 @@ function RequestCard({ home, request, now }: { home: Home; request: ControlAcces
     [t, agent.name],
   );
   return (
-    <div className="dk-banner dk-req">
+    <div className="dk-req">
       <div className="dk-req__who">
-        <AgentFace agent={agent} size="sm" state="waiting" />
+        <span className="dk-tray__lead">
+          <AgentFace agent={agent} size="sm" state="waiting" />
+        </span>
         <span className="dk-req__whotext">
           <b>{t("desktop.tray.wantsFolder", { agent: agent.name })}</b>
           <small>
@@ -1004,14 +1081,17 @@ function RequestCard({ home, request, now }: { home: Home; request: ControlAcces
           </small>
         </span>
       </div>
-      {request.reason && <div className="dk-req__quote">“{request.reason}”</div>}
+      {request.reason && <p className="dk-req__quote">“{request.reason}”</p>}
       <div className="dk-req__fold">
-        <span className="dk-logo dk-logo--soft">
+        <span className="dk-tray__lead">
           <Icon name="drive" size={16} />
         </span>
         <span className="dk-req__foldtext">
           <b>{folder}</b>
-          <span className="dk-path">{shortPath(request.path)}</span>
+          {/* One line, its end kept in sight (the folder's own name): the start gives way with "…". */}
+          <span className="dk-path">
+            <bdi>{shortPath(request.path)}</bdi>
+          </span>
         </span>
       </div>
       <div className="dk-req__for">
@@ -1025,11 +1105,17 @@ function RequestCard({ home, request, now }: { home: Home; request: ControlAcces
         />
       </div>
       <div className="dk-banner__acts">
-        <Button size="sm" variant="primary" icon="check" disabled={busy} onClick={() => void answer("granted")}>
-          {t("desktop.tray.allow")}
-        </Button>
-        <Button size="sm" variant="ghost" disabled={busy} onClick={() => void answer("denied")}>
+        <Button size="sm" disabled={busy} onClick={() => void answer("denied")}>
           {t("desktop.tray.deny")}
+        </Button>
+        <Button
+          size="sm"
+          variant={strong ? "primary" : "default"}
+          icon="check"
+          disabled={busy}
+          onClick={() => void answer("granted")}
+        >
+          {t("desktop.tray.allow")}
         </Button>
       </div>
     </div>

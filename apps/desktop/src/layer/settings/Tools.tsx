@@ -131,7 +131,7 @@ export function Tools() {
 
   const logo = (icon: IconName) => (
     <span className="dk-logo dk-logo--soft">
-      <Icon name={icon} size={16} />
+      <Icon name={icon} size={20} />
     </span>
   );
 
@@ -192,10 +192,10 @@ export function Tools() {
                 </p>
               )}
               {!devinOff && (
-                <div className="dk-ver__acts">
+                // Bordered, as every button in a row: no program here is the screen's one forward action.
+                <div className="dk-tools__acts ac-acts">
                   {gitMissing && (
                     <Button
-                      variant="primary"
                       size="sm"
                       icon="external"
                       onClick={() => void host.openExternal(GIT_FOR_WINDOWS_URL).catch(() => {})}
@@ -205,7 +205,6 @@ export function Tools() {
                   )}
                   {!info && installable && !said && (
                     <Button
-                      variant={gitMissing ? "default" : "primary"}
                       size="sm"
                       loading={pending === `install:${cli}`}
                       disabled={pending !== null}
@@ -215,7 +214,6 @@ export function Tools() {
                     </Button>
                   )}
                   <Button
-                    variant="ghost"
                     size="sm"
                     icon="refresh"
                     loading={pending === `check:${cli}`}
@@ -305,7 +303,7 @@ export function Tools() {
         width={440}
       >
         <DialogFooter bar>
-          <Button variant="ghost" disabled={pending !== null} onClick={() => setAsking(null)}>
+          <Button disabled={pending !== null} onClick={() => setAsking(null)}>
             {t("desktop.common.cancel")}
           </Button>
           <Button variant="primary" loading={pending !== null} onClick={() => asking && void setCommands(asking, true)}>

@@ -1,6 +1,7 @@
 /**
  * How the phone and the team get to the server here (ADR 0265 §4), shared by the first run and Settings: two rows with
- * a hairline, a tile and the kit's Radio, and under the chosen row its own part, with no card. Through Tailscale: the
+ * a hairline, a bare mark in the rows' icon column (no tile) and the kit's Radio at the end, and under the chosen row its
+ * own part, starting where the row's words start, with no card. Through Tailscale: the
  * official app the person installs (its download page, its app, its icon by the clock or the command to connect it),
  * read again every 2 s while it isn't on, with no time limit, and `onReady` once it turns on. Through an address of
  * the person's own (a tunnel on this computer that leads here): its field, where the tunnel points (with Copy), and
@@ -21,10 +22,24 @@ import {
 import type { Platform } from "../control/platform";
 import { BrandFace, CommandCopy } from "./bits";
 import { ServerTile } from "./here";
+import { TAILSCALE_MARK } from "./tailscale-mark";
 import "./reach-way.css";
 
 /** How often the system's Tailscale is read while the person installs it or signs in (it is cheap). */
 export const TAILSCALE_POLL_MS = 2000;
+
+/**
+ * Tailscale's mark bare, at a row's icon size (20 px), in its own black or white: a row leads with a mark, never a
+ * tile (ADR 0265 §6). The 48 px tile stays for drawings (`ServerTile`).
+ */
+export function TailscaleGlyph() {
+  return (
+    <svg className="dk-tailscale dk-way__mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d={TAILSCALE_MARK.solid} />
+      <path d={TAILSCALE_MARK.faded} fillOpacity={0.4} />
+    </svg>
+  );
+}
 
 /** Connecting Tailscale where it has no app or icon of its own to open (Linux, a Mac with only its command line). */
 const TAILSCALE_UP = "sudo tailscale up";
@@ -79,10 +94,12 @@ export function ReachWayPicker({
     onChange(kind === "tailscale" ? { kind: "tailscale" } : { kind: "address", url: typed.current });
   };
 
-  const row = (kind: ReachWay["kind"], tile: ReactNode, title: string, text: string, part: ReactNode) => (
+  const row = (kind: ReachWay["kind"], mark: ReactNode, title: string, text: string, part: ReactNode) => (
     <div className="dk-way__item" data-way={kind} data-chosen={value.kind === kind || undefined}>
       <label className="dk-way__row" htmlFor={`way-${kind}`}>
-        {tile}
+        <span className="dk-way__glyph" aria-hidden="true">
+          {mark}
+        </span>
         <span className="dk-way__text">
           <b>{title}</b>
           <small>{text}</small>
@@ -102,7 +119,7 @@ export function ReachWayPicker({
     >
       {row(
         "tailscale",
-        <ServerTile kind="tailnet" small={compact} />,
+        <TailscaleGlyph />,
         t("desktop.reach.tailscale"),
         t("desktop.reach.tailscaleText"),
         <TailscalePart
@@ -115,9 +132,7 @@ export function ReachWayPicker({
       )}
       {row(
         "address",
-        <span className={compact ? "dk-logo dk-logo--soft" : "dk-logo dk-logo--soft dk-logo--lg"} aria-hidden="true">
-          <Icon name="link" size={compact ? 16 : 20} />
-        </span>,
+        <Icon name="link" size={20} />,
         t("desktop.reach.address"),
         t("desktop.reach.addressText"),
         <AddressPart
@@ -216,16 +231,17 @@ function TailscalePart({
   };
   const missing = now.state === "missing";
   const from = tailscaleFrom(platform, now);
+  // Bordered: the screen's one filled button is its own (Continue in the first run).
   const action = missing ? (
     <span className="dk-way__acts">
-      <Button size="sm" variant={fetching ? "default" : "primary"} icon="download" onClick={() => open("download")}>
+      <Button size="sm" icon="download" onClick={() => open("download")}>
         {t("desktop.reach.download")}
       </Button>
       {!fetching && <span className="dk-way__note">{t("desktop.reach.downloadNote")}</span>}
     </span>
   ) : from === "app" ? (
     <span className="dk-way__acts">
-      <Button size="sm" variant="primary" icon="external" onClick={() => open("app")}>
+      <Button size="sm" icon="external" onClick={() => open("app")}>
         {t("desktop.reach.openApp")}
       </Button>
     </span>

@@ -1,11 +1,12 @@
 /**
- * "Connect this Mac to Acme?" (route `pairLink`, and the first run's connect link, ADR 0265): a pair link from the
- * web, with who made it and where from, read from its server. Connect starts the runner with the link and waits for
- * its maker to let it in on the web; once in, agentes.chat opens at login and, on a Mac with a permission still off,
- * Prepare follows (route `prepare`). What agents can do here is a switch each, as the link's maker may not be the
- * person at this computer.
+ * "Connect this Mac to Acme?" (route `pairLink`, ADR 0265): a pair link from the web, with who made it and where from,
+ * read from its server. Connect starts the runner with the link and waits for its maker to let it in on the web; once
+ * in, agentes.chat opens at login and, on a Mac with a permission still off, Prepare follows (route `prepare`), so the
+ * sheet says where it is in that setup as Get this Mac ready does. What agents can do here is a switch each, as the
+ * link's maker may not be the person at this computer. A link that can't go on says what happened in its title, and
+ * the way forward is the primary button.
  */
-import { Button, Icon, ProviderLogo, Switch } from "@agenteschat/ui";
+import { Button, Icon, type IconName, ProviderLogo, Switch } from "@agenteschat/ui";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost, useSnapshot, useStore } from "../../app";
@@ -14,10 +15,8 @@ import { serverName } from "../../control/server";
 import { type PairTools, pairTools, toolsFound } from "../../control/this-mac";
 import { useOpenPrefs } from "../../hooks";
 import { needsPrepare } from "../../ui/permissions";
-import { CardTitle, hintFor, PrefCard, PrefRow } from "../../ui/settings";
-import { Sheet, SheetProblem, SheetWaiting } from "./SheetFrame";
-
-const logo = (mark: ReactNode) => <span className="dk-logo">{mark}</span>;
+import { CardTitle, hintFor, PrefRow } from "../../ui/settings";
+import { ConnectArt, Sheet, SheetIcon, SheetWaiting } from "./SheetFrame";
 
 /**
  * "What agents can do here": the pairing's tools as switches, on as `pairTools` starts them (Claude Code's and Codex's
@@ -36,10 +35,10 @@ function ToolSwitches({
   const snap = useSnapshot();
   const found = toolsFound(snap);
   const tools = { ...pairTools(snap), ...chosen };
-  const row = (tool: keyof PairTools, lead: ReactNode, name: string, desc: string, under?: ReactNode) => (
+  const row = (tool: keyof PairTools, icon: IconName | ReactNode, name: string, desc: string, under?: ReactNode) => (
     <PrefRow
       key={tool}
-      lead={lead}
+      lead={<SheetIcon icon={icon} />}
       htmlFor={`pair-${tool}`}
       title={name}
       hint={hintFor(t, name, desc)}
@@ -56,42 +55,36 @@ function ToolSwitches({
     />
   );
   return (
-    <div>
+    <section className="dk-sh__group">
       <CardTitle>{t("desktop.pair.canDo")}</CardTitle>
-      <PrefCard>
+      <div className="dk-sh__rows">
         {row(
           "commands",
-          logo(<Icon name="code" size={16} />),
+          "code",
           t("desktop.tools.commandsName"),
           t("desktop.tools.commandsDesc"),
-          <span className="dk-honest ac-iconline">
-            <Icon name="alert" size={14} />
+          <span className="dk-sh__warn ac-iconline">
+            <Icon name="alert" size={16} />
             <span id="pair-commands-warn">{t("desktop.tools.commandsWarn")}</span>
           </span>,
         )}
         {found?.claude &&
           row(
             "claude",
-            logo(<ProviderLogo id="claude_code" size="xs" />),
+            <ProviderLogo id="claude_code" size="xs" />,
             t("desktop.tools.claudeName"),
             t("desktop.tools.claudeDesc"),
           )}
         {found?.codex &&
           row(
             "codex",
-            logo(<ProviderLogo id="codex" size="xs" />),
+            <ProviderLogo id="codex" size="xs" />,
             t("desktop.tools.codexName"),
             t("desktop.tools.codexDesc"),
           )}
-        {row(
-          "browser",
-          logo(<Icon name="globe" size={16} />),
-          t("desktop.tools.browserName"),
-          t("desktop.tools.browserDesc"),
-        )}
-      </PrefCard>
-      <p className="dk-under-card dk-help">{t("desktop.pair.foldersLater")}</p>
-    </div>
+        {row("browser", "globe", t("desktop.tools.browserName"), t("desktop.tools.browserDesc"))}
+      </div>
+    </section>
   );
 }
 
@@ -127,6 +120,17 @@ export function PairLinkSheet({ server, code, onClose }: { server: string; code:
       void pairing.current?.cancel();
     };
   }, []);
+  // On a Mac with a permission still off, Prepare comes next: this is the first of two steps, as in Get this Mac ready.
+  const [prepareNext, setPrepareNext] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void needsPrepare(host)
+      .then((next) => live && setPrepareNext(next))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [host]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: `asked` is Try again
   useEffect(() => {
@@ -163,31 +167,37 @@ export function PairLinkSheet({ server, code, onClose }: { server: string; code:
     }
   };
 
-  const cancel = (
-    <Button variant="ghost" onClick={onClose}>
-      {t("desktop.common.cancel")}
-    </Button>
-  );
-  const notNow = (
-    <Button variant="ghost" onClick={onClose}>
-      {t("desktop.pair.notNow")}
-    </Button>
-  );
-  const close = (
-    <Button variant="primary" autoFocus onClick={onClose}>
+  // Every button but the forward one is bordered: one primary per sheet (ADR 0265).
+  const cancel = <Button onClick={onClose}>{t("desktop.common.cancel")}</Button>;
+  const notNow = <Button onClick={onClose}>{t("desktop.pair.notNow")}</Button>;
+  const close = (primary: boolean) => (
+    <Button variant={primary ? "primary" : "default"} autoFocus={primary} onClick={onClose}>
       {t("desktop.common.close")}
     </Button>
   );
-  // A link that ran out is made again in the site's Devices, on the server that made it.
-  const openDevices = (
-    <Button variant="ghost" onClick={() => void host.openExternal(`${server}/?open=devices`).catch(() => {})}>
-      {t("desktop.pair.openDevices")}
+  // A link that ran out is made again in the site's Devices, on the server that made it: the way forward.
+  const expiredActs = (
+    <>
+      {close(false)}
+      <Button
+        variant="primary"
+        autoFocus
+        onClick={() => void host.openExternal(`${server}/?open=devices`).catch(() => {})}
+      >
+        {t("desktop.pair.openDevices")}
+      </Button>
+    </>
+  );
+  const retry = (onClick: () => void) => (
+    <Button variant="primary" icon="refresh" autoFocus onClick={onClick}>
+      {t("desktop.common.retry")}
     </Button>
   );
+  const step = prepareNext ? t("desktop.sheets.step", { at: 1, total: 2 }) : t("desktop.sheets.stepOnly");
 
   if (state.kind === "checking")
     return (
-      <Sheet screen="pairLink" title={from} acts={cancel}>
+      <Sheet screen="pairLink" size="sm" title={t("desktop.pair.connectTitle")} acts={cancel}>
         <SheetWaiting>{t("desktop.link.checking")}</SheetWaiting>
       </Sheet>
     );
@@ -195,45 +205,38 @@ export function PairLinkSheet({ server, code, onClose }: { server: string; code:
     return (
       <Sheet
         screen="pairLink"
-        title={from}
-        acts={
-          <>
-            {openDevices}
-            {close}
-          </>
-        }
-      >
-        <SheetProblem text={t("desktop.pair.expired")} />
-      </Sheet>
+        size="sm"
+        title={t("desktop.pair.expiredTitle")}
+        lead={t("desktop.pair.expiredLead", { server: from })}
+        acts={expiredActs}
+      />
     );
   if (state.kind === "unreachable")
     return (
       <Sheet
         screen="pairLink"
-        title={from}
+        size="sm"
+        title={t("desktop.pair.unreachableTitle", { server: from })}
+        lead={t("desktop.pair.unreachableLead")}
         acts={
           <>
             {cancel}
-            <Button variant="primary" icon="refresh" autoFocus onClick={() => setAsked((n) => n + 1)}>
-              {t("desktop.common.retry")}
-            </Button>
+            {retry(() => setAsked((n) => n + 1))}
           </>
         }
-      >
-        <SheetProblem text={t("desktop.prefs.thisMac.unreachable", { server: from })} />
-      </Sheet>
+      />
     );
   if (state.kind === "done")
     return (
       <Sheet
         screen="pairLink"
+        art={<ConnectArt org={state.org} kind={host.platform} />}
         title={t("desktop.pair.done", { org: state.org })}
+        lead={t("desktop.pair.doneLead")}
         acts={
           <>
-            <Button variant="ghost" icon="drive" onClick={() => openPrefs("folders")}>
-              {t("desktop.pair.addFolders")}
-            </Button>
-            {close}
+            <Button onClick={() => openPrefs("folders")}>{t("desktop.pair.addFolders")}</Button>
+            {close(true)}
           </>
         }
       />
@@ -241,63 +244,75 @@ export function PairLinkSheet({ server, code, onClose }: { server: string; code:
 
   const { info } = state;
   const computer = info.computer ?? snap.homes.find((h) => h.status?.machine)?.status?.machine?.name;
+  // Who made the link, where from, and this computer: a label and its value, one line each.
   const facts = (
-    <PrefCard>
+    <div className="dk-sh__rows dk-sh__facts">
       <PrefRow title={t("desktop.pair.askedBy")} end={info.by} />
       <PrefRow title={t("desktop.pair.from")} end={from} />
       {computer && <PrefRow title={t("desktop.prefs.general.thisMac")} end={computer} />}
-    </PrefCard>
+    </div>
   );
   const title = t("desktop.pair.linkTitle", { org: info.org });
+  const art = <ConnectArt org={info.org} kind={host.platform} />;
   if (state.kind === "waiting")
     return (
-      <Sheet screen="pairLink" title={title} acts={cancel}>
+      <Sheet screen="pairLink" step={step} art={art} title={title} acts={cancel}>
         {facts}
         <SheetWaiting>{t("desktop.pair.waiting", { by: info.by })}</SheetWaiting>
       </Sheet>
     );
   if (state.kind === "failed") {
-    const again = state.code === "network" || state.code === "internal";
-    const text =
-      state.code === "denied"
-        ? t("desktop.pair.denied", { by: info.by })
-        : state.code === "network"
-          ? t("desktop.prefs.thisMac.unreachable", { server: from })
-          : state.code === "internal"
-            ? t("desktop.common.error")
-            : t("desktop.pair.expired");
+    // What happened is the title; what to do about it, the lead and the primary button.
+    if (state.code === "denied")
+      return (
+        <Sheet
+          screen="pairLink"
+          title={t("desktop.pair.deniedTitle", { by: info.by })}
+          lead={t("desktop.pair.deniedLead")}
+          acts={close(true)}
+        >
+          {facts}
+        </Sheet>
+      );
+    if (state.code === "network" || state.code === "internal")
+      return (
+        <Sheet
+          screen="pairLink"
+          title={
+            state.code === "network"
+              ? t("desktop.pair.unreachableTitle", { server: from })
+              : t("desktop.pair.failedTitle")
+          }
+          lead={state.code === "network" ? t("desktop.pair.unreachableLead") : t("desktop.common.error")}
+          acts={
+            <>
+              {notNow}
+              {retry(() => void connect(info))}
+            </>
+          }
+        >
+          {facts}
+        </Sheet>
+      );
     return (
       <Sheet
         screen="pairLink"
-        title={title}
-        acts={
-          again ? (
-            <>
-              {notNow}
-              <Button variant="primary" icon="refresh" autoFocus onClick={() => void connect(info)}>
-                {t("desktop.common.retry")}
-              </Button>
-            </>
-          ) : state.code === "denied" ? (
-            close
-          ) : (
-            <>
-              {openDevices}
-              {close}
-            </>
-          )
-        }
+        title={t("desktop.pair.expiredTitle")}
+        lead={t("desktop.pair.expiredLead", { server: from })}
+        acts={expiredActs}
       >
         {facts}
-        <SheetProblem text={text} />
       </Sheet>
     );
   }
   return (
     <Sheet
       screen="pairLink"
+      step={step}
+      art={art}
       title={title}
       lead={t("desktop.pair.linkBody")}
+      help={t("desktop.pair.foldersLater")}
       acts={
         <>
           {notNow}
