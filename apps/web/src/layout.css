@@ -1255,6 +1255,7 @@ html:not([data-pointer]) .sidebar__user:focus-visible {
 
 /* A table on my bubble is cut from the page's color, as its code blocks are (the kit's `--surface-sunken` there). */
 .ac-msg--own .ac-msg__text .md__table {
+  --table-card-bg: var(--bg);
   background: var(--bg);
 }
 .channel__composer {
@@ -2453,9 +2454,11 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
 .md ol {
   padding-left: 22px;
 }
+/* A quote is a plate of its own, no bar at its side (as a message's, `.md--message blockquote`). */
 .md blockquote {
-  padding-left: 12px;
-  border-left: 3px solid var(--line);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--plate);
   color: var(--ink-muted);
 }
 .md hr {
@@ -2548,6 +2551,245 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
 }
 .md__table tr:last-child td {
   border-bottom: 0;
+}
+
+/*
+ * A Markdown table's card (TableCard.tsx), in a message and a document: the code card's frame (its radius, hairline
+ * and color, "Table · N rows" with Copy and Full screen on its top line), then the table, with no band behind its
+ * header. The root keeps `.md__table` for what a bubble does with a table (chat/looks.css); everything of its own is
+ * under `.table-card`, so a chart's table view and the wiki editor's tables stay on the rules above.
+ */
+.table-card {
+  --table-card-bg: var(--surface-sunken);
+  position: relative;
+  /* The standing columns' and the fade's layers stay inside the card, under whatever floats over a message. */
+  isolation: isolate;
+  margin: 2px 0;
+}
+.md__table.table-card {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--table-card-bg);
+  box-shadow: none;
+}
+/* The hairline over the cells: the standing column's own color would cover a hairline drawn under it. */
+.table-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--line);
+  pointer-events: none;
+}
+/* The code card's top line (`.code-card__top`, `.code-card__lang`), the rows' count in the language's place. */
+.table-card__top {
+  align-items: center;
+  min-height: 38px;
+  padding: 0 16px;
+}
+.table-card__label {
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The table's box, in the card and in full screen: it scrolls sideways, stopping at a column's start (after the
+   standing ones, `scroll-padding-left` from TableCard.tsx). */
+.table-card__body {
+  position: relative;
+  isolation: isolate;
+}
+.table-card__scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+}
+/* As wide as the box, the columns sharing it by what they hold: a table fits before it scrolls. Separate borders,
+   so a standing cell keeps its own hairlines while the others pass under it. */
+.table-card__body table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+/* The `.md__table` cells' hairline under each row and their 8ch minimum stay off: each column sets its own width. */
+.table-card__body th,
+.table-card__body td {
+  min-width: 0;
+  padding: 9px 12px;
+  border: 0;
+  text-align: left;
+  vertical-align: top;
+  /* Whole words: a column narrows to its longest word, never "colu/na" (a message breaks anywhere). */
+  overflow-wrap: normal;
+  scroll-snap-align: start;
+}
+.table-card__body th {
+  padding-top: 2px;
+  padding-bottom: 8px;
+  font-size: calc(1em - 1.5px);
+  line-height: 18px;
+  font-weight: 600;
+  color: var(--faint);
+  white-space: nowrap;
+  background: var(--table-card-bg);
+  border-bottom: 1px solid var(--line2);
+}
+.table-card__body td {
+  line-height: 20px;
+  color: var(--ink);
+  border-top: 1px solid var(--line);
+}
+/* In a message, the person's Text size: the message's own size, on the tighter line its name takes. */
+.md--message .table-card__body td {
+  line-height: var(--msg-line-tight);
+}
+.table-card__body tbody tr:first-child td {
+  border-top: 0;
+}
+.table-card__body tbody tr:last-child td {
+  padding-bottom: 11px;
+}
+/* Each column by what it holds (`tableColumnKinds`): the rows' count as narrow as it is, faint, by its digits;
+   numbers, short words and links on one line; only longer text wraps, never narrower than a few words. */
+.table-card__body [data-kind="index"] {
+  width: 1%;
+  padding-right: 2px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+.table-card__body :is([data-kind="number"], [data-kind="short"], [data-kind="link"]) {
+  white-space: nowrap;
+}
+.table-card__body td[data-kind="text"] {
+  min-width: 160px;
+}
+/* A link alone in its cell: the site's icon and its name (or the link's own words), cut with "…" past 200px. */
+.table-card__link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 200px;
+  min-width: 0;
+  color: var(--ink2);
+  text-decoration: none;
+}
+.table-card__site {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (hover: hover) {
+  .table-card__link:hover .table-card__site {
+    text-decoration: underline;
+    text-decoration-color: var(--line-strong);
+    text-underline-offset: 3px;
+  }
+}
+/* The first column (the first two when the first only counts the rows) stands still while the rest scrolls under it;
+   the second stands at the first's width (`--table-card-stick`). Its edge shows a hairline only while columns pass
+   under it. */
+.table-card__body .table-card__stick {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--table-card-bg);
+  scroll-snap-align: none;
+}
+.table-card__body .table-card__stick + .table-card__stick {
+  left: var(--table-card-stick, 0px);
+}
+.table-card__body:is([data-more="start"], [data-more="both"]) .table-card__edge {
+  box-shadow: inset -1px 0 0 var(--line2);
+}
+/* The side that still hides columns fades into the card's color, drawn over the table (a mask would fade the standing
+   column too), and stops above our scrollbar (`--table-card-bar`). */
+.table-card__fade {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: var(--table-card-bar, 0px);
+  width: 48px;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--table-card-bg));
+  opacity: 0;
+  transition: opacity 0.16s;
+}
+.table-card__body:is([data-more="end"], [data-more="both"]) > .table-card__fade {
+  opacity: 1;
+}
+/* "See all N rows" under a long table in a message: the card's whole width, under a hairline. */
+.table-card__more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-top: 1px solid var(--line2);
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink2);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+@media (hover: hover) {
+  .table-card__more:hover {
+    background: var(--plate-soft);
+  }
+}
+/* Full screen, grown out of the card as the code's is: the whole table scrolling both ways under its header and its
+   standing columns, edge to edge in the dialog, the first and last columns on the dialog's own edges. */
+.table-viewer {
+  --table-card-bg: var(--surface-raised);
+  height: min(720px, calc(100dvh - 48px));
+}
+.table-viewer .ac-dialog__head {
+  border-bottom: 1px solid var(--line);
+}
+.table-viewer__body.ac-dialog__body {
+  flex: 1 1 auto;
+  overflow: hidden;
+  padding: 0 0 var(--dialog-pad);
+}
+.table-viewer__body > .table-card__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.table-viewer .table-card__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+.table-viewer .table-card__body th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding-top: 10px;
+}
+.table-viewer .table-card__body th.table-card__stick {
+  z-index: 3;
+}
+.table-viewer .table-card__body :is(th, td):first-child {
+  padding-left: 20px;
+}
+.table-viewer .table-card__body :is(th, td):last-child {
+  padding-right: 20px;
 }
 
 /* Fenced code: the language, copy and full screen on top; colors from
@@ -2765,28 +3007,6 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
   display: block;
   image-rendering: pixelated;
 }
-.chart-tip {
-  position: absolute;
-  z-index: 2;
-  padding: 6px 9px;
-  border-radius: 9px;
-  background: var(--ink);
-  color: var(--surface-raised);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 16px;
-  white-space: nowrap;
-  pointer-events: none;
-  transform: translate(-50%, calc(-100% - 8px));
-  opacity: 0;
-  transition: opacity 0.12s;
-}
-.chart-tip[data-on="true"] {
-  opacity: 1;
-}
-.chart-tip[data-below="true"] {
-  transform: translate(-50%, 24px);
-}
 /* Bars: label · rounded bar on a light rail · value. */
 .chart-bars {
   position: relative;
@@ -2855,10 +3075,6 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
 .chart-line__grid {
   stroke: var(--line);
   stroke-dasharray: 2 4;
-}
-.chart-line__cursor {
-  stroke: var(--line-strong);
-  stroke-dasharray: 2 3;
 }
 .chart-line__stroke {
   transition: stroke-dashoffset 0.7s var(--out);
@@ -3493,8 +3709,9 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
 
 /*
  * Markdown inside chat messages, styled for reading: line breaks
- * kept (white-space from .ac-msg__text), 14px between paragraphs, 8px into a list and between its items,
- * a heading opens a section, bold marks without shouting, links in the text's own color.
+ * kept (white-space from .ac-msg__text), 12px between blocks, 6px into a list and between its items,
+ * a heading a step over the words opens a section (20px above it, 4px under), a list's numbers and a quote stay
+ * quiet, bold marks without shouting, links in the text's own color. A document (`.md` alone) keeps its own.
  */
 .md--message {
   display: block;
@@ -3502,17 +3719,18 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
   line-height: inherit;
 }
 .md--message > * + * {
-  margin-top: 14px;
+  margin-top: 12px;
 }
 .md-run {
   word-break: break-all;
 }
 .md--message > p + ul,
 .md--message > p + ol {
-  margin-top: 8px;
+  margin-top: 6px;
 }
 .md--message > .md__h {
-  margin: 22px 0 6px;
+  margin: 20px 0 4px;
+  font-size: calc(1em + 2px);
   font-weight: 650;
   letter-spacing: -0.005em;
 }
@@ -3520,7 +3738,7 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
   margin-top: 0;
 }
 .md--message > .md__h + * {
-  margin-top: 6px;
+  margin-top: 4px;
 }
 .md--message .md__h strong {
   font-weight: inherit;
@@ -3533,10 +3751,13 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
   padding-left: 0;
 }
 .md--message ol {
-  padding-left: 22px;
+  list-style: none;
+  padding-left: 0;
+  /* From the list's own first number when it isn't 1 (`counter-reset` on the list, markdown.tsx). */
+  counter-reset: md-ol;
 }
 .md--message li + li {
-  margin-top: 8px;
+  margin-top: 6px;
 }
 .md--message ul > li:not(.md__task) {
   position: relative;
@@ -3547,11 +3768,41 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
   content: "";
   position: absolute;
   left: 6px;
-  top: 0.78em;
+  top: 0.62em;
   width: 5px;
   height: 5px;
   border-radius: 1px;
   background: var(--faint);
+}
+/* In the middle of the item's first line, whatever the text size and the look's line (an engine without the line
+   unit keeps the em above). */
+@supports (top: 1lh) {
+  .md--message ul > li:not(.md__task)::before {
+    top: calc(0.5lh - 2.5px);
+  }
+}
+/* Numbers drawn as the square is: faint, by their digits, ending 15px in (a longer one reaches left, never into the
+   words), the words at 22px. */
+.md--message ol > li:not(.md__task) {
+  position: relative;
+  padding-left: 22px;
+  counter-increment: md-ol;
+}
+.md--message ol > li:not(.md__task)::before {
+  content: counter(md-ol) ".";
+  position: absolute;
+  right: calc(100% - 15px);
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* A quote is a plate of its own: quieter words on the soft plate, no bar at its side. */
+.md--message blockquote {
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--plate);
+  color: var(--ink-muted);
 }
 /* A message's list has no indent to pull a task back into: its box starts on the text's edge. `.md` too, so this
    outranks the wiki's `.md .md__task` pull-back further down, which a message (`md md--message`) also matches. */
@@ -3560,6 +3811,8 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
 }
 .md--message a.ac-link {
   color: inherit;
+  /* A link in a sentence reads as the sentence's words, underlined; the kit's link (an action) is bold. */
+  font-weight: inherit;
   text-decoration: underline;
   text-decoration-color: var(--line-strong);
   text-underline-offset: 3px;
@@ -4771,6 +5024,12 @@ html:not([data-pointer]) .settings__link:focus-visible {
 .settings-row:first-child {
   border-top: 0;
 }
+/* A setting under the one it depends on (`PrefRow` `nested`): its words start under that row's name (past its 28px
+   icon tile), with no hairline between the two. */
+.settings-row--nested {
+  border-top: 0;
+  padding-inline-start: calc(var(--card-pad) + 28px + var(--space-3));
+}
 /* A group's heading among a card's rows (Limites' Por cargo): on the rows' words, the hairline above it. */
 .settings-rows > .ac-grouphead {
   margin: 0;
@@ -4779,6 +5038,26 @@ html:not([data-pointer]) .settings__link:focus-visible {
 }
 .settings-rows > .ac-grouphead + .settings-row {
   border-top: 0;
+}
+/* Settings › About's update: each way to update (Docker, without it), its name 4 above its command, 16 between. */
+.about-update {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.about-update__way {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.about-update__name {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 600;
+}
+.about-update__help {
+  margin: 0;
+  color: var(--ink-muted);
 }
 /* Under a card's title the rows start below it, a hairline above the first as between the others: a row's hover
    plate never reaches the title. */
@@ -7740,28 +8019,82 @@ html:not([data-pointer]) .run-continue:focus-visible {
   line-height: var(--msg-line);
 }
 /*
- * Short of room, its pieces wrap whole (who types beside it to a line of its own), and its words wrap rather than end
- * in "…": the row has the room a bar above the composer had not. Its globe and "Ver" stay at the line's end, outside
- * the pieces that wrap.
+ * One line, whatever it says: short of room, its step ends in "…" first (the whole step is its tip), then the names;
+ * never a second line, which came and went as the step turned and moved the conversation and the composer with it.
+ * Its globe and "Ver" stay at the line's end.
  */
 .working-tail__words {
   display: flex;
   flex: 1 1 0;
-  flex-wrap: wrap;
   align-items: center;
   gap: inherit;
   min-width: 0;
+  white-space: nowrap;
 }
-.working-tail > .working-tail__body > .working-tail__line.ac-typing[data-active] .ac-typing__text {
+/* No single agent's step (people typing or recording, several agents): its pieces wrap whole, as people come and go. */
+.working-tail__words:not(:has(.ac-typing__step)) {
+  flex-wrap: wrap;
+}
+.working-tail
+  > .working-tail__body
+  > .working-tail__line.ac-typing[data-active]
+  > .working-tail__words:not(:has(.ac-typing__step))
+  .ac-typing__text {
   flex-wrap: wrap;
   overflow: visible;
   white-space: normal;
 }
-.working-tail__line
-  :is(.ac-typing__agents, .ac-typing__people, .ac-typing__group, .ac-typing__typers, .ac-typing__also) {
+.working-tail__words:not(:has(.ac-typing__step))
+  :is(.ac-typing__agents, .ac-typing__people, .ac-typing__group, .ac-typing__typers) {
   flex-wrap: wrap;
   overflow: visible;
   white-space: normal;
+}
+/* A phone's line with "Ver código" too: the button takes a second row, there from the first command to the reply, so
+   the step keeps its room. The step's width is its words' (up to what is left), never a reason to wrap. */
+.working-tail__body {
+  container-type: inline-size;
+}
+@container (max-width: 20rem) {
+  .working-tail__words:has(> .ac-typing__see[aria-expanded]) {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+  .working-tail__words > .ac-typing__sep:has(+ .ac-typing__see[aria-expanded]) {
+    flex-basis: 100%;
+    height: 0;
+    margin: 0;
+  }
+  .working-tail__words:has(> .ac-typing__see[aria-expanded]) .ac-typing__step {
+    flex: 1 1000 0;
+    max-width: max-content;
+  }
+}
+/* Who types or records beside one agent's step: a row of its own under it, so the step never gives way to them. */
+.working-tail__line:has(> .working-tail__also) {
+  flex-wrap: wrap;
+}
+.working-tail__also {
+  display: flex;
+  flex: 1 0 100%;
+  flex-wrap: wrap;
+  column-gap: var(--space-1);
+  min-width: 0;
+}
+.working-tail__also:empty {
+  display: none;
+}
+.working-tail__also > .ac-typing__also:first-child::before {
+  content: none;
+}
+/* The name keeps its width whatever the step says (a share of the step's shrinking made it wrap and unwrap), up to
+   half the line, past which it ends in "…". */
+.working-tail .ac-typing__agents:has(> .ac-typing__step) > b {
+  flex: none;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 /* What it did so far: the newest last, older ones as "+N". Each line wraps, never cut. */
 .working-tail__trail {
@@ -8347,59 +8680,6 @@ html:not([data-pointer]) .sky-welcome__close:focus-visible {
 .sidebar__org .ac-btn:hover {
   background: var(--plate);
 }
-.sidebar__item[data-busy="true"] {
-  position: relative;
-  overflow: hidden;
-}
-/*
- * Above the trail and the glow. Zero specificity (`:where`): the collapsed rail hides the name with
- * `position: absolute`, and this must not bring it back into the row (it pushed the avatar off center).
- */
-.sidebar__item[data-busy="true"] > :where(:not(.sidebar__trail, .sidebar__glow)) {
-  position: relative;
-}
-.sidebar__trail,
-.sidebar__glow {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  border-radius: inherit;
-}
-.sidebar__glow {
-  display: none;
-}
-/* The chosen item's frame, small: the row's sky at its own 2px cells around one plate, in the agent's color. */
-.sidebar__busy {
-  position: relative;
-  isolation: isolate;
-  padding: 2px 9px;
-  border-radius: 8px;
-  background-color: var(--side-active);
-  background-image: var(--sel-sky, none);
-  background-position: right center;
-  background-size: auto 40px;
-  background-repeat: no-repeat;
-  color: var(--ink);
-  font-weight: 600;
-  box-shadow: inset 0 0 0 1px var(--line);
-}
-[data-theme="dark"] .sidebar__busy {
-  background-image: var(--sel-sky-dark, none);
-}
-.sidebar__busy::before {
-  content: "";
-  position: absolute;
-  inset: 2px;
-  z-index: -1;
-  border-radius: 6px;
-  background:
-    linear-gradient(
-      to left,
-      color-mix(in srgb, var(--sel-glow-color, var(--agent)) var(--sel-glow, 24%), transparent),
-      transparent 70%
-    ),
-    var(--side-active);
-}
 .sidebar__foot {
   isolation: isolate;
 }
@@ -8454,12 +8734,6 @@ html:not([data-pointer]) .sky-welcome__close:focus-visible {
 .sidebar[data-rail="true"] .sidebar__org .sidebar__org-button {
   justify-content: center;
   padding: 6px;
-}
-.sidebar[data-rail="true"] .sidebar__trail {
-  display: none;
-}
-.sidebar[data-rail="true"] .sidebar__glow {
-  display: block;
 }
 .sidebar[data-rail="true"] .sidebar__me {
   background: transparent;
@@ -8970,9 +9244,10 @@ a.machine-row__name:hover {
   min-width: 0;
 }
 /* On a phone the app's download, the card's one button, takes its width; its note goes under it. A card's form with
-   one button (a field and Salvar) puts it under the field at the form's width. */
+   one button (a field and Salvar) puts it under the field at the form's width. So does Liberar uma pasta. */
 @media (max-width: 640px) {
   .machine-connect__release > .row > .ac-btn,
+  .machine-grant__ask > .ac-btn,
   .ac-card > form.row:not(:has(> .ac-btn ~ .ac-btn)) > .ac-btn--primary {
     flex: 1 1 100%;
   }
@@ -11262,12 +11537,6 @@ html:not([data-pointer]) .agp-cell:focus-visible {
 .agp-card > .ac-card__foot {
   margin-bottom: -12px;
 }
-/* Something changed in it: a bar on its left edge, inside the card's line. */
-.agp-card[data-changed] {
-  box-shadow:
-    var(--card-shadow),
-    inset 2px 0 0 var(--ink);
-}
 /*
  * The overview. Wide: what it does and its recent work on the left, the Ficha as a column on the right (its rows
  * put the label over the value there). The last row takes what the Ficha needs past the left column, so the
@@ -12986,15 +13255,12 @@ html[data-menu-overlay] .shell {
 /*
  * The sidebar's faces as tokens, so New agent's empty face is always the agents' own (ADR 0164): on the rail a step up
  * from the kit's small (24px), inside the rail's 40px tile with room for its badges; in the full list an agent's row
- * has a message's face (`--name-face`), 40 in a personal workspace's plain list (ADR 0159), 12px from its words.
+ * has a message's face (`--name-face`), in a team's workspace and a personal one alike (ADR 0159), 12px from its words.
  */
 .sidebar {
   --sidebar-rail-face: 28px;
   --sidebar-agent-face: var(--name-face);
   --sidebar-agent-gap: 12px;
-}
-.sidebar[data-personal] {
-  --sidebar-agent-face: 40px;
 }
 /* Faces on the rail (an agent at work's inside its orbit). */
 .sidebar__item > .ac-avatar--sm,
@@ -13046,16 +13312,6 @@ html[data-menu-overlay] .shell {
   .sidebar__item:has(> .ac-orbit + .sidebar__item-text > .sidebar__item-role)
   > :not(.ac-orbit, .sidebar__item-text) {
   align-self: center;
-}
-/* A face larger than a name's (the personal sidebar's 40px): the name and the line under it take the face's height, as
-   they do beside a 32px face (the name's capitals on its top, the line's baseline at its foot), the room between them
-   growing by what the face grows, instead of leaving the face's lower part bare. */
-.sidebar:not([data-rail="true"])
-  :is([data-agent-row] > .sidebar__item, .sidebar__item[data-right-hand]):has(
-    > :is(.ac-avatar, .ac-orbit) + .sidebar__item-text > .sidebar__item-role
-  )
-  > .sidebar__item-text {
-  gap: calc(2px + var(--sidebar-agent-face) - var(--name-face));
 }
 /* An agent at work: its orbit reaches a few pixels past its face, inside the row's padding; the rings' box would count
    as overflow in the scrolling list. */
@@ -13627,11 +13883,10 @@ html:not([data-pointer]) .channel-perms__target:focus-visible {
 .sidebar:not([data-rail="true"]) .sidebar__section--group {
   margin-top: 8px;
 }
-/* A setor's header on its rows' column: its mark centred over the faces, its name 8 after it, the chevron right after
-   the name. */
+/* A setor's header on the channels' column: its mark where a channel's # is (the toggle's own 8, as a row's icon; the
+   faces' left edge too), its name 8 after it, where the channels' names start, the chevron right after the name. */
 .sidebar:not([data-rail="true"]) .sidebar__section--group .sidebar__section-toggle {
   gap: 0;
-  padding-left: calc(10px + (var(--sidebar-agent-face) - 16px) / 2);
 }
 .sidebar:not([data-rail="true"]) .sidebar__section--group .sidebar__section-toggle > .ac-rolemark {
   flex: none;
@@ -13965,7 +14220,7 @@ html:not([data-pointer]) .sidebar__bell:focus-visible {
 }
 /*
  * A personal workspace's agents are its list (ADR 0159), with no header between them, so each row breathes as a
- * conversation's does: a face as tall as the name and its role (40, the name's capitals on its top), 4px between rows.
+ * conversation's does: a team's face (`--sidebar-agent-face`), 8 above and below it, 4px between rows.
  */
 .sidebar:not([data-rail="true"]) .sidebar__agents-plain {
   gap: 4px;
@@ -13975,13 +14230,19 @@ html:not([data-pointer]) .sidebar__bell:focus-visible {
   :is([data-agent-row] > .sidebar__item, .sidebar__item[data-right-hand]) {
   padding-block: 8px;
 }
-.sidebar:not([data-rail="true"])
-  .sidebar__agents-plain
-  :is([data-agent-row] > .sidebar__item, .sidebar__item[data-right-hand])
-  > .ac-avatar--sm {
-  width: var(--sidebar-agent-face);
-  height: var(--sidebar-agent-face);
-  font-size: 15px;
+/*
+ * A personal workspace's group conversations (ADR 0159, amendment of 2026-11-26): their face (`GroupFace`) the agents'
+ * size, on the rail the rail's, their name as far from it as an agent's, the row an agent row's height.
+ */
+.sidebar__group-row {
+  --group-face: var(--sidebar-agent-face);
+}
+.sidebar[data-rail="true"] .sidebar__group-row {
+  --group-face: var(--sidebar-rail-face);
+}
+.sidebar:not([data-rail="true"]) .sidebar__item.sidebar__group-row {
+  gap: var(--sidebar-agent-gap);
+  padding-block: 8px;
 }
 /*
  * New agent under the agents (ADR 0159, ADR 0164): an empty face the exact box of the agents' faces in this sidebar
@@ -16463,5 +16724,200 @@ html:not([data-pointer]) .store-back:focus-visible {
   from {
     opacity: 0;
     transform: translateY(-8px);
+  }
+}
+
+/*
+ * A team's sidebar (ADR 0260): a 64px tool column at its left edge and the list beside it. The column has Ir para…
+ * on top, a line, the tools as 40px tiles (icon only, the name in a tip on their right), and Agora and the collapse at
+ * its foot. Collapsed, the list goes and the column stays: one picture of the sidebar in both states. A tablet keeps
+ * the column and its toggle opens the list over the page; a phone's drawer holds both.
+ */
+.sidebar[data-layout="column"] {
+  flex: 0 0 320px;
+  flex-direction: row;
+  align-items: stretch;
+  width: 320px;
+  min-width: 320px;
+  gap: 0;
+  padding: 0;
+  /* One line in Mensagens diretas and Favoritos: a 24px face, 8 from its name, 8 from the plate's edges. */
+  --sidebar-agent-face: 24px;
+  --sidebar-agent-gap: var(--space-2);
+}
+.sidebar__col {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  width: 64px;
+  padding: var(--space-4) 0;
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.sidebar__col::-webkit-scrollbar {
+  display: none;
+}
+.sidebar__main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 12px;
+}
+.sidebar__main > * {
+  position: relative;
+  z-index: 1;
+}
+.sidebar__col-line {
+  flex: none;
+  width: 24px;
+  margin: var(--space-1) 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+.sidebar__col-gap {
+  flex: 1 0 var(--space-2);
+}
+.sidebar__tile {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--control-h-md);
+  height: var(--control-h-md);
+  padding: 0;
+  border: 0;
+  border-radius: var(--control-r-md);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+.sidebar__tile > .ac-icon {
+  width: var(--control-icon-md);
+  height: var(--control-icon-md);
+}
+.sidebar__tile:hover,
+.sidebar__tile[data-state="open"] {
+  background: var(--side-hover);
+  color: var(--ink);
+}
+.sidebar__tile[data-status="active"] {
+  background: var(--side-chosen);
+  color: var(--ink);
+}
+html:not([data-pointer]) .sidebar__tile:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+/* A tile's mark, on one anchor for every tile: an ink dot for something unread, a red one for something for me. */
+.sidebar__tile[data-dot] {
+  color: var(--ink);
+}
+.sidebar__tile[data-dot]::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--ink);
+  box-shadow: 0 0 0 2px var(--side);
+}
+.sidebar__tile[data-dot="you"]::after {
+  background: var(--danger);
+}
+/* The tools keep their order by dragging and Alt+Shift+↑/↓ (ToolList): no grip on a tile, the tile is what moves. */
+.sidebar__col .sidebar__tool-grip {
+  display: none;
+}
+.sidebar__col :is(.sidebar__collapse, .sidebar__agora).ac-btn {
+  flex: none;
+  width: var(--control-h-md);
+  height: var(--control-h-md);
+  border-radius: var(--control-r-md);
+}
+/* The workspace's name opens its menu: no chevron beside it (the column took the room it had). */
+.sidebar[data-layout="column"] .sidebar__org-button > .ac-icon:last-child {
+  display: none;
+}
+/* Collapsed (or a tablet at rest): the column alone. */
+.sidebar[data-layout="column"][data-rail="true"] {
+  flex: 0 0 64px;
+  width: 64px;
+  min-width: 64px;
+  padding: 0;
+  gap: 0;
+}
+.sidebar[data-layout="column"][data-rail="true"] .sidebar__main {
+  display: none;
+}
+.sidebar[data-layout="column"][data-rail="true"] .sidebar__col {
+  border-right: 0;
+}
+.shell:has(> .sidebar[data-layout="column"][data-float="true"]) {
+  padding-left: 64px;
+}
+/* One line per person and agent: the name as wide as it needs, the "IA" tag right after it, a count at the end. */
+.sidebar__item > .sidebar__item-label:has(+ .sidebar__kind) {
+  flex: 0 1 auto;
+}
+.sidebar__kind.ac-tag {
+  flex: none;
+}
+.sidebar__kind ~ :is(.sidebar__unread, .sidebar__item-meta, .ac-count, .ac-countchip) {
+  margin-left: auto;
+}
+.sidebar[data-layout="column"] .sidebar__item > .ac-avatar--sm,
+.sidebar[data-layout="column"] .sidebar__item > .ac-orbit > .ac-avatar--sm {
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
+}
+.sidebar[data-layout="column"] :is([data-agent-row] > .sidebar__item, .sidebar__item[data-right-hand]) {
+  gap: var(--sidebar-agent-gap);
+}
+.sidebar[data-layout="column"] .sidebar__item:has(> .ac-avatar),
+.sidebar[data-layout="column"] .sidebar__item:has(> .ac-orbit),
+.sidebar[data-layout="column"] .sidebar__new-agent {
+  gap: var(--sidebar-agent-gap);
+  padding-block: 8px;
+}
+/* An invitation not accepted yet: the address quieter than a member's name. */
+.sidebar__invite .sidebar__item-label {
+  color: var(--muted);
+}
+/* A section's name typed in place, on its header's line and size. */
+.sidebar__section-name {
+  flex: 1;
+  min-width: 0;
+  height: var(--control-h-sm);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line-strong, var(--line));
+  border-radius: var(--control-r-sm);
+  background: var(--pane);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+html:not([data-pointer]) .sidebar__section-name:focus-visible,
+.sidebar__section-name:focus {
+  outline: none;
+  box-shadow: var(--focus-ring);
+} /* A phone's drawer holds the column and the list. */
+@media (max-width: 760px) {
+  .shell .sidebar[data-layout="column"] {
+    width: min(368px, calc(100vw - 56px));
+    padding: 0;
   }
 }

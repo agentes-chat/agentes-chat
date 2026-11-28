@@ -1,7 +1,9 @@
 import {
   type AppNotification,
   type InstallableCli,
+  useAskMachineFolder,
   useCliInstall,
+  useMachines,
   useNotificationAction,
   useRefuseFolderRequest,
 } from "@agenteschat/client";
@@ -47,14 +49,18 @@ export function DeviceNoticeCard({ item: n, first }: { item: AppNotification; fi
 
 /**
  * An agent waits for a folder on the viewer's computer: it is allowed there, in the app on that computer (or with the
- * runner's command), so the card has no button that would grant it from here, only No.
+ * runner's command), so the card has no button that would grant it from here: No, and where the app runs that
+ * computer, Liberar no computador, which opens the request there.
  */
 function FolderNotice({ n, d }: { n: AppNotification; d: DeviceNotice }) {
   const { t } = useTranslation();
   const toast = useToast();
   const when = useWhen();
   const dir = useDirectory();
-  const refuse = useRefuseFolderRequest(useOrgId());
+  const orgId = useOrgId();
+  const refuse = useRefuseFolderRequest(orgId);
+  const show = useAskMachineFolder(orgId);
+  const computer = useMachines(orgId).data?.find((m) => m.id === d.machineId);
   const agent = n.actors.find((a) => a.type === "agent");
   const name = dir.nameOf(agent ? { type: "agent", id: agent.id } : null);
   return (
@@ -67,23 +73,47 @@ function FolderNotice({ n, d }: { n: AppNotification; d: DeviceNotice }) {
       onPress={() => router.push(deviceHref(d))}
       decision={
         d.machineId && d.requestId ? (
-          <Button
-            variant="secondary"
-            size="sm"
-            label={t("devices.notice.no")}
-            loading={refuse.isPending}
-            onPress={() =>
-              d.machineId &&
-              d.requestId &&
-              refuse.mutate(
-                { machineId: d.machineId, requestId: d.requestId },
-                {
-                  onSuccess: () => toast({ title: t("devices.notice.decided.no"), icon: "check" }),
-                  onError: (err) => toast({ title: errorText(t, err), icon: "x" }),
-                },
-              )
-            }
-          />
+          <View style={styles.acts}>
+            {computer?.folderPick ? (
+              <Button
+                variant="primary"
+                size="sm"
+                label={t("devices.notice.folderOnComputer")}
+                loading={show.isPending}
+                disabled={refuse.isPending}
+                onPress={() =>
+                  d.machineId &&
+                  d.requestId &&
+                  show.mutate(
+                    { machineId: d.machineId, requestId: d.requestId },
+                    {
+                      onSuccess: () =>
+                        toast({ title: t("devices.notice.folderShown", { deviceName: d.device }), icon: "check" }),
+                      onError: (err) => toast({ title: errorText(t, err), icon: "x" }),
+                    },
+                  )
+                }
+              />
+            ) : null}
+            <Button
+              variant="secondary"
+              size="sm"
+              label={t("devices.notice.no")}
+              loading={refuse.isPending}
+              disabled={show.isPending}
+              onPress={() =>
+                d.machineId &&
+                d.requestId &&
+                refuse.mutate(
+                  { machineId: d.machineId, requestId: d.requestId },
+                  {
+                    onSuccess: () => toast({ title: t("devices.notice.decided.no"), icon: "check" }),
+                    onError: (err) => toast({ title: errorText(t, err), icon: "x" }),
+                  },
+                )
+              }
+            />
+          </View>
         ) : undefined
       }
     >
@@ -197,7 +227,7 @@ function JoinNotice({ n, d }: { n: AppNotification; d: DeviceNotice }) {
         <Text variant="small" tone="muted">
           {joinFacts(t, request)}
         </Text>
-        <JoinInternetLine />
+        <JoinInternetLine os={request.os} />
       </WaitingCard>
     );
   // Answered elsewhere, or out of time: the card opens the devices.
@@ -321,4 +351,5 @@ export function DeviceNoticeActions({ item: n }: { item: AppNotification }) {
 const styles = StyleSheet.create({
   decide: { gap: 8 },
   row: { flexDirection: "row" },
+  acts: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
 });

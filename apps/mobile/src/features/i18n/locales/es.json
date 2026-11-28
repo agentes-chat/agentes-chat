@@ -4,12 +4,17 @@
     "send": "Enviar"
   },
   "categories": {
-    "where": "Dónde aparece #{{channel}}",
-    "whereHelp": "Cambia para todos. Quién participa en el canal no cambia.",
-    "order": "Lugar en la lista",
     "up": "Subir",
     "down": "Bajar",
     "channelPosition": "{{at}} de {{count}}."
+  },
+  "sections": {
+    "title": "Sección",
+    "where": "Dónde queda #{{channel}} para ti",
+    "whereHelp": "Solo cambia tu lista. Cada persona ordena sus propias secciones.",
+    "none": "Sin sección",
+    "order": "Lugar en la sección",
+    "tooLong": "Usa 40 caracteres o menos."
   },
   "blocks": {
     "send": "Enviar",
@@ -61,6 +66,19 @@
     "raw": "Original",
     "more": "Ver las {{count}} líneas",
     "gone": "Este código ya no está abierto."
+  },
+  "table": {
+    "label_one": "Tabla · {{count}} fila",
+    "label_many": "Tabla · {{count}} filas",
+    "label_other": "Tabla · {{count}} filas",
+    "title": "Tabla",
+    "rows_one": "{{count}} fila",
+    "rows_many": "{{count}} filas",
+    "rows_other": "{{count}} filas",
+    "copy": "Copiar la tabla",
+    "copied": "Tabla copiada",
+    "more": "Ver las {{count}} filas",
+    "gone": "Esta tabla ya no está abierta."
   },
   "time": {
     "today": "Hoy",
@@ -182,11 +200,11 @@
       "text": "Puede estar caído o fuera de tu red. Tus chats aparecen solos cuando vuelva.",
       "kept": "Mostrando lo que ya estaba en la app."
     },
-    "pinned": "Fijados",
+    "favorites": "Favoritos",
     "recent": "Recientes",
     "view": {
       "title": "Ver las conversaciones",
-      "sectors": "Sectores",
+      "sections": "Secciones",
       "dms": "Mensajes directos",
       "channels": "Canales"
     },
@@ -961,6 +979,7 @@
       "admin_ask_channel_agent": "{{names}} te pide añadir a {{agent}} a #{{label}}",
       "admin_ask_create_agents": "{{names}} pide poder crear agentes",
       "admin_ask_webhook": "{{names}} te pide configurar el webhook de {{service}} para rutinas",
+      "admin_ask_voice": "{{names}} te pide activar los mensajes de voz",
       "routine_paused_one": "Rutina en pausa",
       "routine_paused_many": "Rutinas en pausa",
       "routine_paused_other": "Rutinas en pausa",

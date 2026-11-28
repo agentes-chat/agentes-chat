@@ -1,5 +1,5 @@
 import type { DeviceJoinRequest } from "@agenteschat/client";
-import { defaultLinkAudience, joinFacts } from "@agenteschat/client/lib/devices";
+import { defaultLinkAudience, joinFacts, joinLends } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { computerKind } from "@agenteschat/client/lib/machines";
 import {
@@ -161,8 +161,8 @@ export function JoinRequestForm({
   const toast = useToast();
   const approve = useApproveRequest(org.id);
   const deny = useDenyRequest(org.id);
-  // A workspace with its own computer: it will open websites through this one's internet too (ADR 0237).
-  const lends = useDevices(org.id).data?.devices.some((d) => d.machineKind === "managed") === true;
+  // Where computers lend their internet, this one will too, but a server box (ADR 0237).
+  const lends = joinLends(useDevices(org.id).data, request.os);
   const [name, setName] = useState(request.name);
   const busy = approve.isPending || deny.isPending;
   const clean = name.trim();

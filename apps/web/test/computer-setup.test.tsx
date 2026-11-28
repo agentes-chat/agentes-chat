@@ -406,7 +406,7 @@ describe("Configurações → Computadores: the workspace's own computer", () =>
     const links = [...document.querySelectorAll("main a, .settings__body a")];
     expect(links.at(-1)).toBe(about);
     // Not the cards of a computer someone connected: folders, tools, browser, apps.
-    for (const name of ["Pastas liberadas", "Ferramentas", "Navegador", "Apps nas telas dos agentes"])
+    for (const name of ["Pastas liberadas", "Ferramentas", "Navegador", "Tela própria de cada agente"])
       expect(screen().queryByRole("region", { name })).toBeNull();
     expect(screen().queryAllByRole("button", { name: /^Desligar/ })).toEqual([]);
     expect(screen().queryByRole("button", { name: "Ações de shared" })).toBeNull();
@@ -611,7 +611,7 @@ describe("a computer connected in system mode (each agent its own user)", () => 
     expect(onMac).toContain(
       "abra o app do agentes.chat nele (Configurações\u00a0›\u00a0Este Mac\u00a0›\u00a0Pastas e ferramentas).",
     );
-    expect(onMac).toContain("Sem o app? No terminal do computador:");
+    expect(onMac).toContain("Sem o app lá? Use o Terminal");
   });
 });
 

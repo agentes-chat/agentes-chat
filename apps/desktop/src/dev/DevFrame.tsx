@@ -111,6 +111,9 @@ export function DevFrame({ host }: { host: FakeHost }) {
           <button type="button" onClick={() => first?.raiseRequest()}>
             folder request
           </button>
+          <button type="button" onClick={() => first?.askPick(true)}>
+            folder pick
+          </button>
           <button type="button" onClick={toggleTheme}>
             theme
           </button>

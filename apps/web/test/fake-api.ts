@@ -59,6 +59,7 @@ import type {
   JoinApproval,
   JoinClaim,
   JoinRequest,
+  LocalSpeech,
   Me,
   Member,
   MemberPresence,
@@ -119,6 +120,7 @@ import { stepIndex } from "@agenteschat/client/lib/onboarding";
 import type { PlanModel } from "@agenteschat/client/lib/plans";
 import { type LodiPrefs, lodiPrefsOf } from "@agenteschat/client/lib/right-hand-prefs";
 import { grants, rowMax, SUMMARY_ORDER, withRowHolders } from "@agenteschat/client/lib/roles";
+import type { ServerRelease } from "@agenteschat/client/lib/server-release";
 import { sidebarItemOrder, sidebarSections } from "@agenteschat/client/lib/sidebar-items";
 import { driveFolder, isSecretFile } from "@agenteschat/ui/names";
 import { createFakeAccess } from "./fakes/access";
@@ -406,6 +408,10 @@ export interface FakeState {
   edition?: Edition;
   /** Overrides `system.instance` (default: agentes.chat Cloud). */
   instance?: Partial<Instance>;
+  /** `system.serverRelease`: the newest server release on GitHub (default: none found). */
+  serverRelease?: ServerRelease | null;
+  /** How many times the app asked for it. */
+  serverReleaseAsked?: number;
   /** `agents.brainMachines`: the computers a new agent could think on ("Criar agente"); unset = none. */
   brainMachines?: BrainMachine[];
   /** `agents.newAgentSetup`: what a new agent starts thinking with; unset = none ("Automático"). */
@@ -430,6 +436,8 @@ export interface FakeState {
    * (null). Saving one makes GIFs available here (`media.gifsAvailable`), removing it takes them away.
    */
   gifKey?: GifKey;
+  /** `system.speechLocal` for the installation's owner (with `speechKey`): unset = not offered here. */
+  speechLocal?: LocalSpeech;
   /** `system.speechKey`: unset = I'm not the installation's owner on a self-hosted server (null). */
   speechKey?: SpeechKey;
   /** The keys a provider refuses when `system.saveSpeechKey` tries them (422, nothing kept). */
@@ -706,6 +714,8 @@ export const OPENROUTER_KEY: Credential = {
 type MediaSetting =
   | "voiceMessages"
   | "voiceAvailable"
+  | "speechState"
+  | "speechOwner"
   | "gifs"
   | "gifRating"
   | "agentStickers"
@@ -733,6 +743,10 @@ function mediaSettings(state: FakeState): Pick<OrgSettings, MediaSetting> {
     agentMedia: state.media?.agentMedia ?? "sometimes",
     voiceMessages: state.media?.voiceMessages ?? true,
     voiceAvailable: state.media?.voiceAvailable ?? false,
+    // Unset: a server older than `speechState`, whose microphone shows only with an engine.
+    ...(state.media?.speechState
+      ? { speechState: state.media.speechState, speechOwner: state.media.speechOwner ?? null }
+      : {}),
     gifsAvailable: state.media?.gifsAvailable ?? true,
     agentMediaAvailable: state.media?.agentMediaAvailable ?? true,
   };
@@ -1506,6 +1520,10 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
   return {
     system: {
       health: async () => ({ status: "ok", version: "test", edition: state.edition ?? "cloud" }),
+      serverRelease: async () => {
+        state.serverReleaseAsked = (state.serverReleaseAsked ?? 0) + 1;
+        return state.serverRelease ?? null;
+      },
       instance: async () => ({
         name: "agentes.chat",
         version: "test",
@@ -1636,6 +1654,20 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         state.speechKey = { provider: null, hint: null, state: "off", envProviders: [] };
         state.media = { ...state.media, voiceAvailable: false };
         return state.speechKey;
+      },
+      speechLocal: async () => (state.speechKey ? (state.speechLocal ?? null) : null),
+      installSpeechLocal: async () => {
+        log("system.installSpeechLocal");
+        if (!state.speechLocal) throw new ApiError(404, "not_found", "Not found");
+        state.speechLocal = { ...state.speechLocal, status: { state: "ready" } };
+        state.media = { ...state.media, speechState: "ready" };
+        return state.speechLocal;
+      },
+      removeSpeechLocal: async () => {
+        log("system.removeSpeechLocal");
+        if (!state.speechLocal) throw new ApiError(404, "not_found", "Not found");
+        state.speechLocal = { ...state.speechLocal, status: { state: "off" } };
+        return state.speechLocal;
       },
     },
     voice: {
@@ -3378,10 +3410,15 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       },
     },
     chat: {
-      channels: async () => state.channels,
+      // Each with its first agents and how many it has, as the server lists them (a group conversation's face).
+      channels: async () =>
+        state.channels.map((c) => {
+          const agents = (state.channelMembers[c.id] ?? []).filter((m) => m.type === "agent").map((m) => m.id);
+          return { ...c, agentIds: agents.slice(0, 4), agentCount: agents.length };
+        }),
       createChannel: async (orgId, input) => {
         log("chat.createChannel", orgId, input);
-        if (state.channels.some((c) => c.name === input.name))
+        if (state.channels.some((c) => c.name.toLowerCase() === input.name.toLowerCase()))
           throw new ApiError(409, "conflict", `#${input.name} already exists`);
         const channel: Channel = {
           id: id("chan"),
@@ -3820,6 +3857,10 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
     },
     connectors: {
       catalog: async () => CATALOG,
+      toolLabels: async (orgId, locale, keys) => {
+        log("connectors.toolLabels", orgId, locale, keys);
+        return {};
+      },
       // As the backend: the team's and the viewer's own; everyone's with `others`.
       list: async (_orgId, options) =>
         structuredClone(
@@ -4123,6 +4164,11 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           decidedBy: { userId: state.me?.user.id ?? "", name: state.me?.user.name ?? "" },
           decidedAt: new Date().toISOString(),
           canDecide: false,
+          // Applied by a person now, as the server answers: no review's word on it, nothing left to apply.
+          reviewed: false,
+          decidedByAgent: null,
+          review: null,
+          applicable: false,
         });
         return structuredClone(p);
       },
@@ -4375,6 +4421,7 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
     },
   };
   const threads = createFakeThreads(ctx, (method, ...args) => state.calls.push({ method, args }));
+  const missions = createFakeMissions(ctx, (method, ...args) => state.calls.push({ method, args }));
   state.openThread = threads.openByReply;
   const machines = createFakeMachines(ctx, (method, ...args) => state.calls.push({ method, args }));
   const devices = createFakeDevices(
@@ -4437,8 +4484,25 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
       (method, ...args) => state.calls.push({ method, args }),
     ),
     wiki: createFakeWiki(ctx, (method, ...args) => state.calls.push({ method, args })),
-    threads,
-    missions: createFakeMissions(ctx, (method, ...args) => state.calls.push({ method, args })),
+    threads: {
+      ...threads,
+      // Like the server, a thread names the mission in it.
+      get: async (orgId, threadId) => {
+        const thread = await threads.get(orgId, threadId);
+        if (thread.mission) return thread;
+        const m = await missions.ofThread(orgId, threadId).catch(() => null);
+        if (!m) return thread;
+        const mission = {
+          id: m.id,
+          agentId: m.agentId,
+          status: m.status,
+          planDone: m.plan.done,
+          planTotal: m.plan.total,
+        };
+        return { ...thread, mission: { ...mission, waitingYou: m.plan.waiting } };
+      },
+    },
+    missions,
     skills: createFakeSkills(
       ctx,
       (method, ...args) => state.calls.push({ method, args }),

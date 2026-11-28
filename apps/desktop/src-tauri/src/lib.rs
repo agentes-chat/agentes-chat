@@ -1,4 +1,4 @@
-//! agentes.chat for macOS, Windows and Linux: one window (ADR 0256), the server open now (agentes.chat or a
+//! agentes.chat for macOS, Windows and Linux: one window (ADR 0265), the server open now (agentes.chat or a
 //! server of the person's own, `servers`) with the app's own screens over it (`app_layer`: the first run that finds
 //! one, This computer's settings, the sheets), and, only while agents work on this computer for a server of the
 //! person's own, the runners it spawns (one per organization) and the menu bar popover. On every system it can also
@@ -12,6 +12,7 @@ mod address;
 mod always_on;
 mod app_icon;
 mod app_layer;
+mod background;
 mod bench;
 mod cookies;
 mod cover;
@@ -38,6 +39,7 @@ mod workspaces;
 use std::io::{self, Read};
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -53,7 +55,7 @@ use tauri_plugin_updater::UpdaterExt;
 use runners::{RunnerInfo, Runners};
 
 /// The app's windows besides the main one (the notch is its own, `notch.rs`): only the menu bar's popover. Everything
-/// else is the main window's app layer (ADR 0256).
+/// else is the main window's app layer (ADR 0265).
 const WINDOWS: &[&str] = &["popover"];
 
 /// When the popover last hid because it lost focus: a click on the tray icon blurs it first,
@@ -146,6 +148,7 @@ pub(crate) fn open_app(app: &AppHandle) {
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub(crate) fn toggle_popover(app: &AppHandle) {
     let Some(window) = app.get_webview_window("popover") else { return };
+    POPOVER_KEPT.store(false, Ordering::Release);
     if window.is_visible().unwrap_or(false) {
         let _ = window.hide();
         return;
@@ -289,7 +292,7 @@ pub(crate) fn run_watched(
 }
 
 /// Graceful quit: the children stop, then the app exits.
-fn begin_quit(app: AppHandle) {
+pub(crate) fn begin_quit(app: AppHandle) {
     leave(app, false);
 }
 
@@ -435,20 +438,63 @@ async fn reveal_folder(app: AppHandle, path: String) -> Result<(), String> {
     .map_err(|e| e.to_string())?
 }
 
+/// The system's folder picker is open. The popover that opened it loses its focus to it and stays up meanwhile
+/// (`on_window_event`), and a second pick opens no second picker over it.
+static PICKING: AtomicBool = AtomicBool::new(false);
+/// The popover came up for a request (a folder asked for from the apps), not a click on the menu bar icon. Raised
+/// while another app is in front it never gets the focus it would lose, so it stays until the person answers or
+/// hides it, instead of going the moment it shows.
+static POPOVER_KEPT: AtomicBool = AtomicBool::new(false);
+
+/// One picker at a time, for the person here: the app comes forward first, or a picker raised over another app's
+/// window goes away with it.
 #[tauri::command]
 async fn pick_folder(app: AppHandle) -> Option<String> {
+    if PICKING.swap(true, Ordering::AcqRel) {
+        return None;
+    }
+    struct Done;
+    impl Drop for Done {
+        fn drop(&mut self) {
+            PICKING.store(false, Ordering::Release);
+        }
+    }
+    let _done = Done;
+    bring_forward(&app);
     let picked = app.dialog().file().blocking_pick_folder()?;
     picked.into_path().ok().map(|p| p.to_string_lossy().into_owned())
 }
+
+#[cfg(target_os = "macos")]
+fn bring_forward(app: &AppHandle) {
+    let _ = app.run_on_main_thread(|| {
+        use objc2::runtime::AnyObject;
+        use objc2::{class, msg_send};
+        // SAFETY: NSApplication's shared instance, on the main thread.
+        unsafe {
+            let ns_app: *mut AnyObject = msg_send![class!(NSApplication), sharedApplication];
+            if !ns_app.is_null() {
+                let _: () = msg_send![ns_app, activateIgnoringOtherApps: true];
+            }
+        }
+    });
+}
+
+#[cfg(not(target_os = "macos"))]
+fn bring_forward(_app: &AppHandle) {}
 
 #[tauri::command]
 fn set_tray_state(app: AppHandle, state: String) -> Result<(), String> {
     tray::set_state(&app, &state)
 }
 
-/// The popover (the notch's "open"); every other screen is the app layer's (`layer_show`).
+/// The popover (the notch's "open"); every other screen is the app layer's (`layer_show`). `keep`: the popover,
+/// raised for a request, stays up when it loses focus (`POPOVER_KEPT`); shown without it, it hides on focus loss again.
 #[tauri::command]
-async fn show_window(app: AppHandle, name: String) -> Result<(), String> {
+async fn show_window(app: AppHandle, name: String, keep: Option<bool>) -> Result<(), String> {
+    if name == "popover" {
+        POPOVER_KEPT.store(keep == Some(true), Ordering::Release);
+    }
     present(&app, &name)
 }
 
@@ -456,6 +502,9 @@ async fn show_window(app: AppHandle, name: String) -> Result<(), String> {
 fn hide_window(app: AppHandle, name: String) -> Result<(), String> {
     if !WINDOWS.contains(&name.as_str()) {
         return Err(format!("unknown window: {name}"));
+    }
+    if name == "popover" {
+        POPOVER_KEPT.store(false, Ordering::Release);
     }
     let Some(window) = app.get_webview_window(&name) else { return Ok(()) };
     window.hide().map_err(|e| e.to_string())
@@ -811,6 +860,7 @@ pub fn run() {
             cover::page_ready,
             cover::cover_retry,
             cover::cover_hide,
+            cover::cover_hold,
             cover::cover_server,
             cover::cover_details,
             prepare::screen_access,
@@ -857,7 +907,7 @@ pub fn run() {
             // Started at login: in the background (the popover, the tray). Opened by hand: the main window on
             // the server open now, or the first run while there is none. Opened again by macOS in the middle of a
             // setup (the "Quit & Reopen" after a permission): the main window on the page it showed, and the setup's
-            // screen over it (the app layer, ADR 0256).
+            // screen over it (the app layer, ADR 0265).
             let at_login = started_at_login(std::env::args(), reopened);
             let resume = prepare::resume(&handle, at_login);
             if servers::current(&handle).is_none() {
@@ -877,6 +927,8 @@ pub fn run() {
             }
             // The app icon picked on this computer (ADR 0179).
             app_icon::show(&handle);
+            // A start at login: on a Mac out of the Dock, in the menu bar.
+            background::settle(&handle, None);
             bench::setup_done(&handle);
             Ok(())
         });
@@ -905,7 +957,7 @@ pub fn run() {
         // A click on the Dock icon: bring the app's window back.
         #[cfg(target_os = "macos")]
         RunEvent::Reopen { .. } => {
-            // Back to the front: this computer's essentials are read again (ADR 0256 §7).
+            // Back to the front: this computer's essentials are read again (ADR 0265 §7).
             always_on::on_front(app);
             // A click on a notification of the server here brings the app forward: the popover, which says why.
             if local_server::take_notice_click() {
@@ -934,7 +986,11 @@ fn window_event_name(event: &WindowEvent) -> &'static str {
 
 fn on_window_event(window: &tauri::Window, event: &WindowEvent) {
     match event {
-        WindowEvent::Focused(false) if window.label() == "popover" => {
+        WindowEvent::Focused(false)
+            if window.label() == "popover"
+                && !PICKING.load(Ordering::Acquire)
+                && !POPOVER_KEPT.load(Ordering::Acquire) =>
+        {
             let _ = window.hide();
             if let Ok(mut at) = window.app_handle().state::<PopoverClock>().0.lock() {
                 *at = Some(Instant::now());
@@ -942,30 +998,26 @@ fn on_window_event(window: &tauri::Window, event: &WindowEvent) {
         }
         WindowEvent::Focused(true) if window.label() == main_window::LABEL => {
             main_window::focused(window.app_handle());
-            // The window came back (maybe from System Settings): this computer's essentials again (ADR 0256 §7).
+            // The window came back (maybe from System Settings): this computer's essentials again (ADR 0265 §7).
             always_on::on_front(window.app_handle());
         }
         WindowEvent::Focused(false) if window.label() == main_window::LABEL => {
             main_window::keep_lights(window.app_handle());
         }
         WindowEvent::CloseRequested { api, .. } => {
-            // The windows are made once and only hidden; quitting goes through "Quit".
+            // The windows are made once and only hidden; quitting goes through "Quit". The main window goes to the
+            // background (background.rs).
             api.prevent_close();
             if window.label() == main_window::LABEL {
                 window_state::remember(window, false);
                 // Settings and sheets end with the window (a setup on screen too, `prepare.rs`); the first run stays
                 // in it, its setup going on (Cancel stops it), and opening the app brings it back.
                 app_layer::window_closing(window.app_handle());
-                // Some Linux desktops show no tray icon: there the window stays in reach, minimized. One that
-                // may be black (its page arrived on the graphics card and never painted) quits instead, so
-                // opening the app again draws without the graphics card (graphics.rs `decide`).
+                // A window that may be black on Linux (its page arrived on the graphics card and never painted)
+                // quits instead, so opening the app again draws without the graphics card (graphics.rs `decide`).
                 #[cfg(target_os = "linux")]
-                {
-                    if cover::unpainted_on_gpu(window.app_handle()) {
-                        begin_quit(window.app_handle().clone());
-                        return;
-                    }
-                    let _ = window.minimize();
+                if cover::unpainted_on_gpu(window.app_handle()) {
+                    begin_quit(window.app_handle().clone());
                     return;
                 }
                 // ⌘W in full screen: out of full screen first, so no empty Space stays behind.
@@ -976,9 +1028,13 @@ fn on_window_event(window: &tauri::Window, event: &WindowEvent) {
                     std::thread::spawn(move || {
                         std::thread::sleep(Duration::from_millis(700));
                         let _ = window.hide();
+                        background::closed(window.app_handle());
                     });
                     return;
                 }
+                let _ = window.hide();
+                background::closed(window.app_handle());
+                return;
             }
             let _ = window.hide();
         }

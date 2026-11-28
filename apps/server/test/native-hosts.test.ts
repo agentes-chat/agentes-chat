@@ -14,7 +14,7 @@ import { allowedOrigins, requestOriginAllowed } from "../src/routes/app/context"
 import { createTestServer, GOOGLE_ENV, type TestServer } from "./harness";
 
 /**
- * A native server (agentes.chat running on this computer, ADR 0256 §5): the computer opens it at its loopback origin,
+ * A native server (agentes.chat running on this computer, ADR 0265 §5): the computer opens it at its loopback origin,
  * everyone else at `PUBLIC_URL` (once reach is on, Tailscale's https address or one of the person's own), and each
  * origin keeps its own sign-in.
  */
@@ -76,7 +76,7 @@ describe("the host guard", () => {
   });
 });
 
-describe("this server's id, answered for any address (ADR 0256 §4)", () => {
+describe("this server's id, answered for any address (ADR 0265 §4)", () => {
   const guard = nativeHostGuard({ port: PORT, publicUrl: PUBLIC });
   const idOf = async (res: Response | null) => {
     if (!res) throw new Error("not answered");

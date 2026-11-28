@@ -1,5 +1,5 @@
 /*
- * Settings › This computer on the app layer (ADR 0256 §7, Settings.tsx): the section list (the desktop's `.dk-pnav`)
+ * Settings › This computer on the app layer (ADR 0265 §7, Settings.tsx): the section list (the desktop's `.dk-pnav`)
  * beside the page (`.dk-pbody`), with the pieces of its own. States are words in their colour, never pills.
  */
 .dk-sx {
@@ -244,7 +244,7 @@
   place-items: center;
 }
 
-/* Reach's quiet links under its row ("Change", "Turn off"), on the row's text column (ADR 0256 §4). */
+/* Reach's quiet links under its row ("Change", "Turn off"), on the row's text column (ADR 0265 §4). */
 .dk-sx__rowlinks {
   display: flex;
   flex-wrap: wrap;

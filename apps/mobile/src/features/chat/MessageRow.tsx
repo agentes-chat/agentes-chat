@@ -27,7 +27,7 @@ import { managesAgent } from "@agenteschat/client/lib/audience";
 import { channelRefsOf } from "@agenteschat/client/lib/channel-refs";
 import { type RunPosition, runAround } from "@agenteschat/client/lib/chat";
 import { mineOnRight } from "@agenteschat/client/lib/chat-look";
-import { choiceReplyLine } from "@agenteschat/client/lib/choices";
+import { choiceReplyLine, choiceReplyRows } from "@agenteschat/client/lib/choices";
 import type { RelayedAnswer } from "@agenteschat/client/lib/consult-group";
 import { spilledText } from "@agenteschat/client/lib/devices";
 import { agentsByAnyHandle } from "@agenteschat/client/lib/directory";
@@ -46,6 +46,7 @@ import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { issueWorkOf } from "@agenteschat/client/lib/issues";
 import { workAnchorBody, workContinuable, workIsOver } from "@agenteschat/client/lib/long-work";
 import { brainUnavailableOf, messageToolOff } from "@agenteschat/client/lib/machine-outages";
+import { hasWideBlock } from "@agenteschat/client/lib/markdown";
 import { isMediaAfterReply, messageMediaOf } from "@agenteschat/client/lib/media";
 import { memberRoleColor } from "@agenteschat/client/lib/member-groups";
 import { serverBody } from "@agenteschat/client/lib/message-body";
@@ -136,7 +137,7 @@ import { secretRequestOf } from "./ask-store";
 import { useBubbleCap } from "./bubble-cap";
 import { ChatMedia } from "./ChatMedia";
 import { ClippedMessage, OpenedMessagesContext } from "./ClippedMessage";
-import { ConsultQuote, useRunConsults } from "./ConsultGroup";
+import { ConsultPairRow, useRunConsults } from "./ConsultGroup";
 import { ApprovalInline, QuestionCard, ThreadLink, ThreadReplyingLink } from "./cards";
 import { FeedbackOfferRow } from "./FeedbackOffer";
 import { HandedTaskChips, IssueWorkCard } from "./issue-work";
@@ -146,6 +147,7 @@ import {
   approvalIdOf,
   artifactsOf,
   BUBBLES_EDGE,
+  BUBBLES_END,
   CHAT_TEXT_MAX_SCALE,
   chatNameOf,
   chatTimeOf,
@@ -187,7 +189,7 @@ import { useStopMovedOn, useStoppedRun } from "./stopped-runs";
 import { SwipeSlide, SwipeTime, useGiveWay, useSwipeSlide } from "./swipe-time";
 import { TeamChecks } from "./TeamChecks";
 import { SavedTools, TurnTools } from "./ToolCalls";
-import { ThreadRootMark, useLandingEntrance } from "./thread-open";
+import { ThreadBubbleVeil, ThreadRootMark, useLandingEntrance } from "./thread-open";
 import { keptTurn, stepLimitOf, stoppedOf, turnOpener } from "./turn";
 import { HandedWorkLines, MessageWorkLine } from "./WorkLine";
 
@@ -351,8 +353,8 @@ function RowBody({
   // The right hand's stand-in line is its pill's sentence (`NoAiCard`): no text above it too.
   const body = isStandInLine(meta) ? "" : m.longWork ? workAnchorBody(t, said, meta, m.longWork) : said;
   const workOver = Boolean(m.longWork && workIsOver(m.longWork));
-  // The person's pick on a choice card (ADR 0124): one compact line, not a bubble.
-  const choiceReply = meta?.choiceReply && body ? <ChoiceReply text={choiceReplyLine(body)} /> : null;
+  // The person's picks on a choice card (ADR 0124): compact lines, not a bubble.
+  const choiceReply = meta?.choiceReply && body ? <ChoiceReply body={body} meta={meta} /> : null;
   const consulted = isAgent && m.author.id ? consultationsOf(meta) : [];
   // A long message from one agent to another (ADR 0034): its first paragraph and "Ver mais", which opens the rest in
   // place. On its thread's screen, and where it is read only, it stays whole.
@@ -391,22 +393,11 @@ function RowBody({
     (c) => !m.handedWorks?.some((w) => w.handedBy?.consultationId === c.id) && c.id !== relay?.consultation.id,
   );
   const relayQuote = relay && !readOnly ? <RelayQuote relay={relay} channelId={m.channelId} /> : null;
-  const pairQuote =
-    isAgent && m.author.id && paired.length > 0 ? (
-      <ConsultQuote askerId={m.author.id} channelId={m.channelId} items={paired} />
-    ) : null;
-  const consultQuote =
-    relayQuote && pairQuote ? (
-      <>
-        {relayQuote}
-        {pairQuote}
-      </>
-    ) : (
-      (relayQuote ?? pairQuote)
-    );
-  const quoteAlone = consultQuote !== null && (!body || Boolean(choiceReply));
-  const quoteInWords = quoteAlone ? null : consultQuote;
-  const grouped = groupedIn && !quoteAlone;
+  // The agents it asked first: the web's slim row between hairlines, before the reply (its face and name again).
+  const pairRow = isAgent && m.author.id && paired.length > 0;
+  const quoteAlone = relayQuote !== null && (!body || Boolean(choiceReply));
+  const quoteInWords = quoteAlone ? null : relayQuote;
+  const grouped = groupedIn && !quoteAlone && !pairRow;
   // A question to another agent (in their DM) carries the asking run: its work shows on that run's reply.
   const ownWork = isAgent && Boolean(m.agentRunId) && !meta?.consultation && !mediaAfter;
   const steps = ownWork ? workStepsOf(meta) : null;
@@ -660,6 +651,9 @@ function RowBody({
   const bubbleCap = useBubbleCap();
   // A compact row runs to the screen's edge: its face and words slide over with the pull, for its time.
   const slide = useSwipeSlide(compact);
+  // A table or code in someone else's bubble takes the conversation's width, out to the screen's margin: at a bubble's
+  // own width a table showed two of its columns on a phone (the web's bubble widens the same way).
+  const wide = useMemo(() => bubbled && Boolean(body) && hasWideBlock(body ?? ""), [bubbled, body]);
 
   if (onRight) {
     // In bubbles the time and what became of the message are never in it (a mark coming in or swapping changed the
@@ -693,6 +687,9 @@ function RowBody({
           bubbleEdge,
         ]}
       >
+        <ThreadBubbleVeil
+          corners={{ borderRadius: (bubbled ? lookRows.bubble : styles.bubble).borderRadius, ...BUBBLE_RUN[run] }}
+        />
         {quote ? <QuotePlate reply={quote} onJump={onQuote} {...(solidInk ? { ink: solidInk } : {})} /> : null}
         <ClippedMessage id={m.id} behind={[(bubbled && look.fill) || c.bubble]} ink={solidInk}>
           <MessageText
@@ -1000,10 +997,13 @@ function RowBody({
   const partTop = bubbled && (body || media) ? BUBBLE_JOIN - rhythm.part : cardTop;
   return (
     <>
-      {quoteAlone && m.author.id ? (
-        <View style={[plateInset(look, aboveInset(look)), { marginTop: rhythm.turn }]}>
-          <ConsultQuote askerId={m.author.id} channelId={m.channelId} items={paired} alone />
+      {pairRow && m.author.id ? (
+        <View style={{ marginTop: rhythm.turn }}>
+          <ConsultPairRow askerId={m.author.id} channelId={m.channelId} items={paired} />
         </View>
+      ) : null}
+      {quoteAlone ? (
+        <View style={[plateInset(look, aboveInset(look)), { marginTop: rhythm.turn }]}>{relayQuote}</View>
       ) : null}
       {liveRef ? (
         <View style={[styles.aboutAbove, { paddingLeft: aboveInset(look), marginTop: rowGap }]}>
@@ -1074,12 +1074,14 @@ function RowBody({
                       }}
                       style={[
                         lookRows.bubble,
+                        wide && styles.wideBubble,
                         OTHER_RUN[run],
                         { backgroundColor: otherBubble },
                         bubbleEdge,
                         bubbleCap.capStyle,
                       ]}
                     >
+                      <ThreadBubbleVeil corners={{ borderRadius: lookRows.bubble.borderRadius, ...OTHER_RUN[run] }} />
                       {!grouped && (look.names || tagged) ? who(true) : null}
                       {quoteInWords}
                       {quote ? <QuotePlate reply={quote} onJump={onQuote} /> : null}
@@ -1419,14 +1421,33 @@ function StoppedLine({
 }
 
 /** The person's pick sent from a choice card (ADR 0124): a check and what they picked. */
-function ChoiceReply({ text }: { text: string }) {
+/**
+ * The person's picks on a choice card, as the web draws them: the check on the first line, then a line per question,
+ * the question quiet and the answer standing out. A reply that doesn't carry them apart is one line.
+ */
+function ChoiceReply({ body, meta }: { body: string; meta: Record<string, unknown> | undefined }) {
   const c = useColors();
+  const rows = choiceReplyRows(body, meta);
   return (
     <View style={styles.choiceReply}>
       <LineIcon name="check" size={13} color={c.muted} variant="footnote" />
-      <Text variant="footnote" tone="ink" style={[styles.medium, styles.shrink]}>
-        {text}
-      </Text>
+      {rows ? (
+        <View style={styles.choiceRows}>
+          {rows.map((r, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: the card's questions in their order, never reordered
+            <Text key={i} variant="footnote" tone="muted">
+              {r.question}{" "}
+              <Text variant="footnote" tone="ink" style={styles.medium}>
+                {r.answer}
+              </Text>
+            </Text>
+          ))}
+        </View>
+      ) : (
+        <Text variant="footnote" tone="ink" style={[styles.medium, styles.shrink]}>
+          {choiceReplyLine(body)}
+        </Text>
+      )}
     </View>
   );
 }
@@ -1693,12 +1714,15 @@ const styles = StyleSheet.create({
   replied: { marginTop: 0, paddingTop: QUOTE_GAP },
   // Bubbles only: the other looks' cards cast shadows past the row.
   ownBox: { overflow: "hidden" },
+  // To the screen's margin past the room a bubble leaves at its end (`BUBBLES_END`), as far in as mine stands.
+  wideBubble: { alignSelf: "stretch", marginRight: -(BUBBLES_END - BUBBLES_EDGE) },
   aboutAbove: { paddingRight: 16 },
   // A quote of the agents' talk with no words to sit in: on the words' column, as wide as a bubble's.
   avslot: { width: MSG_AVATAR, alignItems: "center", paddingTop: 2 },
   body: { flex: 1, minWidth: 0 },
   // A long pick wraps: the check stays on its first line.
   choiceReply: { flexDirection: "row", alignItems: "flex-start", gap: 6, paddingVertical: 2 },
+  choiceRows: { flexShrink: 1, gap: 2 },
   // Wraps on a narrow phone: a routine's tag and "Ver relatório" go to the next line instead of off the edge.
   who: { flexDirection: "row", flexWrap: "wrap", alignItems: "baseline", columnGap: 8, rowGap: 4, marginBottom: 4 },
   // A person's name line keeps room at its end for the receipt's mark, with or without one, so a mark that comes

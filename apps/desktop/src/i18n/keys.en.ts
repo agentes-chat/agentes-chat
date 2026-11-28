@@ -21,6 +21,14 @@ export const desktopEn = {
   device: { mac: "Mac", windows: "PC", linux: "computer" },
   /** The app's own windows by name (the Dock's list, the Window menu, Mission Control). */
   windowTitle: { welcome: "Welcome", prefs: "Preferences", settings: "Settings" },
+  /** The notification the first time someone closes the main window: the app keeps running (background.rs). */
+  background: {
+    title: "agentes.chat is still running",
+    /** A Mac: the icon at the top right of the screen. */
+    bodyMac: "Find it in the menu bar at the top of the screen. Open it or quit it from there.",
+    /** Windows and Linux. */
+    bodyTray: "Find it in the system tray. Open it or quit it from there.",
+  },
   common: {
     cancel: "Cancel",
     close: "Close",
@@ -81,6 +89,12 @@ export const desktopEn = {
         tabs: "switching tabs",
       },
     },
+    apps: {
+      title: "{{agent}} is using {{app}}",
+      detail: "Your mouse and keyboard stay yours",
+      stop: "Stop",
+      stopped: "{{agent}} stopped using your apps",
+    },
     label: "agentes.chat",
     now: "Now",
     background: "In the background",
@@ -102,7 +116,7 @@ export const desktopEn = {
     pauseHintServer: "What is already running finishes normally. The server stays up.",
     resume: "Resume the agents",
     open: "Open agentes.chat",
-    /** The tray's item on Windows and Linux: this computer's settings in the app's window (ADR 0256). */
+    /** The tray's item on Windows and Linux: this computer's settings in the app's window (ADR 0265). */
     thisMac: "This {{device}} settings…",
     quit: "Quit agentes.chat",
     pausedFor1h: "Paused for 1 hour",
@@ -153,19 +167,24 @@ export const desktopEn = {
     allowedUndo: "Undo",
     allowedOk: "OK",
     allowedUndone: "Off again: {{tool}}",
+    /** Someone asked from agentes.chat (the site or the phone) for a folder here: the popover's card and the notification. */
+    pickTitle: "{{name}} asks for a folder for the agents",
+    pickTitleAgent: "{{name}} asks for a folder for {{agent}}",
+    pickBody: "Choose which folder to allow on this {{device}}.",
+    pickChoose: "Choose folder",
     quitTitle: "Quit agentes.chat?",
     quitBody:
       "Agents can't use this {{device}} while the app is closed. What is already running finishes and sends the result when you open it again.",
     quitHereBody:
       "agentes.chat stops on this {{device}}: nobody can use it, here, on your phone or your teammates', until you open the app again.",
     quitConfirm: "Quit",
-    /** The popover's head under this computer's name (ADR 0256 §7): essentials off, requests, permissions. */
+    /** The popover's head under this computer's name (ADR 0265 §7): essentials off, requests, permissions. */
     needsYou_one: "{{count}} thing needs you",
     needsYou_other: "{{count}} things need you",
     allSet: "All set",
     /** This computer's name before a workspace named it. */
     thisDevice: "This {{device}}",
-    /** The popover's menu: this computer's settings in the main window (ADR 0256). */
+    /** The popover's menu: this computer's settings in the main window (ADR 0265). */
     settings: "This {{device}} settings",
     /** The banner for the first of this computer's essentials that needs the person, with its one fix. */
     essential: {
@@ -191,7 +210,7 @@ export const desktopEn = {
           title: "Tailscale isn't connected on this {{device}}",
           body: "Your phone and team can't reach agentes.chat.",
         },
-        /** The person's own address (a tunnel of theirs) doesn't lead here now (ADR 0256 §4). */
+        /** The person's own address (a tunnel of theirs) doesn't lead here now (ADR 0265 §4). */
         address: {
           title: "Your address doesn't lead here now",
           body: "Your phone and team can't reach agentes.chat until it does. Check that your tunnel is on.",
@@ -222,7 +241,7 @@ export const desktopEn = {
     /** Adding a workspace, under "Sign in to agentes.chat": a new one instead. */
     addNew: "Want a new workspace?",
     addNewLink: "Create one",
-    /** The first screen (ADR 0256 §2): sign in first, the other ways under it, a server found on top. */
+    /** The first screen (ADR 0265 §2): sign in first, the other ways under it, a server found on top. */
     welcome: {
       title: "Welcome to agentes.chat",
       lead: "Your team of AI agents, working with you in the chat.",
@@ -242,7 +261,7 @@ export const desktopEn = {
       foundTailnet: "agentes.chat is on your network",
       foundHere: "agentes.chat is running on this {{device}}",
     },
-    /** Running agentes.chat on this computer in three steps (ADR 0256 §3), then the setup and the phone's code. */
+    /** Running agentes.chat on this computer in three steps (ADR 0265 §3), then the setup and the phone's code. */
     run: {
       /** Over each step's title: "Run on this Mac · 1 of 3". */
       step: "Run on this {{device}} · {{n}} of {{total}}",
@@ -259,7 +278,7 @@ export const desktopEn = {
       everywhereText: "Through Tailscale or an address of yours.",
       hereOnly: "Only on this {{device}}",
       hereOnlyText: "The phone can come later.",
-      /** How the phone and the team get here (ADR 0256 §4): Tailscale or an address of the person's own. */
+      /** How the phone and the team get here (ADR 0265 §4): Tailscale or an address of the person's own. */
       netTitle: "How do the phone and the team get here?",
       netLead: "You can change it later in Settings.",
       later: "Do it later",
@@ -284,7 +303,7 @@ export const desktopEn = {
     },
   },
   /**
-   * How the phone and the team reach agentes.chat on this computer (ADR 0256 §4), shared by the first run and Settings:
+   * How the phone and the team reach agentes.chat on this computer (ADR 0265 §4), shared by the first run and Settings:
    * the official Tailscale the person installs, or an address of their own (a tunnel on this computer).
    */
   reach: {
@@ -681,10 +700,17 @@ export const desktopEn = {
     share: "Let the whole workspace use it",
     /** A workspace with its own computer opens websites through this one's internet (ADR 0237); on by default. */
     internet: "Agents use this computer's internet",
-    internetOn: "Websites the agents open see your location",
+    internetOn: "Sites and servers the agents reach see your location",
     internetOff: "Off: agents use their usual connection",
     internetHint:
-      "The workspace's agents open websites through this computer's connection. Only websites and never anything on your own network. While this computer is offline, they use their usual connection.",
+      "The workspace's agents go online through this computer's connection: websites, git, SSH, databases and other TCP connections. Never anything on your own network, nor email on port 25. The agents' AI, name lookups, calls and other UDP traffic use their usual connection, and so does everything while this computer is offline.",
+    /** The same on a self-hosted server, where agents reach it through proxy settings (ADR 0237). */
+    internetHintProxy:
+      "The workspace's agents' browsers and the programs that follow proxy settings (git over HTTPS, curl, most command-line tools) go online through this computer's connection. SSH, database clients and other programs that ignore proxy settings use their usual connection, and so do the agents' AI, name lookups and UDP traffic. Never anything on your own network, nor email on port 25. While this computer is offline, everything uses the usual connection.",
+    /** Nested under `internet` while it is on (ADR 0237, amendment 2026-11-27 c). */
+    internetOnly: "Use only this computer's internet",
+    internetOnlyHint:
+      "Agents use only this computer's internet, their AI included, and never the usual connection. While it's offline, they have no internet until it's back.",
     shareOff: "Only you for now",
     shareHint: "Everyone's agents in {{org}} can run tasks on it, as your user.",
     addFolders: "Add folders",
@@ -696,7 +722,7 @@ export const desktopEn = {
     canUse: "Agents can use it",
     notUsing: "Its agents don't use this {{device}}",
   },
-  /** The sheets over the site (ADR 0256): getting this computer ready for a workspace, then macOS's permissions. */
+  /** The sheets over the site (ADR 0265): getting this computer ready for a workspace, then macOS's permissions. */
   sheets: {
     /** Over a sheet of this computer's setup: where it is in it ("This Mac · 1 of 2"). */
     step: "This {{device}} · {{at}} of {{total}}",
@@ -773,7 +799,7 @@ export const desktopEn = {
     prefsTitle: "Permissions",
     prefsHint: "macOS may turn these off when the app updates. Turn them on again here.",
   },
-  /** What keeps agents working here and the server here reachable, when one of them falls (ADR 0256). */
+  /** What keeps agents working here and the server here reachable, when one of them falls (ADR 0265). */
   essentials: {
     /** The menu bar icon's tooltip (and, on Windows and Linux, its menu's first line) while one is off. */
     tray: "Something on this {{device}} needs you",
@@ -1136,7 +1162,7 @@ export const desktopEn = {
       folderDesc: "One folder per workspace, with a folder for each agent.",
     },
   },
-  /** Settings › This computer, on the main window's app layer (ADR 0256): its sections, under the workspace's own. */
+  /** Settings › This computer, on the main window's app layer (ADR 0265): its sections, under the workspace's own. */
   settings: {
     nav: {
       /** The list of sections (for screen readers). */
@@ -1203,7 +1229,7 @@ export const desktopEn = {
       onlyHere: "only on this {{device}}",
       /** Under "Only on this {{device}}" (said once, as its title). */
       onlyHereDesc: "Your phone and team can't open it.",
-      /** Under the address for people: how they get here (ADR 0256 §4). */
+      /** Under the address for people: how they get here (ADR 0265 §4). */
       wayTailscale: "Through Tailscale, with a lock",
       wayAddress: "Through your address",
       /** Quiet links under it: choose the way again, or turn access off (it asks first). */
@@ -1299,7 +1325,7 @@ export const desktopEn = {
     startNow: "Start now",
     /** Another server of the app's list, by its name. */
     openOther: "Open {{server}}",
-    /** A workspace on someone's private network (Tailscale) that this computer can't reach now (ADR 0256). */
+    /** A workspace on someone's private network (Tailscale) that this computer can't reach now (ADR 0265). */
     privateTitle: "{{org}} is on the private network",
     privateTitleAny: "This workspace is on the private network",
     privateLine: "And the network is off on this {{device}}. Turn it on and the workspace opens by itself.",

@@ -99,7 +99,7 @@ test("a server's tile: Tailscale's own icon for one on the Tailscale network, a 
   expect(rule('[data-theme="dark"] .dk-tailscale')).toContain("fill: #fff");
 });
 
-test("reach's tile by its way (ADR 0256 §4): Tailscale's own icon, a link for the person's address", async () => {
+test("reach's tile by its way (ADR 0265 §4): Tailscale's own icon, a link for the person's address", async () => {
   const el = document.body.appendChild(document.createElement("div"));
   const root = createRoot(el);
   await act(async () =>

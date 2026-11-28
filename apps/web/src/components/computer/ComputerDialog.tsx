@@ -19,6 +19,12 @@ import {
 import { ownsAgentAs } from "@agenteschat/client/lib/agent-owner";
 import { managesAgent } from "@agenteschat/client/lib/audience";
 import { computerName, READY_FLASH_MS, WORKSPACE_COMPUTER_KIND } from "@agenteschat/client/lib/computer";
+import {
+  maintenanceDetails,
+  maintenanceLine,
+  maintenanceOf,
+  maintenanceShort,
+} from "@agenteschat/client/lib/computer-maintenance";
 import { helpingDevices, withHelping } from "@agenteschat/client/lib/devices";
 import { clockAt } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
@@ -493,14 +499,16 @@ export function ComputerStage({
   } else if (machine && !machine.online && !machine.standby) {
     const since = machine.lastSeenAt ? clockAt(i18n.language, machine.lastSeenAt) : null;
     const outage = outages.data?.outages.find((o) => o.machineId === machine.id);
-    body = machine.moving ? (
+    const away = maintenanceOf(machine);
+    body = away?.away ? (
       <>
-        <DialogHead sub={t("machines.moving.short")} />
+        <DialogHead sub={maintenanceShort(t, away)} />
         <Stage>
           <Cover
             color={color}
             art={<ComputerPortrait kind={WORKSPACE_COMPUTER_KIND} state="paused" size={96} />}
-            text={t("machines.moving.line")}
+            text={maintenanceLine(t, away)}
+            help={maintenanceDetails(t, i18n.language, away).join(" ")}
           />
         </Stage>
         {notice}

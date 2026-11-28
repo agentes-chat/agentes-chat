@@ -193,6 +193,29 @@ describe("the reporter", () => {
     expect(event.exception.values[0].stacktrace.frames.length).toBeGreaterThan(0);
   });
 
+  test("an error that names its group, level and contexts is reported in that group, at that level, with them", async () => {
+    const { reporter, sent } = await reporterToFakeServer();
+    const slow = Object.assign(new Error("Slow first_byte: wait (claude_code)"), {
+      fingerprint: ["slow_turn", "first_byte", "wait", "claude_code"],
+      level: "warning" as const,
+      contexts: {
+        slow: { ms: 9100, budget_ms: 6000 },
+        cli_log: { lines: ["+412ms [DEBUG] [API REQUEST] /v1/messages"] },
+      },
+    });
+    reporter.capture(slow, { brain: "claude_code" });
+    expect(await reporter.flush(2000)).toBe(true);
+    expect(eventOf(sent[0]?.body ?? "")).toMatchObject({
+      level: "warning",
+      fingerprint: ["slow_turn", "first_byte", "wait", "claude_code"],
+      contexts: {
+        slow: { ms: 9100, budget_ms: 6000 },
+        cli_log: { lines: ["+412ms [DEBUG] [API REQUEST] /v1/messages"] },
+      },
+      tags: { brain: "claude_code" },
+    });
+  });
+
   test("the phone app's reports say what runs them, scrubbed the same", async () => {
     const { reporter, sent } = await reporterToFakeServer({ platform: "javascript", runtime: { name: "android" } });
     reporter.capture(new Error("for ana@example.com"), { view: "computer", page_ready: false });

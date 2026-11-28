@@ -1,5 +1,5 @@
 /*
- * The app layer's sheets (ADR 0256, SheetFrame.tsx). Sheet mode: a scrim over the site, its top strip dragging the
+ * The app layer's sheets (ADR 0265, SheetFrame.tsx). Sheet mode: a scrim over the site, its top strip dragging the
  * window, a card in the middle. Full mode: the same card on the app's background. The card is as tall as what it
  * holds, up to the window: then its body scrolls and its footer stays.
  */

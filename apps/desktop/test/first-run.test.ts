@@ -121,7 +121,7 @@ describe("a typed address", () => {
     expect(own).toEqual({ open: here, all: [here, BOX] });
     // Typed at loopback: its own check names the Tailscale address, and it still opens at loopback.
     expect(connectOutcome(here, ok(BOX), own)).toEqual({ kind: "use", server: here });
-    // Typed (or found by discovery) at its Tailscale address: on this computer, at loopback too (ADR 0256 §5).
+    // Typed (or found by discovery) at its Tailscale address: on this computer, at loopback too (ADR 0265 §5).
     expect(connectOutcome(BOX, ok(BOX), own)).toEqual({ kind: "use", server: here });
     expect(connectOutcome(here, ok(BOX))).toEqual({ kind: "confirm", server: BOX });
     // Reach off: only its loopback address.
@@ -264,9 +264,24 @@ describe("the menu bar and the labels Rust shows", () => {
       }
     }
   });
+
+  // The first close's notification (background.rs): every language has its own words, the Mac's and the tray's.
+  test("the notice that the app keeps running, in every language", async () => {
+    const en = menuLabels((await loadDesktopI18n("en", "mac")).t);
+    expect(en.backgroundTitle).toBe("agentes.chat is still running");
+    expect(en.backgroundBodyMac).toContain("menu bar");
+    expect(en.backgroundBodyTray).toContain("system tray");
+    for (const { code: lng } of LOCALES.filter((l) => l.code !== "en")) {
+      const labels = menuLabels((await loadDesktopI18n(lng, "windows")).t);
+      for (const key of ["backgroundTitle", "backgroundBodyMac", "backgroundBodyTray"] as const) {
+        expect({ lng, key, translated: labels[key] !== en[key] }).toEqual({ lng, key, translated: true });
+      }
+      expect(labels.backgroundBodyMac).not.toBe(labels.backgroundBodyTray);
+    }
+  });
 });
 
-describe("running agentes.chat here (ADR 0256 §3)", () => {
+describe("running agentes.chat here (ADR 0265 §3)", () => {
   test("the steps: the owner only while there is none, how people get here only when it is needed", () => {
     expect(hereSteps(true, true)).toEqual(["owner", "where", "net"]);
     expect(hereSteps(true, false)).toEqual(["owner", "where"]);
@@ -274,7 +289,7 @@ describe("running agentes.chat here (ADR 0256 §3)", () => {
     expect(hereSteps(false, false)).toEqual(["where"]);
   });
 
-  test("how people get here: only beyond this computer, and never with the system's Tailscale on (ADR 0256 §4)", () => {
+  test("how people get here: only beyond this computer, and never with the system's Tailscale on (ADR 0265 §4)", () => {
     expect(needsPrivateNetwork("everywhere", { state: "off" })).toBe(true);
     expect(needsPrivateNetwork("everywhere", { state: "missing" })).toBe(true);
     // Not read yet: asked.

@@ -157,7 +157,7 @@ export const oauthStates = pgTable(
     personal: boolean().notNull().default(false),
     /**
      * Where the provider sends the person back, when not `PUBLIC_URL`'s callback: the server's own loopback callback
-     * for an MCP sign-in started at its loopback origin (RFC 8252, ADR 0256 §5). The code is traded with the same one.
+     * for an MCP sign-in started at its loopback origin (RFC 8252, ADR 0265 §5). The code is traded with the same one.
      */
     redirectUri: text(),
     expiresAt: timestamp({ withTimezone: true }).notNull(),
@@ -202,7 +202,7 @@ export const oauthClients = pgTable(
     /**
      * The return addresses it was registered with. Null: `PUBLIC_URL`'s callback alone (registered before the
      * loopback one existed, or an admin's own client). A native server registers its loopback callback too
-     * (ADR 0256 §5), so a sign-in started there comes back there.
+     * (ADR 0265 §5), so a sign-in started there comes back there.
      */
     redirectUris: text().array(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
@@ -463,4 +463,25 @@ export const telegramUpdates = pgTable(
     index().on(t.connectionId, t.chatId, t.receivedAt),
     index().on(t.receivedAt),
   ],
+);
+
+/**
+ * A connector tool's name in a person's language, as the conversation's work lines show it (`list_available_accounts`
+ * → "Listar contas disponíveis"): written once per workspace and language by its cheap model when a person first sees
+ * the tool at work in a language other than English (`tool-label-words.ts` in the engine); until then, and for good
+ * when no model answers, the line shows the name's own English words. `key` is the name as the app's catalog keys it
+ * (`toolKey`). Tools with words in the app's own catalog are never asked for.
+ */
+export const toolLabelWords = pgTable(
+  "tool_label_words",
+  {
+    orgId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    locale: text().notNull(),
+    key: text().notNull(),
+    words: text().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.orgId, t.locale, t.key] })],
 );

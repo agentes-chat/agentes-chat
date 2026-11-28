@@ -5,13 +5,13 @@
  * "Can't reach {{host}}…"), and when it is back it asks to load the page again. Over the server here it says
  * that one's state instead (starting, updating, stopped, not starting), with the buttons that fix it: a start or an
  * update shows its time from 10 s, and Copy details once it takes longer than expected. The window opens the server
- * here at its loopback address, never through the tailnet (ADR 0256 §5), so Tailscale is never its reason. A server
+ * here at its loopback address, never through the tailnet (ADR 0265 §5), so Tailscale is never its reason. A server
  * out of reach offers another one; a workspace on a private network (a Tailscale address) while Tailscale is off here
- * shows a card that turns it on (the system's Tailscale, ADR 0256 §4: its Mac app opens, or its download page),
+ * shows a card that turns it on (the system's Tailscale, ADR 0265 §4: its Mac app opens, or its download page),
  * never a command.
  */
 
-import { CLOUD_SERVER, isTailnet, serverHost } from "@agenteschat/client/lib/server";
+import { checkServer, isTailnet, serverHost } from "@agenteschat/client/lib/server";
 import { drawAgent, idlePose } from "@agenteschat/ui/agent/engine";
 import { startSky } from "@agenteschat/ui/sky/engine";
 import { SKY_TONES } from "@agenteschat/ui/sky/math";
@@ -29,7 +29,7 @@ import {
   UPDATE_SLOW_MS,
 } from "../control/local-server";
 import { platformOf } from "../control/platform";
-import type { ServerWorkspaces } from "../control/server";
+import { serverName, type ServerWorkspaces, type VersionProblem, versionProblem } from "../control/server";
 import { SITE_URL } from "../control/version";
 import { desktopStrings, systemLocale } from "../i18n";
 import { mountReportPanel } from "../report/panel";
@@ -74,6 +74,8 @@ let waitSince: { state: "starting" | "migrating"; at: number } | null = null;
 let stuckSteps = 0;
 /** The server open now is the one here (the last check): Copy details copies its diagnostics, else the window's. */
 let overHere = false;
+/** The server open now speaks an app API this app doesn't: the cover says so and stays until the person chooses. */
+let tooOld: VersionProblem | null = null;
 /** A short word in the time's place ("Copied"), until then: the explanation above it stays as it is. */
 let aside: { text: string; until: number } | null = null;
 /** What turns the network on, as last read, and when: each read runs Tailscale's own command. */
@@ -174,11 +176,13 @@ function shown() {
   unreachable = false;
   waitSince = null;
   stuckSteps = 0;
+  tooOld = null;
   say("");
   tick();
   buttons([]);
   hidePrivate();
   root?.removeAttribute("data-fading");
+  void checkVersion();
   void check();
 }
 
@@ -277,7 +281,6 @@ async function otherServer(status: LocalServerStatus | null): Promise<string | n
   if (!list) return null;
   return list.servers.find((s) => s !== list.current && !(status && isHereServer(status, s))) ?? null;
 }
-const serverName = (server: string) => (server === CLOUD_SERVER ? "agentes.chat" : serverHost(server));
 const openServer = (server: string) => void invoke("server_choose", { server }).catch(() => {});
 
 /** The server here's state on the cover, with what fixes it. */
@@ -314,7 +317,7 @@ function showHere(state: NonNullable<ReturnType<typeof coverHere>>, status: Loca
   }
 }
 
-/** The first run, to pick another server or workspace (the main window's app layer, ADR 0256). */
+/** The first run, to pick another server or workspace (the main window's app layer, ADR 0265). */
 const otherWorkspace = () =>
   void invoke("layer_show", { route: { screen: "firstRun", mode: "servers" } }).catch(() => {});
 
@@ -413,7 +416,35 @@ function turnOn(fix: NetworkFix) {
   else if (fix.act === "download") openPage("download");
 }
 
+const showAnyway: [string, () => void] = [words.showAnyway, () => void invoke("cover_hide").catch(() => {})];
+const another: [string, () => void] = [words.otherServer, otherWorkspace];
+
+/**
+ * Each time a server of the list opens, whether this app still speaks its app API (`GET /api/instance`, as when it was
+ * added): if not, the first run's words over its page, which Rust keeps covered (`cover_hold`) until Show it
+ * anyway or another server.
+ */
+async function checkVersion() {
+  const server = await currentServer();
+  const problem = versionProblem(await checkServer(server).catch(() => null));
+  if (!problem || server !== (await currentServer())) return;
+  tooOld = problem;
+  void invoke("cover_hold").catch(() => {});
+  const host = serverName(server);
+  const connect = strings.connect;
+  say(fillIn(problem === "app-too-old" ? connect.appTooOld : connect.serverTooOld, { host }));
+  const updates: [string, () => void] = [
+    connect.checkUpdates,
+    () =>
+      void invoke("layer_show", { route: { screen: "settings", section: "overview", focus: "updates" } }).catch(
+        () => {},
+      ),
+  ];
+  buttons(problem === "app-too-old" ? [updates, another, showAnyway] : [another, showAnyway]);
+}
+
 async function check() {
+  if (tooOld) return;
   if (document.visibilityState !== "visible" || root?.hasAttribute("data-fading")) return;
   const waited = performance.now() - shownAt;
   const server = await currentServer();
@@ -439,7 +470,7 @@ async function check() {
   if (waited < CHECK_MS) return;
   if (!(await reachable(server))) {
     unreachable = true;
-    // A workspace on a private network while the network is off here: the card that turns it on (ADR 0256).
+    // A workspace on a private network while the network is off here: the card that turns it on (ADR 0265).
     const fix = navigator.onLine && isTailnet(server) ? await readNetwork() : null;
     if (fix) {
       await showPrivate(server, fix);
@@ -480,7 +511,7 @@ function stuck(waited: number) {
       },
     ],
     [words.copy, copyDiagnostics],
-    [words.showAnyway, () => void invoke("cover_hide").catch(() => {})],
+    showAnyway,
   ]);
 }
 

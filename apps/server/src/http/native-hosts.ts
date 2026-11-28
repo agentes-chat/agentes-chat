@@ -1,8 +1,8 @@
 /**
- * The addresses of a server that runs on this computer (native mode, `ownHostsOnly`, ADR 0256 §5). It listens on
+ * The addresses of a server that runs on this computer (native mode, `ownHostsOnly`, ADR 0265 §5). It listens on
  * 127.0.0.1 only. The computer that runs it opens it at `http://127.0.0.1:<PORT>`, its loopback origin, and everyone
  * else at `PUBLIC_URL`, once reach is on either Tailscale's https address for this computer or an https address of
- * the person's own (a tunnel or a reverse proxy on this computer that leads here, ADR 0256 §4). Each origin keeps its
+ * the person's own (a tunnel or a reverse proxy on this computer that leads here, ADR 0265 §4). Each origin keeps its
  * own sign-in.
  *
  * The loopback origin gets no privilege of its own: nothing here trusts the Host, the peer address (127.0.0.1 is also
@@ -20,7 +20,7 @@ export const loopbackOrigin = (port: number | string) => `http://${loopbackHost(
 export const HERE_ID_PATH = "/api/native/here-id";
 
 /**
- * This process's id (ADR 0256 §4): 128 random bits made when it starts, never stored and not a secret. The app asks
+ * This process's id (ADR 0265 §4): 128 random bits made when it starts, never stored and not a secret. The app asks
  * for it at the loopback origin and through an address of the person's own, and the two match only when that address
  * leads to this very server. A restart makes a new one.
  */
@@ -31,7 +31,7 @@ const processHereId = (() => {
 
 /**
  * The answer to `GET` or `HEAD` `/api/native/here-id` (exact path), null for any other request: `{ "id": "<hex>" }`,
- * never cached. It runs before the host guard, the cookie layer and the app (ADR 0256 §4), so it answers for any Host
+ * never cached. It runs before the host guard, the cookie layer and the app (ADR 0265 §4), so it answers for any Host
  * (the address being checked isn't `PUBLIC_URL` yet), reads no cookie and sets none. Only a native server mounts it;
  * elsewhere the path is unknown (404).
  */
@@ -62,7 +62,7 @@ const originOf = (url: string) => {
 };
 
 /**
- * `EXTRA_TRUSTED_ORIGINS` with this server's loopback origin added, as native mode starts (ADR 0256 §5): the
+ * `EXTRA_TRUSTED_ORIGINS` with this server's loopback origin added, as native mode starts (ADR 0265 §5): the
  * window on this computer signs in and saves there while `PUBLIC_URL` is the tailnet's address. Computed on every
  * start, never written to `.env`, so it follows a port move. Only the exact origin: never `localhost`, no wildcard.
  * Unchanged when `PUBLIC_URL` already is that origin or the list already holds it.
@@ -115,7 +115,7 @@ export function isLoopbackHost(host: string | null | undefined) {
 }
 
 /**
- * The guard in front of a native server (ADR 0256 §5), null where the request goes on:
+ * The guard in front of a native server (ADR 0265 §5), null where the request goes on:
  * - `GET`/`HEAD` `/api/native/here-id` is answered for any Host (`hereIdAnswer`), the one exemption from the rest;
  * - a Host that isn't one of its names gets a 421 (a page that points a name of its own at 127.0.0.1, DNS rebinding);
  * - `127.0.0.1:<PORT>` and `PUBLIC_URL`'s host are served as themselves, never sent to the other;

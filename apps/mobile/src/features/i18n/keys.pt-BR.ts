@@ -13,12 +13,17 @@ export const featureKeysPtBR = {
     send: "Enviar",
   },
   categories: {
-    where: "Onde #{{channel}} aparece",
-    whereHelp: "Muda para todo mundo. Quem participa do canal continua igual.",
-    order: "Lugar na lista",
     up: "Subir",
     down: "Descer",
     channelPosition: "{{at}}º de {{count}}.",
+  },
+  sections: {
+    title: "Seção",
+    where: "Onde #{{channel}} fica para você",
+    whereHelp: "Só a sua lista muda. Cada pessoa arruma as próprias seções.",
+    none: "Sem seção",
+    order: "Lugar na seção",
+    tooLong: "Use até 40 caracteres.",
   },
   blocks: {
     send: "Mandar",
@@ -70,6 +75,17 @@ export const featureKeysPtBR = {
     raw: "Original",
     more: "Ver as {{count}} linhas",
     gone: "Esse código não está mais aberto.",
+  },
+  table: {
+    label_one: "Tabela · {{count}} linha",
+    label_other: "Tabela · {{count}} linhas",
+    title: "Tabela",
+    rows_one: "{{count}} linha",
+    rows_other: "{{count}} linhas",
+    copy: "Copiar a tabela",
+    copied: "Tabela copiada",
+    more: "Ver as {{count}} linhas",
+    gone: "Essa tabela não está mais aberta.",
   },
   time: {
     today: "Hoje",
@@ -189,13 +205,13 @@ export const featureKeysPtBR = {
       text: "Ele pode estar fora do ar ou fora da sua rede. Suas conversas aparecem sozinhas quando ele voltar.",
       kept: "Mostrando o que já estava no app.",
     },
-    /** Conversas' strip of what the person pinned (the web sidebar's pins), under Início's widgets. */
-    pinned: "Fixados",
+    /** Conversas' strip of the person's Favoritos (the web sidebar's, ADR 0260), under Início's widgets. */
+    favorites: "Favoritos",
     /** Conversas' one list: every chat by its latest activity, with no grouping. */
     recent: "Recentes",
     view: {
       title: "Ver as conversas",
-      sectors: "Setores",
+      sections: "Seções",
       dms: "Mensagens diretas",
       channels: "Canais",
     },
@@ -965,6 +981,7 @@ export const featureKeysPtBR = {
       admin_ask_channel_agent: "{{names}} pede para adicionar {{agent}} a #{{label}}",
       admin_ask_create_agents: "{{names}} pede para poder criar agentes",
       admin_ask_webhook: "{{names}} pede para ligar o webhook do {{service}} para rotinas",
+      admin_ask_voice: "{{names}} pede para ligar as mensagens de voz",
       routine_paused_one: "Rotina pausada",
       routine_paused_other: "Rotina pausada",
       routine_stalled_one: "Rotina esperando o computador",

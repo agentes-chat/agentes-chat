@@ -97,7 +97,7 @@ fn site_call(function: &str, args: &[&str]) -> String {
 }
 
 /// A choice for the site. From the menu bar it also brings the window forward, and settings step aside (⌘K from
-/// This computer's settings lands in the site, not under the app layer, ADR 0256).
+/// This computer's settings lands in the site, not under the app layer, ADR 0265).
 fn to_site(app: &AppHandle, js: String) {
     crate::app_layer::dismiss_settings(app);
     if let Some(page) = app.get_webview(main_window::LABEL) {
@@ -130,11 +130,11 @@ pub fn on_event(app: &AppHandle, id: &str) {
     }
     let Some(action) = id.strip_prefix("app:") else { return };
     match action {
-        // ⌘, and the tray's item: This computer's settings, the app layer's (ADR 0256).
+        // ⌘, and the tray's item: This computer's settings, the app layer's (ADR 0265).
         "prefs" => {
             let _ = crate::app_layer::show(app, crate::app_layer::Route::settings(None, None));
         }
-        // The tray's "needs you" line (Windows, Linux): the Overview, where each essential has its fix (ADR 0256 §7).
+        // The tray's "needs you" line (Windows, Linux): the Overview, where each essential has its fix (ADR 0265 §7).
         "attention" => {
             let route = crate::app_layer::Route::settings(Some(crate::app_layer::Section::Overview), None);
             let _ = crate::app_layer::show(app, route);

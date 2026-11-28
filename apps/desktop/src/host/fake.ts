@@ -22,7 +22,7 @@
  * The server here: `?phase=` (starting, updating, stopped, failing), `?reach=1`, `?back=<version>` (an update
  * went back), `?run=0` (it stopped running here, its data kept), `?owner=0` (it runs with no account left, and the
  * first run opens on Run here's form), `?usage=0` (usage statistics off),
- * `?tailscale=` (on, off, missing: the system's Tailscale, ADR 0256 §4; `&install=1` turns it on about 6 s after
+ * `?tailscale=` (on, off, missing: the system's Tailscale, ADR 0265 §4; `&install=1` turns it on about 6 s after
  * "Download Tailscale" or "Open Tailscale", as if the person installed it or signed in, so the waiting screens can be
  * captured), `?way=address&addr=<https address>` (reach through an address of the person's own, saved; with
  * `?reach=1`), `?addr=` (unreachable, other, error, nothttps: `checkAddress` fails that way), `?health=` (approve,
@@ -124,7 +124,7 @@ const LOCAL_PORT = 4310;
 const TAILNET_URL = "https://ana-mac.tail1234.ts.net";
 /** An address of the person's own, a tunnel's (`?way=address` without `?addr=`). */
 const OWN_ADDRESS = "https://agentes.example.com";
-/** How `checkAddress` fails for `?addr=` (ADR 0256 §4). */
+/** How `checkAddress` fails for `?addr=` (ADR 0265 §4). */
 const ADDRESS_FAILS: Record<string, { why: AddressProblem; status?: number }> = {
   unreachable: { why: "unreachable" },
   other: { why: "otherServer" },
@@ -164,6 +164,8 @@ export interface FakeHost extends Host {
   readonly notified: { title: string; body: string }[];
   /** This computer's essentials read again and sent, as Rust does when the app comes to the front (`onHealth`). */
   sayHealth(): void;
+  /** Every window shown, and whether it was kept up (`showWindow`'s `keep`). */
+  readonly shown: { name: WindowName; keep: boolean }[];
   /** The site in the main window asks this computer (ADR 0036): resolves with the popover's reply. */
   askThisMac(request: ThisMacRequest): Promise<{ ok: boolean; data: unknown }>;
   /** The app layer as Rust would keep it (`app_layer.rs`), and the routes shown, in order. */
@@ -332,7 +334,7 @@ export function createFakeHost(
             claim: here.claim && here.serving !== false ? "b3duZXItY2xhaW0tYWJjZGVmZ2hpamtsbW5vcHFy" : null,
           }
         : { systemName: "Ana Souza" }),
-    // The port the setup would pick now, and keeps (ADR 0256 §4: a tunnel points at it).
+    // The port the setup would pick now, and keeps (ADR 0265 §4: a tunnel points at it).
     port: here.installed === "terminal" ? null : LOCAL_PORT,
   };
   // `?install=1`: the person installs Tailscale (or signs in to it) about 6 s after its page or app opened.
@@ -359,7 +361,7 @@ export function createFakeHost(
       : scenario === "selfhost"
         ? { current: FAKE_SERVER, servers: [FAKE_SERVER, CLOUD_SERVER] }
         : running
-          ? // The window opens the server here at its loopback address (ADR 0256 §5).
+          ? // The window opens the server here at its loopback address (ADR 0265 §5).
             { current: LOCAL_URL, servers: [LOCAL_URL] }
           : { current: null, servers: [] };
   let link: string | null = options.link ?? (scenario === "link" ? CLAIM_LINK : null);
@@ -497,6 +499,7 @@ export function createFakeHost(
 
   const host: FakeHost = {
     window: initial,
+    shown: [],
     compat: { on: true, fellBack: false, own: false },
     fake: true,
     platform,
@@ -672,7 +675,8 @@ export function createFakeHost(
       }
     },
     setTrayVisible: async () => {},
-    showWindow: async (name) => {
+    showWindow: async (name, o) => {
+      host.shown.push({ name, keep: o?.keep === true });
       host.window = name;
       devChanged();
       for (const l of shownListeners) l(name);
@@ -916,7 +920,7 @@ export function createFakeHost(
       setLocal({ phase: "starting" });
       await wait(900);
       setLocal({ phase: "running" });
-      // The window stays on the loopback address: the list never changes (ADR 0256 §5).
+      // The window stays on the loopback address: the list never changes (ADR 0265 §5).
       const url = on ? peopleOf(way) : LOCAL_URL;
       setLocal({
         reach: on,

@@ -141,7 +141,7 @@ describe("this computer on its server", () => {
     );
   });
 
-  test("the server here's homes are asked at its loopback address, where the window signs in (ADR 0256 §5)", () => {
+  test("the server here's homes are asked at its loopback address, where the window signs in (ADR 0265 §5)", () => {
     const home = { status: { server: "http://127.0.0.1:4310" } } as Home;
     const local = {
       run: true,

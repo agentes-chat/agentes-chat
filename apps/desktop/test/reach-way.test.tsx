@@ -113,7 +113,7 @@ function typeInto(field: Element | null, value: string) {
   input.dispatchEvent(new window.Event("input", { bubbles: true }));
 }
 
-describe("the two ways (ADR 0256 §4)", () => {
+describe("the two ways (ADR 0265 §4)", () => {
   test("two rows with a hairline, a tile and a radio, Tailscale chosen; no card and no tag", () =>
     picker(
       async ({ el, rows }) => {

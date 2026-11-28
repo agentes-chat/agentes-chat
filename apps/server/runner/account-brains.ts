@@ -5,6 +5,8 @@ import {
   type AgentScope,
   type BrainRouteRequest,
   type BrainTurnRequest,
+  type BrainWarmReply,
+  type BrainWarmRequest,
   type MachineRequest,
   MISSION_RULES_NO_GIT,
   SHARED_LOGIN_OFF,
@@ -238,6 +240,27 @@ export class AccountBrains {
       release();
       scope.signal.removeEventListener("abort", cancel);
     }
+  }
+
+  /**
+   * `brain.warm` on the sign-in: its CLI starts here as its turn would start it (`BrainManager.prewarm`), with the
+   * agent's last text on this same sign-in, so nothing of another sign-in's goes into it.
+   */
+  async prewarm(
+    req: BrainWarmRequest,
+    agent: AgentScope,
+    scope: Pick<RequestScope, "signal">,
+  ): Promise<BrainWarmReply> {
+    const account = String(req.account);
+    if ((await this.readiness(account, agent, scope.signal)) !== "ready") return { open: false, started: false };
+    const user = await this.o.workers.agentReady(agent, scope.signal);
+    return this.brains.prewarm(req, {
+      agent,
+      folder: "",
+      signal: scope.signal,
+      emit: () => {},
+      delegated: await this.delegated(account, agent, user, scope.signal),
+    });
   }
 
   /**

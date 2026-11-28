@@ -1,5 +1,5 @@
 /**
- * This computer's essentials (ADR 0256 §7): what keeps agents working here and the server here reachable without
+ * This computer's essentials (ADR 0265 §7): what keeps agents working here and the server here reachable without
  * anyone looking. Each one is on, off (with the one action that turns it on again), still being read, or not one for
  * this computer. Opening at login, the macOS permissions agents need, reach, the nightly backup, installing updates at
  * night and staying awake while serving are on by default, so one that is off needs the person; starting after a
@@ -65,7 +65,7 @@ export type EssentialFix =
   | { kind: "autostart" }
   /** Prepare's way: the system's prompt while it was never asked, else System Settings on its list. */
   | { kind: "permission"; permission: MacPermission }
-  /** Reach was left off (only this computer): turning it on chooses how people get here (ADR 0256 §4). */
+  /** Reach was left off (only this computer): turning it on chooses how people get here (ADR 0265 §4). */
   | { kind: "reach" }
   /** HTTPS waits for one click in the Tailscale network's admin page: that page. */
   | { kind: "tailscaleHttps" }
@@ -138,7 +138,7 @@ const onOff = (id: EssentialId, on: boolean | null | undefined, fix: EssentialFi
   on === undefined ? item(id, "checking") : on === null ? item(id, "na") : item(id, on ? "on" : "off", fix);
 
 /**
- * Why reach needs the person, from what the server here's status says (`reachHealth`, ADR 0256 §4): HTTPS waiting for
+ * Why reach needs the person, from what the server here's status says (`reachHealth`, ADR 0265 §4): HTTPS waiting for
  * the Tailscale network's admin, Tailscale not connected here, or the person's own address not leading here now; null
  * while it works. Each has one fix.
  */

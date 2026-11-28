@@ -214,7 +214,7 @@ export interface ConnectorDeps {
   /** Public base URL, for the OAuth redirect URI. */
   publicUrl: string;
   /**
-   * The server's own loopback origin, beside `publicUrl` (a native server, ADR 0256 §5): the clients it registers
+   * The server's own loopback origin, beside `publicUrl` (a native server, ADR 0265 §5): the clients it registers
    * with MCP servers can also return there (RFC 8252). Null or absent: none.
    */
   loopbackUrl?: string | null;
@@ -245,7 +245,7 @@ export const oauthRedirectUri = (publicUrl: string) =>
 
 /**
  * The return addresses a client registered with an MCP server's authorization server lists: `publicUrl`'s callback
- * first, then the loopback one where the server has it (ADR 0256 §5).
+ * first, then the loopback one where the server has it (ADR 0265 §5).
  */
 export const oauthRedirectUris = (deps: Pick<ConnectorDeps, "publicUrl" | "loopbackUrl">) => [
   oauthRedirectUri(deps.publicUrl),

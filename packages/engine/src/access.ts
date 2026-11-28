@@ -10,6 +10,7 @@ import { classifiedTools, customScope, isCustom, type ToolAccess } from "./conne
 import { exposedToolName } from "./connectors/mcp";
 import { othersLabel, othersPersonal, seesOthersOnAgent } from "./connectors/personal";
 import { sha256 } from "./crypto";
+import { APPS_TOOLS } from "./desktop/person-apps";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { requirePermission } from "./organizations";
 import { isRightHand, isRightHandId, RIGHT_HAND_COMPUTER_GRANTS, RIGHT_HAND_GRANTS } from "./right-hand";
@@ -113,6 +114,7 @@ export const BUILTIN_TOOLS: Record<string, string[]> = {
     "offer_approvals",
     "propose_member_changes",
     "offer_open_page",
+    "offer_voice_setup",
     "set_team_week",
     "offer_answers",
     "propose_team",
@@ -140,6 +142,8 @@ const UNLISTED_TOOLS: Record<string, string[]> = {
   "context:read": ["read_conversation"],
   "schedule:write": ["delete_routine", "run_routine_now"],
   "sandbox:run": ["review_media"],
+  // The person's own apps (ADR 0258): on with the desktop, for a computer whose runner serves them.
+  [DESKTOP_SCOPE]: [...APPS_TOOLS],
 };
 
 /**
@@ -348,6 +352,10 @@ export const BUILTIN_TOOL_INFO: Record<string, { label: string; description: str
   offer_open_page: {
     label: "Offer to open a screen",
     description: "Posts a card whose button opens a screen of the app, such as billing, roles or an agent's page.",
+  },
+  offer_voice_setup: {
+    label: "Offer to turn on voice messages",
+    description: "Posts a card that turns on voice messages in one click for whoever runs the server, or asks them.",
   },
   set_team_week: {
     label: "Change the Team week card",

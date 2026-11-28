@@ -19,7 +19,7 @@ const mac = (screen: boolean, disk: boolean, notifications: NotifyPermission = "
     notificationPermission: async () => notifications,
   }) as unknown as Host;
 
-test("Prepare asks for notifications, Screen Recording and Full Disk Access, never Local Network (ADR 0256)", () => {
+test("Prepare asks for notifications, Screen Recording and Full Disk Access, never Local Network (ADR 0265)", () => {
   expect([...MAC_PERMISSIONS]).toEqual(["notifications", "screen", "disk"]);
   expect(MAC_PERMISSIONS as readonly string[]).not.toContain("network");
 });

@@ -22,13 +22,13 @@ export interface LocalServerStatus {
   phase: LocalPhase;
   /** Its loopback address (a terminal install's too). */
   url: string | null;
-  /** The address the main window on this computer opens: the app's own server's loopback one (ADR 0256 §5). */
+  /** The address the main window on this computer opens: the app's own server's loopback one (ADR 0265 §5). */
   localUrl: string | null;
   /** Its address for people (the phone, the team, links): the Tailscale one or the person's own with reach on, else null. */
   publicUrl: string | null;
   reach: boolean;
   /**
-   * How the phone and the team reach it, as saved with it (ADR 0256 §4): kept while reach is off, for turning it on
+   * How the phone and the team reach it, as saved with it (ADR 0265 §4): kept while reach is off, for turning it on
    * again; null: never chosen.
    */
   way: ReachWay | null;
@@ -90,7 +90,7 @@ export interface KeepRunning {
 export type Tailnet = { state: "missing" } | { state: "off"; app: boolean } | { state: "on"; device: string };
 
 /**
- * How the phone and the team reach the server here (ADR 0256 §4): the official Tailscale the person installs, or an
+ * How the phone and the team reach the server here (ADR 0265 §4): the official Tailscale the person installs, or an
  * address of their own (a tunnel or a domain of theirs, running on this computer, that leads to the server here).
  */
 export type ReachWay = { kind: "tailscale" } | { kind: "address"; url: string };
@@ -130,7 +130,7 @@ export function tailscaleFrom(platform: Platform, tailnet: Tailnet | null): "app
  * Why reach didn't turn on: HTTPS off in the Tailscale network, Tailscale's permission (Linux), Tailscale missing or
  * refusing, Tailscale installed but not connected here (`app`: its Mac app is there to open), the person stopped
  * waiting for HTTPS, the server didn't answer again at its new address, or the person's own address doesn't lead here
- * (`why`, ADR 0256 §4). `back`: turning it off, the server didn't answer again at this computer's own address.
+ * (`why`, ADR 0265 §4). `back`: turning it off, the server didn't answer again at this computer's own address.
  */
 export type ServeProblem =
   | { reason: "https"; url: string | null }
@@ -145,7 +145,7 @@ export type ServeProblem =
  * What turning reach on or off is doing now (`local-server://reach`): confirming the person's address leads here
  * (`checking`), Tailscale sharing it, Tailscale waiting for HTTPS to be allowed at `url`, the server starting again
  * behind the window with its address for people, and done (that address). The window stays on this computer's own
- * address throughout (ADR 0256 §5).
+ * address throughout (ADR 0265 §5).
  */
 export type ReachStage =
   | { stage: "checking" | "sharing" | "restarting" }
@@ -156,7 +156,7 @@ export type ReachResult = { ok: true; url: string } | { ok: false; problem: Serv
 /**
  * An address the person typed, by its form only (the app checks where it leads, `checkAddress`): an https origin, with
  * a port or not, and nothing after it but "/" (no path, query, fragment or user). Ok: the origin, lowercased by the
- * URL parser, as the server's `PUBLIC_URL` will be (ADR 0256 §4).
+ * URL parser, as the server's `PUBLIC_URL` will be (ADR 0265 §4).
  */
 export function addressForm(input: string): { ok: true; url: string } | { ok: false; why: "notHttps" } {
   const raw = input.trim();
@@ -254,7 +254,7 @@ export const NO_SERVER: LocalServerStatus = {
 
 /**
  * "Setting it up", in order; access from the phone and the team only when it will be used there. The window is signed
- * in right after `account`, before `computer` and `reach` (ADR 0256 §3).
+ * in right after `account`, before `computer` and `reach` (ADR 0265 §3).
  */
 export const setupSteps = (place: LocalPlace): SetupStep[] => [
   "database",
@@ -392,7 +392,7 @@ export const serverPlace = (status: LocalServerStatus, server: string | null): "
 
 /**
  * The main window's cover over the server here: starting, updating, stopped or not starting. The window opens it at
- * its loopback address, never through the tailnet (ADR 0256 §5), so Tailscale being off is no reason for a cover: it is
+ * its loopback address, never through the tailnet (ADR 0265 §5), so Tailscale being off is no reason for a cover: it is
  * an item of this computer's essentials instead.
  */
 export function coverHere(

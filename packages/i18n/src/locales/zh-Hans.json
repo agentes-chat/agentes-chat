@@ -38,6 +38,9 @@
     "wrapLines": "自动换行",
     "raw": "原始数据",
     "table": "表格",
+    "tableRows_other": "表格 · {{count}} 行",
+    "tableSeeAll": "查看全部 {{count}} 行",
+    "tableRowCount_other": "{{count}} 行",
     "chartItem": "项目",
     "chartShare": "占比",
     "you": "你",
@@ -2306,44 +2309,65 @@
     "deleteText": "其中的智能体会回到“智能体”。",
     "deleteChannels": "其中的频道会回到“频道”。",
     "dropHere": "把智能体拖到这里",
-    "dropHereAll": "把智能体或频道拖到这里",
     "moved": "{{name}} 已移到 {{group}}",
     "movedOut": "{{name}} 已离开 {{group}}",
     "undo": "撤销"
   },
   "sidebarAgents": {
-    "options": "智能体选项",
-    "add": "新建智能体或部门",
-    "order": "顺序",
-    "sort": {
-      "workspace": "工作区的顺序",
-      "mine": "我的优先",
-      "working": "工作中优先"
-    },
     "showAll": "显示不与我对话的智能体",
-    "collapseAll": "全部收起",
-    "expandAll": "全部展开",
-    "organize": "在团队中整理部门",
     "more_other": "团队中还有 {{count}} 个智能体",
     "newAgent": "新智能体",
-    "working_other": "{{count}} 个工作中",
     "count_other": "{{count}} 个智能体",
     "workingIn": "正在 #{{channel}} 工作",
     "talksOnly": "只与 {{name}} 对话",
-    "talksOnlyMore_other": "只与 {{name}} 和另外 {{count}} 人对话",
-    "changeGroup": "移到部门",
-    "newGroupWith": "包含 {{name}} 的新部门",
-    "dmsEmpty": "你与成员的对话会显示在这里。"
+    "talksOnlyMore_other": "只与 {{name}} 和另外 {{count}} 人对话"
   },
-  "sidebarPins": {
-    "pin": "置顶",
-    "unpin": "取消置顶",
-    "pinned": "已置顶",
-    "full": {
-      "agents": "你已置顶 5 个智能体。取消一个才能置顶这个。",
-      "channels": "你已置顶 5 个频道。取消一个才能置顶这个。",
-      "people": "你已置顶 5 个人。取消一个才能置顶这位。"
-    }
+  "sidebarFavorites": {
+    "title": "收藏",
+    "add": "加入收藏",
+    "remove": "移出收藏",
+    "marked": "已收藏",
+    "full": "收藏已有 50 项。移除一项后才能添加这一项。"
+  },
+  "sidebarSections": {
+    "new": "新建分区",
+    "newName": "新分区",
+    "moveTo": "移到分区",
+    "takeOut": "移出分区",
+    "rename": "重命名分区",
+    "delete": "删除分区",
+    "nameLabel": "分区名称"
+  },
+  "sidebarDms": {
+    "options": "私信选项",
+    "show": "显示",
+    "shows": {
+      "all": "工作区所有人",
+      "recent": "仅最近的对话"
+    },
+    "invite": "邀请成员",
+    "invited": "已发送邀请",
+    "invitedTip": "{{email}} 尚未接受邀请",
+    "agentTag": "AI",
+    "agentTip": "AI 智能体"
+  },
+  "sidebarColumn": {
+    "label": "工具",
+    "unread": "{{name}}，有未读内容",
+    "you": "{{name}}，有你的事项"
+  },
+  "unreads": {
+    "title": "未读",
+    "forYou": "给你的",
+    "conversations": "对话",
+    "markAll": "全部标为已读",
+    "markRead": "标为已读",
+    "open": "打开",
+    "seeInbox": "在收件箱中查看全部",
+    "more_other": "还有 {{count}} 条消息",
+    "emptyTitle": "全部看完了",
+    "emptyText": "新消息和等你处理的事项会显示在这里。",
+    "markedAll": "已全部标为已读"
   },
   "appsDownload": {
     "computer": "电脑",
@@ -2725,6 +2749,7 @@
     "details": "频道详情",
     "composerLabel": "在 #{{channel}} 中发消息",
     "composerDm": "给 {{name}} 发消息",
+    "groupYou": "你",
     "composerPlaceholder": "在 #{{channel}} 中发消息 · 用 @ 呼叫智能体",
     "send": "发送",
     "attach": "附加文件",
@@ -2745,6 +2770,7 @@
     "sendFailed": "消息未发送，请重试。",
     "reconnecting": "正在重新连接实时服务…",
     "detailsTitle": "#{{channel}}",
+    "detailsTitlePersonal": "{{channel}}",
     "detailsSearch": "搜索成员或智能体",
     "detailsEmpty": "没有找到“{{q}}”。",
     "topicLabel": "频道描述",
@@ -2756,9 +2782,11 @@
     "replyInChannel": "智能体在频道中回复",
     "replyInThreadsHelp": "在频道中被叫到的智能体会在该消息下的话题中回答，频道只为它显示一行。已在进行的工作保持原处。",
     "nameTaken": "已存在 #{{name}}。",
+    "nameTakenPersonal": "已经有名为“{{name}}”的群组对话。",
     "generalName": "#general 的名称不能更改。",
     "archive": "归档频道",
     "archived": "#{{channel}} 已归档。对话会保留。",
+    "archivedPersonal": "“{{channel}}”已归档。对话会保留。",
     "archivedTitle": "已归档的频道",
     "archivedCount_other": "{{count}} 个已归档的频道",
     "archivedNone": "没有可恢复的已归档频道",
@@ -2766,6 +2794,7 @@
     "restore": "恢复",
     "restoreName": "恢复 #{{channel}}",
     "restored": "#{{channel}} 已恢复。",
+    "restoredPersonal": "“{{channel}}”已恢复。",
     "leave": "退出频道",
     "left": "你已退出 #{{channel}}",
     "leaveTitle": "退出 #{{channel}}？",
@@ -4113,8 +4142,9 @@
     "namePlaceholderPersonal": "例如 trip",
     "nameHelp": "小写字母、数字和连字符。显示为 #{{name}}。",
     "nameInvalid": "请使用小写字母、数字和连字符，以字母或数字开头。",
+    "nameInvalidPersonal": "请起一个不超过 80 个字符的名字，写在一行内。",
     "nameTaken": "已经有一个 #{{name}} 频道了。",
-    "nameTakenPersonal": "已经有名为 #{{name}} 的群组对话。",
+    "nameTakenPersonal": "已经有名为“{{name}}”的群组对话。",
     "topic": "描述",
     "topicPlaceholder": "这里聊些什么",
     "visibility": "谁可以加入",
@@ -4143,7 +4173,8 @@
     "membersSearch": "搜索成员或智能体",
     "membersEmpty": "没有找到“{{q}}”。",
     "selected_other": "已选 {{count}} 个",
-    "create": "创建 #{{name}}"
+    "create": "创建 #{{name}}",
+    "createPersonal": "创建对话"
   },
   "channelCategories": {
     "undo": "撤销",
@@ -4159,6 +4190,7 @@
     "invitePersonal": "邀请 {{email}} 加入你的工作区和 #{{channel}}",
     "inviteOrgPersonal": "邀请 {{email}} 加入你的工作区",
     "addTitle": "添加到 #{{channel}}",
+    "addTitlePersonal": "添加到 {{channel}}",
     "addSearch": "搜索成员或智能体",
     "addEmpty": "频道外没有人匹配“{{q}}”。",
     "addEveryone": "{{org}} 的所有人都已在 #{{channel}} 中。",
@@ -4166,6 +4198,7 @@
     "actions": "{{name}} 的选项",
     "remove": "从频道中移除",
     "removeTitle": "把 {{name}} 从 #{{channel}} 中移除？",
+    "removeTitlePersonal": "把 {{name}} 从 {{channel}} 中移除？",
     "removePersonBody": "对方将看不到这个频道，也不会再收到其中的消息。之后可以重新添加。",
     "removeAgentBody": "他将不再阅读和回复这个频道中的消息。之后可以重新添加他。",
     "removeAgentBody_female": "她将不再阅读和回复这个频道中的消息。之后可以重新添加她。",
@@ -5323,6 +5356,7 @@
       "adminAskChannel": "<b>{{name}}</b> 请你把 <b>{{agent}}</b> 加入 #{{label}}",
       "adminAskCreate": "<b>{{name}}</b> 请求获得创建智能体的权限",
       "adminAskWebhook": "<b>{{name}}</b> 请你为例行任务设置 {{service}} Webhook",
+      "adminAskVoice": "<b>{{name}}</b> 请你开启语音消息",
       "invitationAccepted": "<b>{{name}}</b> 接受了你的邀请并加入了 {{org}}",
       "invitationAcceptedAny": "<b>{{name}}</b> 接受了你的邀请",
       "reaction_other": "<b>{{names}}</b> 对你的消息发了表情回应",
@@ -6562,6 +6596,7 @@
     "undoneBy": "已由 {{name}} 撤销",
     "undoneByYou": "已由你撤销",
     "undo": "撤销",
+    "applyAnyway": "仍然应用",
     "appliedSome": "已应用 {{done}}/{{total}}",
     "waitingAdmin": "等待管理员",
     "stale": "已过时",
@@ -9459,8 +9494,7 @@
       "machine_access_requested": "{{agent}} 申请使用 {{computer}} 上的文件夹 {{folder}}。正在那台电脑上等待回复。",
       "machine_access_granted": "已允许：{{agent}} 现在可以使用 {{computer}} 上的 {{folder}}",
       "machine_access_denied": "已拒绝：{{agent}} 不会使用 {{computer}} 上的 {{folder}}",
-      "machine_access_expired": "对 {{computer}} 上文件夹 {{folder}} 的申请没有得到回复",
-      "access_command": "电脑上没有应用？在它的终端中运行："
+      "machine_access_expired": "对 {{computer}} 上文件夹 {{folder}} 的申请没有得到回复"
     },
     "suggestion": {
       "pending": "专项任务建议",
@@ -10140,7 +10174,6 @@
     "filter": {
       "person": "成员",
       "agent": "智能体",
-      "routine": "例行工作",
       "reminder": "提醒",
       "deadline": "任务截止日期"
     },
@@ -10173,37 +10206,16 @@
         "declined": "你不参加。"
       }
     },
-    "every": {
-      "hour": "每小时",
-      "hours": "每 {{count}} 小时",
-      "minutes": "每 {{count}} 分钟"
-    },
-    "perDay": "每天 {{count}} 次",
-    "runs_other": "这几天共运行 {{count}} 次。",
-    "routineDetail": "例行工作 · 发送到 {{target}}",
     "deadlineDetail": "任务到期了。",
     "reminderBy": "由 {{name}} 设置",
     "reminderPosted": "提醒 · 发布在 {{target}}",
     "cancelReminder": "取消提醒",
     "reminderCancelled": "提醒已取消",
     "openIssue": "打开任务",
-    "openRoutines": "在“例行工作”中查看",
-    "openRoutine": "打开例行工作",
-    "runAria": "例行工作 {{name}}，{{time}}",
     "runHint": "{{name}} · {{agent}} · {{time}}",
-    "runsAt": "{{time}} 的例行工作",
-    "moreRuns_other": "还有 {{count}} 项例行工作",
-    "runTimes": "×{{count}}",
-    "result": {
-      "ok": "已回复",
-      "silent": "没有新内容",
-      "failed": "失败",
-      "skipped": "未运行"
-    },
-    "lastResult": "上次：{{result}}",
     "upcomingMeta": "{{day}} · {{time}}",
     "emptyHint": "没有安排。拖动即可创建，或按 N",
-    "agendaEmpty": "接下来 30 天的日程和例行工作会显示在这里。",
+    "agendaEmpty": "接下来 30 天的日程和提醒会显示在这里。",
     "agendaEmptyTitle": "未来 30 天日程空闲",
     "noResults": "此筛选下没有内容。",
     "more": "还有 {{count}} 项",
@@ -11107,6 +11119,7 @@
     "silent": "什么都没听到。没有发送任何内容。",
     "notSent": "语音发送失败。",
     "limit": "今天的语音额度已用完。请在这里打字，或明天再试。",
+    "plan": "语音消息需要 agentes.chat 套餐。你仍然可以在这里打字。",
     "micBlocked": "麦克风已被阻止",
     "micBlockedHint": "请在设备设置中允许使用麦克风，才能录音。",
     "openSettings": "打开设置",
@@ -11141,9 +11154,9 @@
       "title": "语音消息",
       "on": "语音消息",
       "onHelp": "这个工作区的成员可以在对话中发送语音。",
-      "noEngine": "这里还不能使用语音消息。",
-      "noEngineAsk": "语音消息还没有开启。管理这台服务器的人可以就在这个页面开启。",
-      "noEngineHere": "在下方选好把语音转成文字的服务后，语音消息就会开启。",
+      "noEngine": "目前语音消息以音频发送，所以智能体还听不到。",
+      "noEngineAsk": "目前语音消息以音频发送，所以智能体听不到。把语音转成文字的服务由管理这台服务器的人在这个页面选择。",
+      "noEngineHere": "在下方选好把语音转成文字的服务之前，语音消息会以音频发送。",
       "engineTitle": "把语音转成文字的服务",
       "own": "你自己的服务器",
       "ownHelp": "你机器上的 Whisper 或 Parakeet。语音留在那里。",
@@ -11151,10 +11164,55 @@
       "key": "{{name}} 密钥",
       "keyPlaceholder": "粘贴到这里",
       "test": "测试",
-      "tested": "可以用了。现在所有人都能看到麦克风。",
+      "tested": "可以用了。现在语音消息会以文字形式传给智能体。",
       "sealed": "加密保存在你的服务器上，不会再次显示。",
       "leaves": "语音消息的音频会发送到 {{name}} 转成文字。",
       "invalid": "保存的密钥无法在这台服务器上打开。请重新粘贴。"
+    },
+    "local": {
+      "titleHere": "在这台电脑上",
+      "titleServer": "在这台服务器上",
+      "titlePhone": "在服务器的电脑上",
+      "textHere": "Parakeet，需下载 {{size}}。语音留在这台电脑上。支持 25 种欧洲语言。",
+      "textServer": "Parakeet，需下载 {{size}}。语音留在这台服务器上。支持 25 种欧洲语言。",
+      "download": "下载并开启",
+      "downloading": "正在下载语音模型",
+      "progress": "{{done}} / {{total}}",
+      "meanwhile": "现在就可以录音。准备好之前，消息会以音频发送。",
+      "downloadingPhone": "正在把语音模型下载到服务器的电脑上。现在就可以录音。",
+      "starting": "正在开启…",
+      "licenses": "模型许可证",
+      "tooSmall": "这台电脑有 {{memory}} 内存，语音模型需要 8 GB。请在下方使用服务商的密钥。",
+      "noDisk": "这个磁盘剩余 {{free}}，语音模型需要 {{need}}。请腾出空间，或在下方使用服务商的密钥。",
+      "noBuild": "这台电脑还没有可用的语音模型。请在下方使用服务商的密钥。",
+      "stopped": "下载中断了：{{detail}}",
+      "diskFull": "下载时磁盘满了。请腾出空间后重试。",
+      "didntStart": "语音模型没有启动：{{detail}}",
+      "resume": "继续下载",
+      "copy": "复制详情",
+      "copied": "已复制详情"
+    },
+    "offer": {
+      "title": "语音消息",
+      "download": "下载 {{size}} 并开启",
+      "choose": "选择方式",
+      "askOwner": "在这台服务器上把语音转成文字",
+      "askMember": "请求开启语音消息",
+      "on": "语音消息已开启：智能体会以文字形式读取。"
+    },
+    "setup": {
+      "memberTitle": "这里还没有开启语音",
+      "memberText": "你的消息会以所有人都能播放的音频发送。在 {{name}} 选好把语音转成文字的服务之前，智能体听不到它。",
+      "memberTextNoName": "你的消息会以所有人都能播放的音频发送。在管理这台服务器的人选好把语音转成文字的服务之前，智能体听不到它。",
+      "ask": "请 {{name}} 开启",
+      "asked": "已请 {{name}} 开启",
+      "recordAnyway": "仍然录音",
+      "ownerTitle": "选择把语音转成文字的服务",
+      "ownerText": "在你选好之前，语音消息会以所有人都能播放的音频发送，智能体听不到。",
+      "readyTitle": "语音消息已开启",
+      "readyText": "你说的话会以文字形式传给智能体。",
+      "record": "录一条消息",
+      "ownerPhone": "请在网页版或桌面应用的 设置 › 语音 中选择。在那之前，语音消息会以所有人都能播放的音频发送，智能体听不到。"
     }
   },
   "media": {
@@ -14615,6 +14673,9 @@
       "desktop_read": "读取屏幕",
       "desktop_screenshot": "截取屏幕",
       "desktop_ask_person": "请人接管电脑",
+      "apps_list": "查看打开的应用",
+      "apps_read": "读取应用",
+      "apps_act": "使用应用",
       "computer_use": "使用电脑",
       "computer_status": "检查电脑状态",
       "left_click": "点击",
@@ -15667,6 +15728,7 @@
       "generalStays": "所有人都留在 #general。",
       "leadChannelOnly": "只有频道才有负责的智能体。",
       "leadNotMember": "负责的智能体必须在该频道中。",
+      "groupNameInvalid": "请起一个不超过 80 个字符的名字，写在一行内。",
       "mcpUnreachable": "无法连接到 MCP 服务器。请检查地址后重试。",
       "notApproved": "这项服务尚未批准 agentes.chat。",
       "alreadyInvited": "此人已有邀请。",
@@ -15967,6 +16029,7 @@
       "spillOwnerOnly": "只有连接这台电脑的人可以打开它的帮忙功能。你可以关闭它。",
       "shareOwnerOnly": "只有连接这台电脑的人才能让智能体使用它的网络。你可以关闭它。",
       "shareConnectedOnly": "只有有人连接的电脑才能与智能体共享网络。",
+      "shareOff": "请先打开“智能体使用这台电脑的网络”，再选择只用它的网络。",
       "tasksOwnerOnly": "只有连接这台电脑的人才能更改它同时运行的任务数。",
       "tasksCloud": "这台电脑用于任务的余量由 Cloud 自己决定。",
       "notHome": "智能体住在工作区的电脑上，点名时才使用这台电脑。"
@@ -16115,13 +16178,13 @@
       "browser_download": "无法下载智能体浏览器。请检查这台电脑的网络连接，下次使用时会再试一次。",
       "browser_checksum": "智能体浏览器的下载文件已损坏，因此没有使用。下次使用时会再试一次。",
       "desktop_use_linux": "智能体屏幕上的应用可在带有智能体屏幕的 Linux 电脑上运行。",
-      "desktop_use_own_user": "智能体屏幕上的应用需要每个智能体在这台电脑上以自己的用户身份工作（系统模式）。这里所有智能体都以 runner 的用户身份工作。",
+      "desktop_use_own_user": "智能体屏幕上的应用需要每个智能体在这台电脑上以自己的用户身份工作（系统模式）。这里所有智能体都以同一个用户身份工作，也就是运行 agentes.chat 的用户。",
       "desktop_use_install": "请在这台电脑上安装智能体屏幕上的应用所需的组件：",
       "desktop_unavailable": "智能体屏幕无法在这台电脑上运行。",
       "desktop_linux": "智能体屏幕只能在 Linux 电脑上运行。",
       "desktop_install": "请在这台电脑上安装智能体屏幕：",
-      "not_as_root": "智能体的屏幕和终端从不以 root 身份运行。请用普通用户运行 runner。",
-      "runner_bun_old": "这需要 runner 运行在 Bun 1.3.5 或更新版本上。请更新这台电脑上的 runner。",
+      "not_as_root": "智能体的屏幕和终端从不以 root 身份运行。请以普通用户身份运行 agentes.chat。",
+      "runner_bun_old": "这需要运行在 Bun 1.3.5 或更新版本上的 agentes.chat。请更新这台电脑上的 agentes.chat。",
       "terminal_unsupported": "终端只能在 Linux 和 Mac 电脑上运行。"
     },
     "egress": {
@@ -16131,13 +16194,51 @@
       "hint": "智能体浏览网页时网站看到的地址。电脑的网络变化时会随之更新。",
       "waiting": "正在重新连接智能体的网络。网络恢复前，它们的连接会等待。",
       "via": "智能体正在使用 {{name}} 的网络",
-      "viaBy": "智能体正在使用 {{name}}（{{person}}）的网络",
-      "viaHint": "网站会看到那台电脑的位置。连接它的人可以在它的页面上关闭。"
+      "viaHint": "网站会看到那台电脑的位置。连接它的人可以在它的页面上关闭。",
+      "offline": "智能体无法上网：{{name}} 已离线"
     },
-    "moving": {
-      "short": "正在迁移服务器",
-      "line": "正在迁移到新服务器… 几分钟后回来",
-      "named": "{{computer}} 正在迁移到新服务器… 几分钟后回来"
+    "maintenance": {
+      "short": {
+        "moving": "正在迁移服务器",
+        "restarting": "正在重启",
+        "updating": "正在更新",
+        "converting": "正在升级磁盘",
+        "host_maintenance": "维护中",
+        "other": "维护中"
+      },
+      "what": {
+        "moving": "正在迁移到新服务器",
+        "copying": "正在复制到新服务器",
+        "restarting": "正在重启",
+        "updating": "正在更新软件",
+        "converting": "正在升级磁盘",
+        "host_maintenance": "所在服务器正在维护",
+        "other": "正在处理"
+      },
+      "line": "{{what}}… {{when}}",
+      "named": "{{computer}}: {{line}}",
+      "back": "约 {{time}} 后恢复",
+      "backSoon": "几分钟后恢复",
+      "late": "比预计稍久一些",
+      "slower": "期间可能会变慢",
+      "slowerFor": "约 {{time}} 内可能会变慢",
+      "why": {
+        "moving": "我们正在把它迁移到新服务器。",
+        "copying": "我们正在把它的文件复制到新服务器，它仍在工作。",
+        "handover": "我们正在把它最后的改动交接到新服务器。",
+        "restarting": "我们正在重启它。",
+        "unresponsive": "它停止了响应，所以我们自动重启了它。",
+        "updating": "我们正在更新它的软件。",
+        "converting": "我们正在把它的磁盘迁移到更快的存储。",
+        "host_maintenance": "它所在的服务器正在维护。",
+        "other": "我们正在对它进行一些处理。"
+      },
+      "since": "自 {{time}} 起",
+      "expectedBack": "预计 {{time}} 左右恢复",
+      "expectedDone": "预计 {{time}} 左右完成",
+      "meanwhile": "发给它的智能体的消息会等待，它恢复后自动继续。",
+      "working": "期间它的智能体会继续工作。",
+      "about": "发生了什么"
     },
     "online": "在线",
     "offline": "离线",
@@ -16206,6 +16307,11 @@
     "removed": "已移除 {{name}}。",
     "name": "电脑名称",
     "nameHelp": "成员和智能体看到的名称。",
+    "defaultName": {
+      "model": "{{name}} 的 {{model}}",
+      "linux": "{{name}} 的 Linux 电脑",
+      "other": "{{name}} 的电脑"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",
@@ -16355,6 +16461,13 @@
       "grantTextTerminal": "允许操作需要在这台电脑上进行，在它的终端中：",
       "grantTextAdmin": "允许操作需要在这台电脑上进行，以管理员身份在它的终端中：",
       "grantTerminal": "没有应用？在这台电脑的终端中：",
+      "pickText": "agentes.chat 应用会在 {{machine}} 上打开文件夹选择窗口，由那里的人来选。",
+      "pick": "允许一个文件夹",
+      "picked": "{{machine}} 上已打开文件夹选择窗口。请在那里选择文件夹。",
+      "pickWaiting": "正在等待在 {{machine}} 上选择文件夹",
+      "grantTerminalMore": "那里没有应用？使用终端",
+      "noApp": "这台电脑没有可以选择文件夹的 agentes.chat 应用。请在它的终端里允许。",
+      "requestDone": "这个请求已经回复过或已过期。",
       "preferTerminal": "我更想用终端",
       "grantOnlyOwner": "只有 {{name}} 可以在这台电脑上允许更多内容。如有需要，请联系对方。",
       "pathPlaceholder": "<文件夹>",
@@ -16397,6 +16510,8 @@
     "workspace": "工作区",
     "cloud": "Cloud",
     "cpus_other": "{{count}} 个 CPU",
+    "cores_other": "{{count}} 核",
+    "threads_other": "{{count}} 线程",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",
@@ -16472,11 +16587,14 @@
     "helpWorkspace": "团队的电脑满载或不在线时，其他电脑来帮忙",
     "helpWorkspaceHint": "每台电脑只有在其所有者允许时才会帮忙。关闭：无论所有者如何选择，都不会有电脑帮忙。",
     "shareInternet": "智能体使用这台电脑的网络",
-    "shareInternetHint": "智能体打开的网站会经过这台电脑的网络连接，所以网站会看到你的位置。仅限网站，绝不会访问你自己网络中的任何内容。这台电脑离线时，智能体使用平常的连接。",
+    "shareInternetHint": "智能体的连接会经过这台电脑的网络，所以网站和服务器会看到你的位置：网站、git、SSH、数据库及其他 TCP 连接。绝不会访问你自己网络中的任何内容，也不会通过 25 端口发送邮件。智能体的 AI、域名解析、通话等 UDP 流量使用平常的连接。这台电脑离线时，所有流量都使用平常的连接。",
+    "shareInternetHintProxy": "智能体的浏览器和遵循代理设置的程序（通过 HTTPS 的 git、curl、大多数命令行工具）会经过这台电脑的网络，所以网站会看到你的位置。SSH、数据库客户端等忽略代理设置的程序使用平常的连接，智能体的 AI、域名解析和 UDP 流量也一样。绝不会访问你自己网络中的任何内容，也不会通过 25 端口发送邮件。这台电脑离线时，所有流量都使用平常的连接。",
+    "shareInternetOnly": "只用这台电脑的网络",
+    "shareInternetOnlyHint": "智能体只用这台电脑的网络，包括 AI 在内，绝不使用平常的连接。这台电脑离线时，智能体在它恢复前都无法上网。",
     "shareInternetInUse": "正在使用",
     "shareInternetOther": "智能体正在使用 {{name}}",
     "shareInternetPick": "使用这台",
-    "shareInternetJoin": "智能体也会通过这台电脑的网络打开网站，所以网站会看到你的位置。你可以在它的页面上关闭。",
+    "shareInternetJoin": "智能体也会通过这台电脑上网，所以网站和服务器会看到你的位置。你可以在它的页面上关闭。",
     "connectedBy": "由 {{name}} 连接",
     "downloadFor": "下载 {{system}} 版",
     "downloadApp": "下载应用",
@@ -16518,6 +16636,8 @@
       "paused": "{{host}} 已暂停，控制会等到它恢复。",
       "held": "此工作区已暂停，恢复后才能控制。",
       "lost": "控制已结束。你又在观看 {{name}} 了。",
+      "controlLate": "未能及时开始控制。{{host}} 仍在准备 {{name}}，请一分钟后再试。",
+      "controlFailed": "无法控制 {{name}}。请重试，或在 {{host}} 上重新启动 agentes.chat 应用。",
       "typeLabel": "在 {{name}} 上输入"
     },
     "status": {
@@ -16539,7 +16659,7 @@
       "withHost": "与 {{host}} 一起",
       "lastSeen": "上次在线 {{time}}",
       "offlineUnresponsive": "{{time}} 起无响应",
-      "offlineStopped": "runner 于 {{time}} 停止",
+      "offlineStopped": "agentes.chat 于 {{time}} 停止",
       "offlineDropped": "连接于 {{time}} 断开"
     },
     "line": {
@@ -16554,9 +16674,14 @@
       "offline": "智能体会等它回来。",
       "offlineSeen": "上次在线 {{time}}。智能体会等它回来。",
       "offlineWithHost": "{{host}} 已离线。智能体会等它回来。",
-      "offlineUnresponsive": "{{time}} 起无响应，可能没有网络或负载过高。请在这台电脑上运行 `{{command}}`。",
-      "offlineStopped": "runner 于 {{time}} 停止。请重新启动它，或在这台电脑上运行 `{{command}}` 查看原因。",
-      "offlineDropped": "连接于 {{time}} 断开，会自动重连。如果没有恢复，请在这台电脑上运行 `{{command}}`。"
+      "offlineUnresponsive": "{{time}} 起无响应，可能没有网络或负载过高。请确认它已开机并连上网络。",
+      "offlineStopped": "这台电脑上的 agentes.chat 应用于 {{time}} 停止运行。请重新打开应用。",
+      "offlineStoppedCli": "这台电脑上的 agentes.chat 于 {{time}} 停止运行。请在这台电脑上重新启动它。",
+      "offlineDropped": "连接于 {{time}} 断开，会自动重连。"
+    },
+    "technical": {
+      "title": "技术细节",
+      "doctor": "要查看原因，请在这台电脑上运行："
     },
     "reason": {
       "locked": "手机已锁定",
@@ -16617,7 +16742,7 @@
     },
     "facts": {
       "system": "系统",
-      "cpu": "CPU",
+      "cpu": "处理器",
       "memory": "内存",
       "lastSeen": "上次在线",
       "toolchains": "已找到的工具链",
@@ -17005,8 +17130,10 @@
       "toolRequest": "<b>{{who}}</b> 请你在你的 <b>{{deviceName}}</b> 上打开{{tool}}",
       "cliRequest": "<b>{{who}}</b> 请你在 <b>{{deviceName}}</b> 上安装 {{tool}}",
       "folderRequest": "<b>{{who}}</b> 请你在你的 <b>{{deviceName}}</b> 上开放文件夹 {{path}}",
+      "folderOnComputer": "在电脑上允许",
+      "folderShown": "已在 {{deviceName}} 上打开。请在那里允许。",
       "internetShared": "智能体现在通过 <b>{{deviceName}}</b> 的网络打开网站",
-      "internetSharedLine": "仅限此工作区的智能体，仅限网站，绝不访问它所在网络中的任何内容。它离线时，智能体会使用平常的连接。",
+      "internetSharedLine": "仅限此工作区的智能体，绝不访问它所在网络中的任何内容，绝不通过 25 端口发送邮件。它离线时，智能体会使用平常的连接。",
       "internetOff": "关闭",
       "internetOffDone": "智能体不再使用 {{deviceName}} 的网络。",
       "once": "允许一次",
@@ -17766,7 +17893,21 @@
       "version": "版本",
       "license": "依据 <license>GNU Affero General Public License v3</license> 发布的自由软件，不提供任何担保。",
       "source": "源代码",
-      "copyright": "Copyright © 2026 AGENTESCHAT, LLC 及贡献者"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC 及贡献者",
+      "latest": "已是最新版本",
+      "newer": "{{version}} 已发布",
+      "notes": "新功能",
+      "update": {
+        "title": "更新到 {{version}}",
+        "docker": "使用 Docker",
+        "native": "不使用 Docker",
+        "nativeHelp": "将该版本的安装包解压到 `~/.agentes/app`，然后运行：",
+        "desktop": "在这台电脑的桌面应用中运行？它会随应用一起更新。",
+        "notice": "此服务器的 agentes.chat {{version}} 已发布",
+        "how": "如何更新"
+      },
+      "computers": "电脑上的程序",
+      "computersAhead_other": "有 {{count}} 台电脑运行的版本比此服务器更新。它们照常工作，新功能会随此服务器的更新一起到来。"
     },
     "title": "设置",
     "account": {
@@ -18737,6 +18878,7 @@
         "usingScreen": "使用了屏幕",
         "cloningRepo": "克隆了仓库",
         "listingRepos": "已列出仓库",
+        "updatingCode": "更新了代码",
         "preparingCli": "准备了 {{app}}",
         "openingPullRequest": "创建了拉取请求",
         "handingOff": "交付了报告",
@@ -18861,6 +19003,7 @@
       "usingScreen": "使用屏幕",
       "cloningRepo": "克隆仓库",
       "listingRepos": "正在列出仓库",
+      "updatingCode": "正在更新代码",
       "preparingCli": "在 {{computer}} 上准备 {{app}}",
       "preparingCliPct": "在 {{computer}} 上准备 {{app}}（{{percent}}%）",
       "openingPullRequest": "创建拉取请求",
@@ -18982,6 +19125,7 @@
       "brain_unavailable_outdated": "我电脑上的程序需要更新，{{brain}} 才能回答。更新后我会立即回复。",
       "brain_unavailable_plan_owner": "{{brain}} 会使用不属于我主人的套餐来思考，所以我不使用它。请在我的页面上连接我主人的账号。",
       "brain_unavailable_shared_login": "我的电脑现在无法使用面向所有智能体的 Claude 登录。能用时我会回复。如果一直失败，请在 AI 账号中重新连接 Claude。",
+      "brain_unavailable_lent_offline": "我现在无法上网：{{computer}} 已离线，而这个工作区的智能体只用它的网络。它恢复后，或在它的页面上关闭“只用这台电脑的网络”后，我会回复。",
       "provider_unavailable": "我的 AI 服务商暂时没有响应。恢复后我会尽快回复。",
       "provider_wait_rate_limit": "{{provider}} 正在限制这个密钥的请求。一旦放开我会尽快回复。",
       "provider_wait_down": "{{provider}} 目前已中断或过载。恢复后我会尽快回复。",
@@ -18992,7 +19136,9 @@
       "provider_back": "我的 AI 已恢复。",
       "confidential_removed": "已移除：机密文本保留 {{days}} 天。",
       "brain_queued": "仍在排队。轮到我时会马上回复。",
-      "brain_interrupted": "{{brain}} 在完成前停止了。已完成的不会重复：{{tools}}。",
+      "brain_interrupted": "{{brain}} 在完成前停止了。请再问一次以继续。",
+      "brain_interrupted_timeout": "{{brain}} 超出时间限制，在完成前停止了。请再问一次以继续。",
+      "brain_interrupted_computer": "电脑在 {{brain}} 完成前让它停止了。请再问一次以继续。",
       "plan_limit_cut": "我在 {{plan}} 套餐的限额处停了下来。{{when}}重置后，我会从停下的地方继续。",
       "plan_limit_cut_unknown": "我在 {{plan}} 套餐的限额处停了下来。重置后我会立即从停下的地方继续。",
       "plan_limit_wait": "{{plan}} 套餐已达限额。{{when}}重置后我会回复。如果在 {{plan}} 中提前解除，我会察觉并立即回复。",
@@ -19057,6 +19203,7 @@
       "action_approvals": "等你处理的审批",
       "welcome_member": "你刚加入了{{org}}。**你在这里负责什么？**告诉我，我和你一起设置你的第一个智能体。",
       "action_open_page": "打开页面",
+      "action_voice_setup": "开启语音消息",
       "calendar_proposal": "日程提议：{{title}}",
       "action_workspace": "提议了一项工作区更改",
       "agent_proposal": "提议了一个新智能体：{{name}}",
@@ -19351,6 +19498,10 @@
     "offer_open_page": {
       "label": "提议打开一个页面",
       "description": "发布一张卡片，点击按钮即可打开应用中的页面，例如账单、角色或某个智能体的页面。"
+    },
+    "offer_voice_setup": {
+      "label": "提议开启语音消息",
+      "description": "发布一张卡片，服务器管理者一键即可开启语音消息，其他人可以请管理者开启。"
     },
     "set_team_week": {
       "label": "更改团队周报卡片",
@@ -19962,7 +20113,7 @@
       "people": "所有人立即只能查看，并会收到邮件",
       "peopleQuiet": "所有人立即只能查看",
       "computer": "它的电脑立即停止并被清空",
-      "computers": "已连接的电脑会断开连接。智能体的文件夹会保留在电脑上，直到移除运行程序。",
+      "computers": "已连接的电脑会断开连接。智能体的文件夹会保留在电脑上，直到从中移除 agentes.chat。",
       "connectors": "连接器和邮箱会断开连接"
     },
     "undo": "在 {{date}} {{time}} 之前，任何所有者都可以恢复它。之后将无法撤销。",
@@ -20321,14 +20472,6 @@
       "doneByYou": "你于 {{time}} 完成。{{agent}} 重新查看了屏幕并继续工作。",
       "doneByYou_female": "你于 {{time}} 完成。{{agent}} 重新查看了屏幕并继续工作。"
     },
-    "control": {
-      "notice": "{{name}} 电脑上的程序可以看到屏幕，以及你输入或粘贴的内容。",
-      "notice_female": "{{name}} 电脑上的程序可以看到屏幕，以及你输入或粘贴的内容。"
-    },
-    "session": {
-      "check": "安全检查",
-      "screening": "我们可能会检查此屏幕上的文字是否存在滥用行为，只保留检查结果。屏幕上不显示的内容（比如命令行中输入的密码）绝不会被捕获。"
-    },
     "after": {
       "titleNoSite": "使用了屏幕",
       "noSite": "打开应用之前"
@@ -20338,8 +20481,6 @@
       "group_female": "{{name}} 的屏幕"
     },
     "watch": {
-      "notice": "{{name}} 电脑上的程序可以看到屏幕，以及在那里输入或粘贴的任何内容。",
-      "notice_female": "{{name}} 电脑上的程序可以看到屏幕，以及在那里输入或粘贴的任何内容。",
       "step": {
         "desktop_open": "打开了 {{detail}}",
         "desktop_open_plain": "打开了一个应用",
@@ -20363,14 +20504,13 @@
       }
     },
     "use": {
-      "title": "智能体屏幕上的应用",
-      "description": "智能体会像人一样在自己的屏幕上打开和使用应用，成员可以在每个智能体的页面上观看。",
+      "title": "每个智能体自己的屏幕",
+      "description": "在这里，每个智能体都有一块与你的屏幕分开的专属屏幕，并像人一样在上面使用带窗口的应用，比如浏览器或表格。你可以在智能体的页面上观看。目前仅支持 Linux：它能为每个智能体多开一块屏幕，而不影响你的屏幕。",
       "ready": "就绪",
       "off": "已关闭",
-      "unavailable": "不可用",
+      "unavailable": "需要准备",
       "offHelp": "在这台电脑上开启屏幕和命令：",
       "offOne": "这台电脑需要同时打开屏幕和命令。",
-      "linuxOnly": "智能体只能在 Linux 电脑上使用自己屏幕上的应用。",
       "agent": "{{name}} 还不能在 {{computer}} 上使用他屏幕上的应用。",
       "agent_female": "{{name}} 还不能在 {{computer}} 上使用她屏幕上的应用。"
     },

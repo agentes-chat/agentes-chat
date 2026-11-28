@@ -51,6 +51,7 @@ import {
   requireSession,
   security,
 } from "./app/context";
+import { MaintenanceView } from "./app/schemas";
 
 const tags = ["Devices"];
 
@@ -83,8 +84,9 @@ const Status = z
     z.object({ kind: z.literal("needs_you"), reason: Reason }),
     z.object({ kind: z.literal("preparing"), reason: Reason }),
     z.object({ kind: z.literal("paused"), until: z.string().nullable() }),
-    z.object({ kind: z.literal("moving"), since: z.string() }).openapi({
-      description: "The workspace's own computer, away while it moves to another server: back in a few minutes.",
+    z.object({ kind: z.literal("moving"), since: z.string(), maintenance: MaintenanceView.optional() }).openapi({
+      description:
+        "The workspace's own computer, away for what we do to it (`maintenance` says what: a move, a restart…): back by itself.",
     }),
     z.object({
       kind: z.literal("offline"),
@@ -135,6 +137,16 @@ const Computer = z
     arch: z.string(),
     hostname: z.string(),
     cpus: z.number().nullable(),
+    cpuModel: z
+      .string()
+      .nullable()
+      .openapi({ description: "The processor's name (`Apple M4 Pro`); null: an older runner." }),
+    cores: z.number().nullable().openapi({
+      description: "Its physical cores (`cpus` counts logical CPUs, threads); null: an older runner, or Windows.",
+    }),
+    system: z.string().nullable().openapi({
+      description: "The system and its version (`macOS 26.1`); null: an older runner or the workspace's own computer.",
+    }),
     memoryGb: z.number().nullable(),
     ownerUserId: z.string().nullable(),
     belongsToWorkspace: z.boolean(),
@@ -142,9 +154,12 @@ const Computer = z
       description:
         "\"Help when the team's computer is full or away\" (`own`): while an agent's own computer is full or away, fresh turns of its owner's agents (anyone's, on a computer marked the workspace's) may think here, on a sign-in of the agent's owner. \"Use this computer for my agents' work\" (`first`, implies `own`): its owner's agents' asks, routines and long work start here whenever it is free.",
     }),
-    shareInternet: z.object({ on: z.boolean(), inUse: z.boolean() }).nullable().openapi({
+    maintenance: MaintenanceView.nullable().optional().openapi({
+      description: "What we do to the workspace's own computer now, away (`status` says it too) or while it works.",
+    }),
+    shareInternet: z.object({ on: z.boolean(), inUse: z.boolean(), only: z.boolean() }).nullable().openapi({
       description:
-        "A person's computer in a workspace with its own computer (ADR 0237): whether its owner lends it its internet, and whether the workspace's computer's web traffic goes out through it now. Null: nothing to lend to.",
+        "A person's computer where computers lend their internet (ADR 0237, `lendsInternet`): whether its owner lends it, whether it carried agents' web traffic in the last five minutes, and whether the workspace's agents use only its internet, AI calls included, never their usual way (`only`). Null: nothing to lend to.",
     }),
     systemMode: z.boolean().openapi({ description: "Each agent works as its own OS user there (a server install)." }),
     audience: Audience,
@@ -309,6 +324,14 @@ export function deviceAppRoutes(deps: AppDeps) {
             devicesHelp: z.boolean().openapi({
               description: "People's computers may help when the workspace's is full or away (an admin's switch).",
             }),
+            lendsInternet: z.boolean().openapi({
+              description:
+                "People's computers here lend their internet (ADR 0237): the workspace has its own computer, or this server lends to its own computer and its reads of web pages. The apps say so where a computer joins.",
+            }),
+            serverBoxesBorrow: z.boolean().openapi({
+              description:
+                "This server lends (ADR 0237), so a Linux computer that joins from a Terminal install borrows instead: its switch starts off.",
+            }),
           }),
         ),
         ...errors,
@@ -348,7 +371,7 @@ export function deviceAppRoutes(deps: AppDeps) {
       summary:
         "Rename a computer, change who can use it, mark it the workspace's, let it help when the team's computer is full or away, set its tasks at once",
       description:
-        "Its owner: anything. An admin: rename, mark it the workspace's, and narrow who can use someone's own computer (`device.widen_forbidden` otherwise). Never the workspace's computer (`machine.managed`). Only its owner turns its help on (`device.spill_owner_only`), which starts installing the CLIs their agents think with that it lacks, and changes its tasks at once or Push harder (`device.tasks_owner_only`; an admin too on a computer nobody connected; never on a Cloud computer, `device.tasks_cloud`), which the computer applies: it must be online (`machine.offline`) with an app that can (`machine.outdated`). Only its owner lends its internet to the workspace's own computer (`shareInternet`, `device.share_owner_only`; on again picks it first); an admin may stop it; only a person's own computer lends (`device.share_connected_only`).",
+        "Its owner: anything. An admin: rename, mark it the workspace's, and narrow who can use someone's own computer (`device.widen_forbidden` otherwise). Never the workspace's computer (`machine.managed`). Only its owner turns its help on (`device.spill_owner_only`), which starts installing the CLIs their agents think with that it lacks, and changes its tasks at once or Push harder (`device.tasks_owner_only`; an admin too on a computer nobody connected; never on a Cloud computer, `device.tasks_cloud`), which the computer applies: it must be online (`machine.offline`) with an app that can (`machine.outdated`). Only its owner lends its internet to the computers that borrow it (`shareInternet`, `device.share_owner_only`; on again picks it first); an admin may stop it; only a person's own computer lends (`device.share_connected_only`).",
       request: {
         params: MachineParams,
         body: body(
@@ -360,6 +383,10 @@ export function deviceAppRoutes(deps: AppDeps) {
             maxTasks: z.number().int().min(TASK_LIMIT_BOUNDS[0]).max(TASK_LIMIT_BOUNDS[1]).optional(),
             pushHarder: z.boolean().optional(),
             shareInternet: z.boolean().optional(),
+            internetOnly: z.boolean().optional().openapi({
+              description:
+                "With `shareInternet` on: the workspace's agents use only this computer's internet, AI calls included, and have none while it is offline. Its owner turns it on (`device.share_owner_only`), only while it lends (`device.share_off`); an admin may turn it off.",
+            }),
           }),
         ),
       },

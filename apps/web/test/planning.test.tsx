@@ -1128,7 +1128,7 @@ describe("Calendário", () => {
     const show = screen().queryByRole("button", { name: "Mostrar painel" });
     if (show) await click(show);
   };
-  test("week of 7 days with events, routine runs and issue due dates; filter chips hide them", async () => {
+  test("week of 7 days with events and issue due dates, never routine runs; filter chips hide them", async () => {
     const api = createFakeApi(seedState());
     const monday = mondayOf(new Date());
     await api.issues.create(ORG_ID, { title: "Fechar a release", dueDate: toYmd(monday) });
@@ -1136,26 +1136,13 @@ describe("Calendário", () => {
     expect(screen().getByRole("heading", { level: 1, name: "Calendário" })).toBeTruthy();
     expect(document.querySelectorAll(".cal-week__col")).toHaveLength(7);
     expect(screen().getByRole("button", { name: "Daily de produto, 10:00–11:00" })).toBeTruthy();
-    expect(screen().getAllByRole("button", { name: "Rotina Erros do Sentry do dia, 18:00" })).toHaveLength(5);
     expect(screen().getByRole("button", { name: "#133 Fechar a release, dia todo" })).toBeTruthy();
-    // A routine's run is a row at its time with its agent's face and name, never a pixel dot; a click opens it.
-    const routine = screen().getByRole("button", { name: "Rotina Resumo da semana, 09:00" });
-    expect(routine.classList.contains("cal-chip--run")).toBe(true);
-    expect(routine.querySelector(".ac-run-mark")).toBeNull();
-    expect(routine.querySelector(".cal-chip__title")?.textContent).toBe("Resumo da semana");
-    await click(routine);
-    await settle(2);
-    const runs = screen().getByRole("region", { name: "Resumo da semana" });
-    expect(runs.querySelector(".cal-details__owner")?.textContent).toBe("Atlas · Ops");
-    expect(runs.textContent).toContain("última: respondeu");
-    expect(within(runs).getByRole("link", { name: "Abrir rotina" }).getAttribute("href")).toContain("?open=");
-    await act(async () => fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" }));
-    await settle(2);
+    // The workspace's routines live on their own page: none of their runs is on the calendar.
+    expect(screen().queryByRole("button", { name: /Resumo da semana|Erros do Sentry/ })).toBeNull();
 
     await openPanel();
     const filters = screen().getByRole("group", { name: "Filtros" });
-    await click(within(filters).getByRole("button", { name: /^Rotinas/ }));
-    expect(screen().queryByRole("button", { name: /Resumo da semana/ })).toBeNull();
+    expect(within(filters).queryByRole("button", { name: /^Rotinas/ })).toBeNull();
     await click(within(filters).getByRole("button", { name: /^Prazos de tarefas/ }));
     expect(screen().queryByRole("button", { name: /Fechar a release/ })).toBeNull();
     expect(screen().getByRole("button", { name: "Daily de produto, 10:00–11:00" })).toBeTruthy();

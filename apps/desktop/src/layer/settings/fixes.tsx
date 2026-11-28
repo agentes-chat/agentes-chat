@@ -1,8 +1,8 @@
 /**
- * The one action that turns each of this computer's essentials on again (ADR 0256 §7), and the server here's reach
+ * The one action that turns each of this computer's essentials on again (ADR 0265 §7), and the server here's reach
  * switched on or off, shared by the Overview's "Always ready", the server's own section and App settings: each fix as
  * a button with its words, each essential's line under its title, reach's progress, problem and the question before
- * turning it off, and choosing how the phone and the team get here (ADR 0256 §4: the official Tailscale the person
+ * turning it off, and choosing how the phone and the team get here (ADR 0265 §4: the official Tailscale the person
  * installs, or an address of their own) inline under reach's row.
  */
 import { Button, Dialog, DialogFooter } from "@agenteschat/ui";
@@ -152,7 +152,7 @@ export function ReachRows({
 }
 
 /**
- * How the phone and the team get here, chosen inline under reach's row (ADR 0256 §4): the shared picker, then Cancel
+ * How the phone and the team get here, chosen inline under reach's row (ADR 0265 §4): the shared picker, then Cancel
  * and the button that applies it (`setLocalReach(true, way)`). An address is checked by its form here and where it
  * leads by the app, its problem said under its field; Tailscale applies by itself once it turns on while its row
  * waits. `done`: it applied, or the person cancelled (what it said about the choice is forgotten then).
@@ -245,7 +245,7 @@ export interface FixContext {
   mac: MacGrants | null;
   /** Read the system's side again (after a fix the system answers at once). */
   reread: () => void;
-  /** Turning reach on chooses how people get here first: where this screen shows that choice (ADR 0256 §4). */
+  /** Turning reach on chooses how people get here first: where this screen shows that choice (ADR 0265 §4). */
   chooseReach?: () => void;
 }
 

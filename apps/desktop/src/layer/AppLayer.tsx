@@ -1,5 +1,5 @@
 /**
- * The app layer (ADR 0256): the app's own screens in the main window, a web view of their own over the site
+ * The app layer (ADR 0265): the app's own screens in the main window, a web view of their own over the site
  * (app_layer.rs). Rust keeps the route and how it shows (`LayerState`); this draws it, says once it painted each route
  * (the layer appears only then, never with the screen it showed before), and sets `body[data-mode]`: `full` takes the
  * window (opaque), `sheet` is transparent over the site with a scrim and a card (macOS only), `hidden` draws nothing.

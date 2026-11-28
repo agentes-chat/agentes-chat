@@ -53,6 +53,15 @@
   "windowTitle.settings": {
     "value": "Settings"
   },
+  "background.title": {
+    "value": "agentes.chat is still running"
+  },
+  "background.bodyMac": {
+    "value": "Find it in the menu bar at the top of the screen. Open it or quit it from there."
+  },
+  "background.bodyTray": {
+    "value": "Find it in the system tray. Open it or quit it from there."
+  },
   "common.cancel": {
     "value": "Cancel"
   },
@@ -205,6 +214,18 @@
   },
   "tray.browser.doing.tabs": {
     "value": "switching tabs"
+  },
+  "tray.apps.title": {
+    "value": "{{agent}} is using {{app}}"
+  },
+  "tray.apps.detail": {
+    "value": "Your mouse and keyboard stay yours"
+  },
+  "tray.apps.stop": {
+    "value": "Stop"
+  },
+  "tray.apps.stopped": {
+    "value": "{{agent}} stopped using your apps"
   },
   "tray.label": {
     "value": "agentes.chat"
@@ -403,6 +424,18 @@
   },
   "tray.allowedUndone": {
     "value": "Off again: {{tool}}"
+  },
+  "tray.pickTitle": {
+    "value": "{{name}} asks for a folder for the agents"
+  },
+  "tray.pickTitleAgent": {
+    "value": "{{name}} asks for a folder for {{agent}}"
+  },
+  "tray.pickBody": {
+    "value": "Choose which folder to allow on this {{device}}."
+  },
+  "tray.pickChoose": {
+    "value": "Choose folder"
   },
   "tray.quitTitle": {
     "value": "Quit agentes.chat?"
@@ -1551,13 +1584,22 @@
     "value": "Agents use this computer's internet"
   },
   "pair.internetOn": {
-    "value": "Websites the agents open see your location"
+    "value": "Sites and servers the agents reach see your location"
   },
   "pair.internetOff": {
     "value": "Off: agents use their usual connection"
   },
   "pair.internetHint": {
-    "value": "The workspace's agents open websites through this computer's connection. Only websites and never anything on your own network. While this computer is offline, they use their usual connection."
+    "value": "The workspace's agents go online through this computer's connection: websites, git, SSH, databases and other TCP connections. Never anything on your own network, nor email on port 25. The agents' AI, name lookups, calls and other UDP traffic use their usual connection, and so does everything while this computer is offline."
+  },
+  "pair.internetHintProxy": {
+    "value": "The workspace's agents' browsers and the programs that follow proxy settings (git over HTTPS, curl, most command-line tools) go online through this computer's connection. SSH, database clients and other programs that ignore proxy settings use their usual connection, and so do the agents' AI, name lookups and UDP traffic. Never anything on your own network, nor email on port 25. While this computer is offline, everything uses the usual connection."
+  },
+  "pair.internetOnly": {
+    "value": "Use only this computer's internet"
+  },
+  "pair.internetOnlyHint": {
+    "value": "Agents use only this computer's internet, their AI included, and never the usual connection. While it's offline, they have no internet until it's back."
   },
   "pair.shareOff": {
     "value": "Only you for now"

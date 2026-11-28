@@ -1,7 +1,7 @@
 /**
- * Running agentes.chat on this computer (ADR 0256 §3), in three steps in one frame: who owns it (name, e-mail and the
+ * Running agentes.chat on this computer (ADR 0265 §3), in three steps in one frame: who owns it (name, e-mail and the
  * usage statistics line, until an owner exists), where it will be used (this computer, the phone and the team, chosen
- * when the system's Tailscale is on already; or only this computer), and how the phone and the team get here (ADR 0256
+ * when the system's Tailscale is on already; or only this computer), and how the phone and the team get here (ADR 0265
  * §4: the official Tailscale the person installs, waited for with no time limit and gone on from by itself once it is
  * on, or an address of their own; skipped when Tailscale is on already). Then the setup's steps and, shared with the
  * phone and the team, the phone's code. One installed from the terminal already runs here: Use it (its owner page
@@ -83,7 +83,7 @@ export function RunHere({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [usage, setUsage] = useState(true);
-  // Where it will be used, until chosen: everywhere when the system's Tailscale is on, else only here (ADR 0256 §4).
+  // Where it will be used, until chosen: everywhere when the system's Tailscale is on, else only here (ADR 0265 §4).
   const [place, setPlace] = useState<LocalPlace>("here");
   const placeChosen = useRef(false);
   const [way, setWay] = useState<ReachWay>(start === "address" ? { kind: "address", url: "" } : { kind: "tailscale" });
@@ -446,7 +446,7 @@ export function RunHere({
   if (at === "where") {
     const next = async () => {
       if (place !== "everywhere") return startSetup("here");
-      // Read again now: Tailscale on already needs no last step (ADR 0256 §4).
+      // Read again now: Tailscale on already needs no last step (ADR 0265 §4).
       const now = await host.tailscale().catch((): Tailnet => ({ state: "missing" }));
       setSystem(now);
       if (needsPrivateNetwork(place, now)) setStep("net");

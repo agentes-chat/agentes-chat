@@ -73,6 +73,7 @@ import { withGitBash } from "./cli-install";
 import { codexLoginStatusOf } from "./codex-sign-in";
 import { ConsoleDecoder } from "./console-text";
 import { prepareDevinHome } from "./devin-home";
+import { egressProxyEnv } from "./egress-relay";
 import { errnoCode, RunnerError } from "./errors";
 import { killTree } from "./exec";
 import {
@@ -974,7 +975,10 @@ export function accountSettingsEnv(
     ANTHROPIC_BASE_URL: plan?.claudeCode.baseUrl ?? (own ? runner.ANTHROPIC_BASE_URL : undefined) ?? API_ANTHROPIC,
   };
   for (const k of CLOUD_ENV) env[k] = own ? (runner[k] ?? "") : "";
-  for (const k of NETWORK_ENV) env[k] = runner[k] ?? "";
+  // ADR 0237: a borrowing computer's proxy, for the CLI's own commands; its endpoint keeps the computer's own way.
+  const endpoint = URL.parse(env.ANTHROPIC_BASE_URL ?? "")?.hostname;
+  const proxy = egressProxyEnv(endpoint ? [endpoint] : []);
+  for (const k of NETWORK_ENV) env[k] = runner[k] ?? proxy[k] ?? "";
   if (!plan) {
     // The computer's own API key on Anthropic's API: its conversation stays cached for an hour between messages, as a
     // subscription's does by default (Claude Code 2.1.242 and later read it), unless its owner chose a TTL.
@@ -3488,7 +3492,7 @@ export class AccountManager {
     this.retryTimer = null;
     this.probeQueue.length = 0;
     const waiting = [...this.logins.values()].filter((l) => l.state === "waiting");
-    for (const l of waiting) this.settle(l, "failed", "The runner stopped");
+    for (const l of waiting) this.settle(l, "failed", "agentes.chat stopped on the computer");
     await Promise.all(waiting.map((l) => this.drop(l)));
     for (const l of this.logins.values()) if (l.timer) clearTimeout(l.timer);
     this.logins.clear();

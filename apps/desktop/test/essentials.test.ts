@@ -181,7 +181,7 @@ describe("reach (the server here only)", () => {
     expect(reach({ local: here({ reach: false, reachHealth: "off" }) }).reason).toBe("chosen");
   });
 
-  test("from what the status says (ADR 0256 §4): HTTPS waiting, Tailscale not connected, the address down", () => {
+  test("from what the status says (ADR 0265 §4): HTTPS waiting, Tailscale not connected, the address down", () => {
     expect(reach({ local: here({ reachHealth: "approve" }) })).toEqual({
       id: "reach",
       state: "off",

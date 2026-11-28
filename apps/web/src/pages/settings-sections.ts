@@ -133,7 +133,7 @@ export interface SettingsNavItem {
 }
 
 /**
- * The settings list as the page shows it, and as the desktop app's layer shows it above This {{device}} (ADR 0256 §2):
+ * The settings list as the page shows it, and as the desktop app's layer shows it above This {{device}} (ADR 0265 §2):
  * the short list, then Advanced, each line with its words (a team's Workspace, People and Connectors hold more than the
  * section they open on), icon and address. Pure: the same model in both places.
  */

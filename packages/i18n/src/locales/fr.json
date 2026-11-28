@@ -38,6 +38,13 @@
     "wrapLines": "Retour à la ligne",
     "raw": "Brut",
     "table": "Tableau",
+    "tableRows_one": "Tableau · {{count}} ligne",
+    "tableRows_many": "Tableau · {{count}} lignes",
+    "tableRows_other": "Tableau · {{count}} lignes",
+    "tableSeeAll": "Voir les {{count}} lignes",
+    "tableRowCount_one": "{{count}} ligne",
+    "tableRowCount_many": "{{count}} lignes",
+    "tableRowCount_other": "{{count}} lignes",
     "chartItem": "Élément",
     "chartShare": "Part",
     "you": "vous",
@@ -2468,31 +2475,16 @@
     "deleteText": "Ses agents retournent dans Agents.",
     "deleteChannels": "Ses canaux retournent dans Canaux.",
     "dropHere": "Faites glisser des agents ici",
-    "dropHereAll": "Faites glisser des agents ou des canaux ici",
     "moved": "{{name}} est passé dans {{group}}",
     "movedOut": "{{name}} a quitté {{group}}",
     "undo": "Annuler"
   },
   "sidebarAgents": {
-    "options": "Options des agents",
-    "add": "Nouvel agent ou service",
-    "order": "Ordre",
-    "sort": {
-      "workspace": "Celui de l’espace de travail",
-      "mine": "Les miens d’abord",
-      "working": "Au travail d’abord"
-    },
     "showAll": "Afficher les agents qui ne me parlent pas",
-    "collapseAll": "Tout replier",
-    "expandAll": "Tout déplier",
-    "organize": "Organiser les services dans Équipe",
     "more_one": "1 agent de plus dans Équipe",
     "more_many": "{{count}} agents de plus dans Équipe",
     "more_other": "{{count}} agents de plus dans Équipe",
     "newAgent": "Nouvel agent",
-    "working_one": "{{count}} au travail",
-    "working_many": "{{count}} au travail",
-    "working_other": "{{count}} au travail",
     "count_one": "{{count}} agent",
     "count_many": "{{count}} agents",
     "count_other": "{{count}} agents",
@@ -2500,20 +2492,56 @@
     "talksOnly": "ne parle qu’à {{name}}",
     "talksOnlyMore_one": "ne parle qu’à {{name}} et {{count}} autre",
     "talksOnlyMore_many": "ne parle qu’à {{name}} et {{count}} autres",
-    "talksOnlyMore_other": "ne parle qu’à {{name}} et {{count}} autres",
-    "changeGroup": "Déplacer vers un service",
-    "newGroupWith": "Nouveau service avec {{name}}",
-    "dmsEmpty": "Vos conversations avec des personnes apparaissent ici."
+    "talksOnlyMore_other": "ne parle qu’à {{name}} et {{count}} autres"
   },
-  "sidebarPins": {
-    "pin": "Épingler en haut",
-    "unpin": "Désépingler",
-    "pinned": "Épinglé en haut",
-    "full": {
-      "agents": "Vous avez déjà épinglé 5 agents. Désépinglez-en un pour épingler celui-ci.",
-      "channels": "Vous avez déjà épinglé 5 canaux. Désépinglez-en un pour épingler celui-ci.",
-      "people": "Vous avez déjà épinglé 5 personnes. Désépinglez-en une pour épingler celle-ci."
-    }
+  "sidebarFavorites": {
+    "title": "Favoris",
+    "add": "Ajouter aux favoris",
+    "remove": "Retirer des favoris",
+    "marked": "Dans les favoris",
+    "full": "Les favoris en contiennent déjà 50. Retirez-en un pour ajouter celui-ci."
+  },
+  "sidebarSections": {
+    "new": "Nouvelle section",
+    "newName": "Nouvelle section",
+    "moveTo": "Déplacer vers la section",
+    "takeOut": "Retirer de la section",
+    "rename": "Renommer la section",
+    "delete": "Supprimer la section",
+    "nameLabel": "Nom de la section"
+  },
+  "sidebarDms": {
+    "options": "Options des messages directs",
+    "show": "Afficher",
+    "shows": {
+      "all": "Tout le workspace",
+      "recent": "Conversations récentes seulement"
+    },
+    "invite": "Inviter des personnes",
+    "invited": "Invitation envoyée",
+    "invitedTip": "{{email}} n'a pas encore accepté l'invitation",
+    "agentTag": "IA",
+    "agentTip": "Agent IA"
+  },
+  "sidebarColumn": {
+    "label": "Outils",
+    "unread": "{{name}}, quelque chose de non lu",
+    "you": "{{name}}, quelque chose pour vous"
+  },
+  "unreads": {
+    "title": "Non lus",
+    "forYou": "Pour vous",
+    "conversations": "Conversations",
+    "markAll": "Tout marquer comme lu",
+    "markRead": "Marquer comme lu",
+    "open": "Ouvrir",
+    "seeInbox": "Tout voir dans la boîte de réception",
+    "more_one": "{{count}} message de plus",
+    "more_many": "{{count}} messages de plus",
+    "more_other": "{{count}} messages de plus",
+    "emptyTitle": "Vous êtes à jour",
+    "emptyText": "Les nouveaux messages et ce qui vous attend apparaissent ici.",
+    "markedAll": "Tout est marqué comme lu"
   },
   "appsDownload": {
     "computer": "Ordinateur",
@@ -2926,6 +2954,7 @@
     "details": "Détails du canal",
     "composerLabel": "Écrire dans #{{channel}}",
     "composerDm": "Écrire à {{name}}",
+    "groupYou": "Vous",
     "composerPlaceholder": "Écrire dans #{{channel}} · utilisez @ pour appeler un agent",
     "send": "Envoyer",
     "attach": "Joindre un fichier",
@@ -2946,6 +2975,7 @@
     "sendFailed": "Le message n'a pas été envoyé. Réessayez.",
     "reconnecting": "Reconnexion au temps réel…",
     "detailsTitle": "#{{channel}}",
+    "detailsTitlePersonal": "{{channel}}",
     "detailsSearch": "Rechercher des personnes ou des agents",
     "detailsEmpty": "Aucun résultat pour « {{q}} ».",
     "topicLabel": "Description du canal",
@@ -2957,9 +2987,11 @@
     "replyInChannel": "Les agents répondent dans le canal",
     "replyInThreadsHelp": "Un agent appelé dans le canal répond dans le fil sous ce message, et le canal affiche une ligne pour ce fil. Le travail déjà en cours reste où il est.",
     "nameTaken": "#{{name}} existe déjà.",
+    "nameTakenPersonal": "Il existe déjà une conversation de groupe nommée « {{name}} ».",
     "generalName": "#general garde son nom.",
     "archive": "Archiver le canal",
     "archived": "#{{channel}} archivé. La conversation est conservée.",
+    "archivedPersonal": "« {{channel}} » archivée. La conversation est conservée.",
     "archivedTitle": "Canaux archivés",
     "archivedCount_one": "{{count}} canal archivé",
     "archivedCount_many": "{{count}} canaux archivés",
@@ -2969,6 +3001,7 @@
     "restore": "Restaurer",
     "restoreName": "Restaurer #{{channel}}",
     "restored": "#{{channel}} est de retour.",
+    "restoredPersonal": "« {{channel}} » est de retour.",
     "leave": "Quitter le canal",
     "left": "Vous avez quitté #{{channel}}",
     "leaveTitle": "Quitter #{{channel}} ?",
@@ -4429,8 +4462,9 @@
     "namePlaceholderPersonal": "par ex. voyage",
     "nameHelp": "Lettres minuscules, chiffres et tirets. S'affiche comme #{{name}}.",
     "nameInvalid": "Utilisez des lettres minuscules, des chiffres et des tirets, en commençant par une lettre ou un chiffre.",
+    "nameInvalidPersonal": "Donnez-lui un nom de 80 caractères maximum, sur une seule ligne.",
     "nameTaken": "Il existe déjà un canal #{{name}}.",
-    "nameTakenPersonal": "Il existe déjà une conversation de groupe nommée #{{name}}.",
+    "nameTakenPersonal": "Il existe déjà une conversation de groupe nommée « {{name}} ».",
     "topic": "Description",
     "topicPlaceholder": "De quoi on parle ici",
     "visibility": "Qui peut rejoindre",
@@ -4461,7 +4495,8 @@
     "selected_one": "{{count}} sélectionné",
     "selected_many": "{{count}} sélectionnés",
     "selected_other": "{{count}} sélectionnés",
-    "create": "Créer #{{name}}"
+    "create": "Créer #{{name}}",
+    "createPersonal": "Créer la conversation"
   },
   "channelCategories": {
     "undo": "Annuler",
@@ -4477,6 +4512,7 @@
     "invitePersonal": "Inviter {{email}} dans votre espace de travail et dans #{{channel}}",
     "inviteOrgPersonal": "Inviter {{email}} dans votre espace de travail",
     "addTitle": "Ajouter à #{{channel}}",
+    "addTitlePersonal": "Ajouter à {{channel}}",
     "addSearch": "Rechercher des personnes ou des agents",
     "addEmpty": "Personne hors du canal ne correspond à « {{q}} ».",
     "addEveryone": "Tout le monde dans {{org}} est déjà dans #{{channel}}.",
@@ -4486,6 +4522,7 @@
     "actions": "Options pour {{name}}",
     "remove": "Retirer du canal",
     "removeTitle": "Retirer {{name}} de #{{channel}} ?",
+    "removeTitlePersonal": "Retirer {{name}} de {{channel}} ?",
     "removePersonBody": "Cette personne ne verra plus le canal et ne recevra plus ses messages. Vous pourrez la rajouter plus tard.",
     "removeAgentBody": "Il ne lira plus ce canal et n'y répondra plus. Vous pourrez le rajouter plus tard.",
     "removeAgentBody_female": "Elle ne lira plus ce canal et n'y répondra plus. Vous pourrez la rajouter plus tard.",
@@ -5741,6 +5778,7 @@
       "adminAskChannel": "<b>{{name}}</b> vous demande d'ajouter <b>{{agent}}</b> à #{{label}}",
       "adminAskCreate": "<b>{{name}}</b> demande à pouvoir créer des agents",
       "adminAskWebhook": "<b>{{name}}</b> vous demande de configurer le webhook {{service}} pour les routines",
+      "adminAskVoice": "<b>{{name}}</b> vous demande d'activer les messages vocaux",
       "invitationAccepted": "<b>{{name}}</b> a accepté votre invitation et a rejoint {{org}}",
       "invitationAcceptedAny": "<b>{{name}}</b> a accepté votre invitation",
       "reaction_one": "<b>{{names}}</b> a réagi à votre message",
@@ -7060,6 +7098,7 @@
     "undoneBy": "Annulé par {{name}}",
     "undoneByYou": "Annulé par vous",
     "undo": "Annuler",
+    "applyAnyway": "Appliquer quand même",
     "appliedSome": "{{done}} sur {{total}} appliquées",
     "waitingAdmin": "En attente d'un admin",
     "stale": "Obsolète",
@@ -10157,8 +10196,7 @@
       "machine_access_requested": "{{agent}} a demandé le dossier {{folder}} sur {{computer}}. En attente de la réponse là-bas.",
       "machine_access_granted": "Autorisé : {{agent}} peut désormais utiliser {{folder}} sur {{computer}}",
       "machine_access_denied": "Refusé : {{agent}} n'utilisera pas {{folder}} sur {{computer}}",
-      "machine_access_expired": "La demande pour le dossier {{folder}} sur {{computer}} est restée sans réponse",
-      "access_command": "Pas d'app sur l'ordinateur ? Lancez ceci dans son Terminal :"
+      "machine_access_expired": "La demande pour le dossier {{folder}} sur {{computer}} est restée sans réponse"
     },
     "suggestion": {
       "pending": "Suggestion pour la mission",
@@ -10928,7 +10966,6 @@
     "filter": {
       "person": "Personnes",
       "agent": "Agents",
-      "routine": "Routines",
       "reminder": "Rappels",
       "deadline": "Échéances des tâches"
     },
@@ -10961,41 +10998,16 @@
         "declined": "Vous n'y allez pas."
       }
     },
-    "every": {
-      "hour": "toutes les heures",
-      "hours": "toutes les {{count}} h",
-      "minutes": "toutes les {{count}} min"
-    },
-    "perDay": "{{count}}× par jour",
-    "runs_one": "{{count}} exécution sur ces jours.",
-    "runs_many": "{{count}} exécutions sur ces jours.",
-    "runs_other": "{{count}} exécutions sur ces jours.",
-    "routineDetail": "Routine · livre dans {{target}}",
     "deadlineDetail": "La tâche arrive à échéance.",
     "reminderBy": "Créé par {{name}}",
     "reminderPosted": "Rappel · publié dans {{target}}",
     "cancelReminder": "Annuler le rappel",
     "reminderCancelled": "Rappel annulé",
     "openIssue": "Ouvrir la tâche",
-    "openRoutines": "Voir dans Routines",
-    "openRoutine": "Ouvrir la routine",
-    "runAria": "Routine {{name}}, {{time}}",
     "runHint": "{{name}} · {{agent}} · {{time}}",
-    "runsAt": "Routines à {{time}}",
-    "moreRuns_one": "+{{count}} routine",
-    "moreRuns_many": "+{{count}} routines",
-    "moreRuns_other": "+{{count}} routines",
-    "runTimes": "×{{count}}",
-    "result": {
-      "ok": "a répondu",
-      "silent": "rien de nouveau",
-      "failed": "échec",
-      "skipped": "ne s'est pas exécutée"
-    },
-    "lastResult": "dernière : {{result}}",
     "upcomingMeta": "{{day}} · {{time}}",
     "emptyHint": "Rien de prévu. Faites glisser pour créer ou appuyez sur N",
-    "agendaEmpty": "Les événements et routines des 30 prochains jours apparaissent ici.",
+    "agendaEmpty": "Les événements et rappels des 30 prochains jours apparaissent ici.",
     "agendaEmptyTitle": "Agenda libre pour les 30 prochains jours",
     "noResults": "Rien avec ce filtre.",
     "more": "+{{count}} de plus",
@@ -11959,6 +11971,7 @@
     "silent": "Rien entendu. Rien n'a été envoyé.",
     "notSent": "Impossible d'envoyer l'audio.",
     "limit": "La limite d'audio du jour est atteinte. Écrivez ici, ou réessayez demain.",
+    "plan": "Les messages vocaux sont inclus avec un abonnement agentes.chat. Vous pouvez toujours écrire ici.",
     "micBlocked": "Le microphone est bloqué",
     "micBlockedHint": "Autorisez le microphone dans les réglages de votre appareil pour enregistrer.",
     "openSettings": "Ouvrir les réglages",
@@ -11993,9 +12006,9 @@
       "title": "Messages vocaux",
       "on": "Messages vocaux",
       "onHelp": "Les personnes de cet espace de travail peuvent envoyer des audios dans les conversations.",
-      "noEngine": "Les messages vocaux ne sont pas encore disponibles ici.",
-      "noEngineAsk": "Les messages vocaux ne sont pas encore activés. La personne qui gère ce serveur les active, sur cette même page.",
-      "noEngineHere": "Les messages vocaux s'activent dès que vous choisissez ci-dessous ce qui transforme la voix en texte.",
+      "noEngine": "Pour l'instant, les messages vocaux partent en audio, donc les agents ne les entendent pas encore.",
+      "noEngineAsk": "Pour l'instant, les messages vocaux partent en audio, donc les agents ne les entendent pas. La personne qui gère ce serveur choisit ce qui transforme la voix en texte, sur cette même page.",
+      "noEngineHere": "Les messages vocaux partent en audio jusqu'à ce que vous choisissiez ci-dessous ce qui transforme la voix en texte.",
       "engineTitle": "Ce qui transforme la voix en texte",
       "own": "Votre propre serveur",
       "ownHelp": "Whisper ou Parakeet sur votre machine. L'audio y reste.",
@@ -12003,10 +12016,55 @@
       "key": "Clé {{name}}",
       "keyPlaceholder": "Collez ici",
       "test": "Tester",
-      "tested": "Ça marche. Tout le monde voit maintenant le microphone.",
+      "tested": "Ça marche. Les messages vocaux arrivent maintenant aux agents sous forme de texte.",
       "sealed": "Conservée chiffrée sur votre serveur et plus jamais affichée.",
       "leaves": "L'audio des messages vocaux est envoyé à {{name}} pour devenir du texte.",
       "invalid": "La clé enregistrée ne s'ouvre pas sur ce serveur. Collez-la à nouveau."
+    },
+    "local": {
+      "titleHere": "Sur cet ordinateur",
+      "titleServer": "Sur ce serveur",
+      "titlePhone": "Sur l'ordinateur du serveur",
+      "textHere": "Parakeet, un téléchargement de {{size}}. La voix reste sur cet ordinateur. 25 langues européennes.",
+      "textServer": "Parakeet, un téléchargement de {{size}}. La voix reste sur ce serveur. 25 langues européennes.",
+      "download": "Télécharger et activer",
+      "downloading": "Téléchargement du modèle vocal",
+      "progress": "{{done}} sur {{total}}",
+      "meanwhile": "Vous pouvez déjà enregistrer. Les messages partent en audio jusqu'à ce qu'il soit prêt.",
+      "downloadingPhone": "Téléchargement du modèle vocal sur l'ordinateur du serveur. Vous pouvez déjà enregistrer.",
+      "starting": "Activation…",
+      "licenses": "Licences des modèles",
+      "tooSmall": "Cet ordinateur a {{memory}} de mémoire et le modèle vocal a besoin de 8 Go. Utilisez la clé d'un fournisseur ci-dessous.",
+      "noDisk": "{{free}} libres sur ce disque et le modèle vocal a besoin de {{need}}. Libérez de l'espace ou utilisez la clé d'un fournisseur ci-dessous.",
+      "noBuild": "Il n'y a pas encore de modèle vocal pour cet ordinateur. Utilisez la clé d'un fournisseur ci-dessous.",
+      "stopped": "Le téléchargement s'est arrêté : {{detail}}",
+      "diskFull": "Le disque s'est rempli pendant le téléchargement. Libérez de l'espace et réessayez.",
+      "didntStart": "Le modèle vocal n'a pas démarré : {{detail}}",
+      "resume": "Reprendre",
+      "copy": "Copier les détails",
+      "copied": "Détails copiés"
+    },
+    "offer": {
+      "title": "Messages vocaux",
+      "download": "Télécharger {{size}} et activer",
+      "choose": "Choisir comment",
+      "askOwner": "Transformer la voix en texte sur ce serveur",
+      "askMember": "Demander d'activer les messages vocaux",
+      "on": "Les messages vocaux sont activés : les agents les lisent en texte."
+    },
+    "setup": {
+      "memberTitle": "La voix n'est pas encore activée ici",
+      "memberText": "Votre message part en audio que chacun peut écouter. Les agents ne l'entendent pas tant que {{name}} n'a pas choisi ce qui transforme la voix en texte.",
+      "memberTextNoName": "Votre message part en audio que chacun peut écouter. Les agents ne l'entendent pas tant que la personne qui gère ce serveur n'a pas choisi ce qui transforme la voix en texte.",
+      "ask": "Demander à {{name}}",
+      "asked": "{{name}} a reçu votre demande",
+      "recordAnyway": "Enregistrer quand même",
+      "ownerTitle": "Choisissez ce qui transforme la voix en texte",
+      "ownerText": "D'ici là, les messages vocaux partent en audio que chacun peut écouter, et les agents ne les entendent pas.",
+      "readyTitle": "Les messages vocaux sont activés",
+      "readyText": "Ce que vous dites arrive aux agents sous forme de texte.",
+      "record": "Enregistrer un message",
+      "ownerPhone": "Choisissez-le dans Paramètres › Voix sur le web ou dans l'app de bureau. D'ici là, les messages vocaux partent en audio que chacun peut écouter, et les agents ne les entendent pas."
     }
   },
   "media": {
@@ -15641,6 +15699,9 @@
       "desktop_read": "Lire l'écran",
       "desktop_screenshot": "Prendre une capture d'écran",
       "desktop_ask_person": "Demander à quelqu'un de prendre le contrôle de l'ordinateur",
+      "apps_list": "Voir les apps ouvertes",
+      "apps_read": "Lire une app",
+      "apps_act": "Utiliser une app",
       "computer_use": "Utiliser l'ordinateur",
       "computer_status": "Vérifier l'ordinateur",
       "left_click": "Cliquer",
@@ -16767,6 +16828,7 @@
       "generalStays": "Tout le monde reste dans #general.",
       "leadChannelOnly": "Seuls les canaux ont un agent responsable.",
       "leadNotMember": "L’agent responsable doit être dans le canal.",
+      "groupNameInvalid": "Donnez-lui un nom de 80 caractères maximum, sur une seule ligne.",
       "mcpUnreachable": "Connexion au serveur MCP impossible. Vérifiez son adresse et réessayez.",
       "notApproved": "Ce service n'a pas encore approuvé agentes.chat.",
       "alreadyInvited": "Cette personne a déjà une invitation.",
@@ -17067,6 +17129,7 @@
       "spillOwnerOnly": "Seule la personne qui a connecté cet ordinateur peut activer son aide. Tu peux la désactiver.",
       "shareOwnerOnly": "Seule la personne qui a connecté cet ordinateur peut laisser les agents utiliser sa connexion internet. Vous pouvez la couper.",
       "shareConnectedOnly": "Seul un ordinateur que quelqu’un a connecté peut partager sa connexion internet avec les agents.",
+      "shareOff": "Activez d’abord « Les agents utilisent la connexion internet de cet ordinateur », puis choisissez d’utiliser uniquement son internet.",
       "tasksOwnerOnly": "Seule la personne qui a connecté cet ordinateur peut changer le nombre de tâches qu'il exécute en même temps.",
       "tasksCloud": "Le Cloud dimensionne lui-même la place de cet ordinateur pour les tâches.",
       "notHome": "Les agents vivent sur l'ordinateur du workspace et utilisent celui-ci quand ils le nomment."
@@ -17217,13 +17280,13 @@
       "browser_download": "Impossible de télécharger le navigateur des agents. Vérifiez la connexion de cet ordinateur et il réessaiera à la prochaine utilisation.",
       "browser_checksum": "Le téléchargement du navigateur des agents est arrivé abîmé, il n'a donc pas été utilisé. Il réessaiera à la prochaine utilisation.",
       "desktop_use_linux": "Les applications sur les écrans des agents fonctionnent sur les ordinateurs Linux qui ont les écrans des agents.",
-      "desktop_use_own_user": "Les applications sur les écrans demandent que chaque agent travaille avec son propre utilisateur sur cet ordinateur (mode système). Ici tous les agents travaillent avec l'utilisateur du runner.",
+      "desktop_use_own_user": "Les applications sur les écrans demandent que chaque agent travaille avec son propre utilisateur sur cet ordinateur (mode système). Ici tous les agents travaillent avec le même utilisateur, celui qui exécute agentes.chat.",
       "desktop_use_install": "Installez sur cet ordinateur ce dont les applications sur les écrans ont besoin :",
       "desktop_unavailable": "Les écrans des agents ne peuvent pas fonctionner sur cet ordinateur.",
       "desktop_linux": "Les écrans des agents fonctionnent uniquement sur les ordinateurs Linux.",
       "desktop_install": "Installez les écrans des agents sur cet ordinateur :",
-      "not_as_root": "Les écrans et les terminaux des agents ne fonctionnent jamais en root. Lancez le runner avec un utilisateur normal.",
-      "runner_bun_old": "Il faut le runner sur Bun 1.3.5 ou plus récent. Mettez à jour le runner sur cet ordinateur.",
+      "not_as_root": "Les écrans et terminaux des agents ne tournent jamais en root. Lancez agentes.chat avec un utilisateur normal.",
+      "runner_bun_old": "Il faut agentes.chat sur Bun 1.3.5 ou plus récent. Mettez à jour agentes.chat sur cet ordinateur.",
       "terminal_unsupported": "Les terminaux fonctionnent uniquement sur les ordinateurs Linux et Mac."
     },
     "egress": {
@@ -17233,13 +17296,51 @@
       "hint": "L’adresse que voient les sites quand les agents naviguent. Elle change quand le réseau de l’ordinateur change.",
       "waiting": "Les agents se reconnectent à internet. Leurs connexions attendent son retour.",
       "via": "Les agents utilisent la connexion internet de {{name}}",
-      "viaBy": "Les agents utilisent la connexion internet de {{name}} ({{person}})",
-      "viaHint": "Les sites voient l’emplacement de cet ordinateur. La personne qui l’a connecté peut couper ça sur sa page."
+      "viaHint": "Les sites voient l’emplacement de cet ordinateur. La personne qui l’a connecté peut couper ça sur sa page.",
+      "offline": "Les agents n’ont pas d’internet : {{name}} est hors ligne"
     },
-    "moving": {
-      "short": "Changement de serveur",
-      "line": "Passe sur un nouveau serveur… de retour dans quelques minutes",
-      "named": "{{computer}} passe sur un nouveau serveur… de retour dans quelques minutes"
+    "maintenance": {
+      "short": {
+        "moving": "Changement de serveur",
+        "restarting": "Redémarrage",
+        "updating": "Mise à jour",
+        "converting": "Amélioration du disque",
+        "host_maintenance": "Maintenance",
+        "other": "Maintenance"
+      },
+      "what": {
+        "moving": "Passage sur un nouveau serveur",
+        "copying": "Copie vers un nouveau serveur",
+        "restarting": "Redémarrage",
+        "updating": "Mise à jour de son logiciel",
+        "converting": "Amélioration de son disque",
+        "host_maintenance": "Son serveur est en maintenance",
+        "other": "En maintenance"
+      },
+      "line": "{{what}}… {{when}}",
+      "named": "{{computer}}: {{line}}",
+      "back": "de retour dans environ {{time}}",
+      "backSoon": "de retour dans quelques minutes",
+      "late": "cela prend un peu plus longtemps que prévu",
+      "slower": "il peut être plus lent en attendant",
+      "slowerFor": "il peut être plus lent pendant environ {{time}}",
+      "why": {
+        "moving": "Nous le déplaçons sur un nouveau serveur.",
+        "copying": "Nous copions ses fichiers vers un nouveau serveur pendant qu’il travaille.",
+        "handover": "Nous transférons ses dernières modifications vers le nouveau serveur.",
+        "restarting": "Nous le redémarrons.",
+        "unresponsive": "Il ne répondait plus, alors nous l’avons redémarré automatiquement.",
+        "updating": "Nous mettons à jour son logiciel.",
+        "converting": "Nous passons son disque sur un stockage plus rapide.",
+        "host_maintenance": "Le serveur sur lequel il tourne est en maintenance.",
+        "other": "Nous effectuons une intervention dessus."
+      },
+      "since": "Depuis {{time}}",
+      "expectedBack": "Retour prévu vers {{time}}",
+      "expectedDone": "Fin prévue vers {{time}}",
+      "meanwhile": "Les messages à ses agents attendent et repartent d’eux-mêmes à son retour.",
+      "working": "Ses agents continuent de travailler en attendant.",
+      "about": "Ce qui se passe"
     },
     "online": "En ligne",
     "offline": "Hors ligne",
@@ -17308,6 +17409,11 @@
     "removed": "{{name}} a été retiré.",
     "name": "Nom de l'ordinateur",
     "nameHelp": "Le nom que voient les personnes et les agents.",
+    "defaultName": {
+      "model": "{{model}} de {{name}}",
+      "linux": "Ordinateur Linux de {{name}}",
+      "other": "Ordinateur de {{name}}"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",
@@ -17461,6 +17567,13 @@
       "grantTextTerminal": "Les autorisations se donnent sur l'ordinateur lui-même, dans son Terminal :",
       "grantTextAdmin": "Les autorisations se donnent sur l'ordinateur lui-même, dans son Terminal, en tant qu'administrateur :",
       "grantTerminal": "Pas d'app ? Dans le terminal de l'ordinateur :",
+      "pickText": "L'app agentes.chat ouvre un sélecteur de dossier sur {{machine}}, pour que la personne sur place choisisse.",
+      "pick": "Autoriser un dossier",
+      "picked": "Un sélecteur de dossier s'est ouvert sur {{machine}}. Choisissez le dossier là-bas.",
+      "pickWaiting": "En attente du choix du dossier sur {{machine}}",
+      "grantTerminalMore": "Pas d'app sur place ? Utilisez le Terminal",
+      "noApp": "Cet ordinateur n'a pas l'app agentes.chat pour choisir le dossier. Autorisez-le depuis son Terminal.",
+      "requestDone": "Cette demande a déjà reçu une réponse ou a expiré.",
       "preferTerminal": "Je préfère le Terminal",
       "grantOnlyOwner": "Seule la personne {{name}} peut autoriser davantage, sur l'ordinateur lui-même. Si vous avez besoin de quelque chose, demandez-lui.",
       "pathPlaceholder": "<dossier>",
@@ -17505,6 +17618,12 @@
     "cpus_one": "{{count}} CPU",
     "cpus_many": "{{count}} CPU",
     "cpus_other": "{{count}} CPU",
+    "cores_one": "{{count}} cœur",
+    "cores_many": "{{count}} de cœurs",
+    "cores_other": "{{count}} cœurs",
+    "threads_one": "{{count}} thread",
+    "threads_many": "{{count}} de threads",
+    "threads_other": "{{count}} threads",
     "memory": "{{gb}} Go",
     "system": {
       "android": "Android {{version}}",
@@ -17580,11 +17699,14 @@
     "helpWorkspace": "Les ordinateurs aident quand celui de l'équipe est plein ou absent",
     "helpWorkspaceHint": "Chaque ordinateur n'aide que si son propriétaire le permet. Désactivé : aucun n'aide, quel que soit le choix de son propriétaire.",
     "shareInternet": "Les agents utilisent la connexion internet de cet ordinateur",
-    "shareInternetHint": "Les sites que les agents ouvrent passent par la connexion de cet ordinateur, ils voient donc votre emplacement. Uniquement des sites web et jamais rien sur votre propre réseau. Tant que cet ordinateur est hors ligne, les agents utilisent leur connexion habituelle.",
+    "shareInternetHint": "Les connexions des agents passent par l’internet de cet ordinateur, les sites et les serveurs voient donc votre emplacement : sites web, git, SSH, bases de données et autres connexions TCP. Jamais rien sur votre propre réseau, ni d’e-mail sur le port 25. L’IA des agents, les résolutions de noms, les appels et le reste du trafic UDP utilisent la connexion habituelle, comme tout le reste tant que cet ordinateur est hors ligne.",
+    "shareInternetHintProxy": "Le navigateur des agents et les programmes qui suivent les réglages de proxy (git via HTTPS, curl, la plupart des outils en ligne de commande) passent par l’internet de cet ordinateur, les sites voient donc votre emplacement. SSH, les clients de base de données et les autres programmes qui ignorent les réglages de proxy utilisent la connexion habituelle, comme l’IA des agents, les résolutions de noms et le trafic UDP. Jamais rien sur votre propre réseau, ni d’e-mail sur le port 25. Tant que cet ordinateur est hors ligne, tout utilise la connexion habituelle.",
+    "shareInternetOnly": "Utiliser uniquement l’internet de cet ordinateur",
+    "shareInternetOnlyHint": "Les agents utilisent uniquement l’internet de cet ordinateur, leur IA comprise, et jamais la connexion habituelle. Tant qu’il est hors ligne, ils n’ont pas d’internet jusqu’à son retour.",
     "shareInternetInUse": "Utilisé en ce moment",
     "shareInternetOther": "Les agents utilisent {{name}} en ce moment",
     "shareInternetPick": "Utiliser celui-ci",
-    "shareInternetJoin": "Les agents ouvriront aussi des sites via la connexion internet de cet ordinateur, les sites verront donc votre emplacement. Vous pouvez couper ça sur sa page.",
+    "shareInternetJoin": "Les agents passeront aussi par l’internet de cet ordinateur, les sites et les serveurs verront donc votre emplacement. Vous pouvez couper ça sur sa page.",
     "connectedBy": "Connecté par {{name}}",
     "downloadFor": "Télécharger pour {{system}}",
     "downloadApp": "Télécharger l'app",
@@ -17626,6 +17748,8 @@
       "paused": "{{host}} est en pause, le contrôle attend donc sa reprise.",
       "held": "Cet espace de travail est en pause, donc la prise de contrôle attend qu'il soit de nouveau actif.",
       "lost": "Le contrôle est terminé. Vous regardez à nouveau {{name}}.",
+      "controlLate": "La prise de contrôle n'a pas démarré à temps. {{host}} prépare encore {{name}} : réessayez dans une minute.",
+      "controlFailed": "Impossible de prendre le contrôle de {{name}}. Réessayez, ou redémarrez l'app agentes.chat sur {{host}}.",
       "typeLabel": "Écrire sur {{name}}"
     },
     "status": {
@@ -17647,7 +17771,7 @@
       "withHost": "avec {{host}}",
       "lastSeen": "vu pour la dernière fois {{time}}",
       "offlineUnresponsive": "ne répond plus depuis {{time}}",
-      "offlineStopped": "runner arrêté à {{time}}",
+      "offlineStopped": "agentes.chat arrêté à {{time}}",
       "offlineDropped": "connexion perdue à {{time}}"
     },
     "line": {
@@ -17664,9 +17788,14 @@
       "offline": "Les agents attendent son retour.",
       "offlineSeen": "Vu pour la dernière fois {{time}}. Les agents attendent son retour.",
       "offlineWithHost": "{{host}} est hors ligne. Les agents attendent son retour.",
-      "offlineUnresponsive": "Ne répond plus depuis {{time}}, peut-être sans réseau ou surchargé. Lancez `{{command}}` dessus.",
-      "offlineStopped": "Le runner s'est arrêté à {{time}}. Relancez-le, ou lancez `{{command}}` dessus pour savoir pourquoi.",
-      "offlineDropped": "La connexion a été perdue à {{time}}. Elle se rétablit d'elle-même. Sinon, lancez `{{command}}` dessus."
+      "offlineUnresponsive": "Ne répond plus depuis {{time}}, peut-être sans internet ou surchargé. Vérifiez qu'il est allumé et connecté.",
+      "offlineStopped": "L'app agentes.chat s'est arrêtée sur cet ordinateur à {{time}}. Rouvrez l'app.",
+      "offlineStoppedCli": "agentes.chat s'est arrêté sur cet ordinateur à {{time}}. Relancez-le dessus.",
+      "offlineDropped": "La connexion a été perdue à {{time}}. Elle se rétablit d'elle-même."
+    },
+    "technical": {
+      "title": "Détails techniques",
+      "doctor": "Pour voir pourquoi, lancez ceci dessus :"
     },
     "reason": {
       "locked": "Le téléphone est verrouillé",
@@ -18119,8 +18248,10 @@
       "toolRequest": "<b>{{who}}</b> vous demande d'activer {{tool}} sur votre <b>{{deviceName}}</b>",
       "cliRequest": "<b>{{who}}</b> vous demande d'installer {{tool}} sur votre <b>{{deviceName}}</b>",
       "folderRequest": "<b>{{who}}</b> vous demande le dossier {{path}} sur votre <b>{{deviceName}}</b>",
+      "folderOnComputer": "Autoriser sur l'ordinateur",
+      "folderShown": "Ouvert sur {{deviceName}}. Autorisez-le là-bas.",
       "internetShared": "Les agents ouvrent désormais les sites web via la connexion internet de <b>{{deviceName}}</b>",
-      "internetSharedLine": "Uniquement les agents de ce workspace, uniquement des sites web, jamais rien sur son propre réseau. Tant qu’il est hors ligne, ils utilisent leur connexion habituelle.",
+      "internetSharedLine": "Uniquement les agents de ce workspace, jamais rien sur son propre réseau, jamais d’e-mail sur le port 25. Tant qu’il est hors ligne, ils utilisent leur connexion habituelle.",
       "internetOff": "Désactiver",
       "internetOffDone": "Les agents n’utilisent plus la connexion internet de {{deviceName}}.",
       "once": "Autoriser une fois",
@@ -18918,7 +19049,23 @@
       "version": "Version",
       "license": "Logiciel libre sous la <license>GNU Affero General Public License v3</license>, sans garantie.",
       "source": "Code source",
-      "copyright": "Copyright © 2026 AGENTESCHAT, LLC et contributeurs"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC et contributeurs",
+      "latest": "La version la plus récente",
+      "newer": "La {{version}} est sortie",
+      "notes": "Nouveautés",
+      "update": {
+        "title": "Passer à la {{version}}",
+        "docker": "Avec Docker",
+        "native": "Sans Docker",
+        "nativeHelp": "Extrayez le paquet de la version dans `~/.agentes/app`, puis lancez :",
+        "desktop": "Il tourne dans l'app de bureau de cet ordinateur ? Il se met à jour avec l'app.",
+        "notice": "agentes.chat {{version}} est sorti pour ce serveur",
+        "how": "Comment mettre à jour"
+      },
+      "computers": "Programme des ordinateurs",
+      "computersAhead_one": "{{count}} ordinateur utilise une version plus récente que ce serveur. Il fonctionne tel quel, et ses nouveautés arrivent avec la mise à jour de ce serveur.",
+      "computersAhead_many": "{{count}} ordinateurs utilisent une version plus récente que ce serveur. Ils fonctionnent tels quels, et leurs nouveautés arrivent avec la mise à jour de ce serveur.",
+      "computersAhead_other": "{{count}} ordinateurs utilisent une version plus récente que ce serveur. Ils fonctionnent tels quels, et leurs nouveautés arrivent avec la mise à jour de ce serveur."
     },
     "title": "Paramètres",
     "account": {
@@ -19941,6 +20088,7 @@
         "usingScreen": "A utilisé l'écran",
         "cloningRepo": "A cloné un dépôt",
         "listingRepos": "A listé les dépôts",
+        "updatingCode": "A mis à jour le code",
         "preparingCli": "A préparé {{app}}",
         "openingPullRequest": "A ouvert une pull request",
         "handingOff": "A livré un rapport",
@@ -20065,6 +20213,7 @@
       "usingScreen": "utilisation de l'écran",
       "cloningRepo": "clonage d'un dépôt",
       "listingRepos": "liste les dépôts",
+      "updatingCode": "met à jour le code",
       "preparingCli": "préparation de {{app}} sur {{computer}}",
       "preparingCliPct": "préparation de {{app}} sur {{computer}} ({{percent}} %)",
       "openingPullRequest": "ouverture d'une pull request",
@@ -20188,6 +20337,7 @@
       "brain_unavailable_outdated": "Le programme de mon ordinateur doit être mis à jour pour que {{brain}} puisse répondre. Je répondrai dès qu'il sera à jour.",
       "brain_unavailable_plan_owner": "{{brain}} réfléchirait avec un abonnement qui n'est pas celui de mon propriétaire, donc je ne l'utilise pas. Connectez le compte de mon propriétaire sur ma page.",
       "brain_unavailable_shared_login": "Mon ordinateur ne peut pas utiliser la connexion de Claude pour tous les agents pour l'instant. Je répondrai dès que possible. Si l'échec continue, reconnectez Claude dans Comptes IA.",
+      "brain_unavailable_lent_offline": "Je n’ai pas d’internet pour le moment : {{computer}} est hors ligne, et les agents de ce workspace utilisent uniquement son internet. Je répondrai à son retour, ou dès que « Utiliser uniquement l’internet de cet ordinateur » sera désactivé sur sa page.",
       "provider_unavailable": "Mon fournisseur d'IA ne répond pas pour le moment. Je répondrai dès son retour.",
       "provider_wait_rate_limit": "{{provider}} limite les requêtes de cette clé pour le moment. Je répondrai dès que possible.",
       "provider_wait_down": "{{provider}} est en panne ou surchargé pour le moment. Je répondrai dès son retour.",
@@ -20198,7 +20348,9 @@
       "provider_back": "Mon IA est de retour.",
       "confidential_removed": "Supprimé : le texte confidentiel est conservé pendant {{days}} jours.",
       "brain_queued": "Toujours dans la file. Je réponds dès que mon tour arrive.",
-      "brain_interrupted": "{{brain}} s'est arrêté avant de terminer. Déjà fait, non répété : {{tools}}.",
+      "brain_interrupted": "{{brain}} s'est arrêté avant de terminer. Redemandez pour continuer.",
+      "brain_interrupted_timeout": "{{brain}} a dépassé son temps limite et s'est arrêté avant de terminer. Redemandez pour continuer.",
+      "brain_interrupted_computer": "L'ordinateur a arrêté {{brain}} avant la fin. Redemandez pour continuer.",
       "plan_limit_cut": "Je me suis arrêté à la limite de l'abonnement {{plan}}. Je reprendrai là où j'en étais {{when}}, quand elle se réinitialisera.",
       "plan_limit_cut_unknown": "Je me suis arrêté à la limite de l'abonnement {{plan}}. Je reprendrai là où j'en étais dès qu'elle se réinitialisera.",
       "plan_limit_wait": "L'abonnement {{plan}} a atteint sa limite. Je répondrai {{when}}, quand elle se réinitialisera. S'il est libéré plus tôt dans {{plan}}, je le verrai et répondrai aussitôt.",
@@ -20263,6 +20415,7 @@
       "action_approvals": "Approbations qui vous attendent",
       "welcome_member": "Vous venez de rejoindre {{org}}. **De quoi vous occupez-vous ici ?** Dites-le-moi et je crée votre premier agent avec vous.",
       "action_open_page": "Ouvrir un écran",
+      "action_voice_setup": "Activer les messages vocaux",
       "calendar_proposal": "Proposition d'événement : {{title}}",
       "action_workspace": "A proposé une modification dans l'espace de travail",
       "agent_proposal": "A proposé un nouvel agent : {{name}}",
@@ -20563,6 +20716,10 @@
     "offer_open_page": {
       "label": "Proposer d'ouvrir un écran",
       "description": "Publie une carte dont le bouton ouvre un écran de l'app, comme la facturation, les rôles ou la page d'un agent."
+    },
+    "offer_voice_setup": {
+      "label": "Proposer d'activer les messages vocaux",
+      "description": "Publie une carte qui active les messages vocaux en un clic pour la personne qui gère le serveur, ou le lui demande."
     },
     "set_team_week": {
       "label": "Modifier la carte Semaine de l’équipe",
@@ -21182,7 +21339,7 @@
       "people": "Dès maintenant, tout le monde peut seulement le lire et reçoit un e-mail",
       "peopleQuiet": "Dès maintenant, tout le monde peut seulement le lire",
       "computer": "Son ordinateur s'arrête dès maintenant et est effacé",
-      "computers": "Les ordinateurs connectés sont déconnectés. Les dossiers des agents y restent jusqu'à la suppression du runner.",
+      "computers": "Les ordinateurs connectés sont déconnectés. Les dossiers des agents y restent jusqu'à ce qu'agentes.chat en soit retiré.",
       "connectors": "Les connecteurs et les boîtes mail sont déconnectés"
     },
     "undo": "N'importe quel propriétaire peut le restaurer jusqu'au {{date}} à {{time}}. Ensuite, impossible de revenir en arrière.",
@@ -21551,14 +21708,6 @@
       "doneByYou": "Fait par vous à {{time}}. {{agent}} a regardé l'écran à nouveau et a continué.",
       "doneByYou_female": "Fait par vous à {{time}}. {{agent}} a regardé l'écran à nouveau et a continué."
     },
-    "control": {
-      "notice": "Les programmes de l'ordinateur de {{name}} peuvent voir l'écran et ce que vous tapez ou collez.",
-      "notice_female": "Les programmes de l'ordinateur de {{name}} peuvent voir l'écran et ce que vous tapez ou collez."
-    },
-    "session": {
-      "check": "Contrôles de sécurité",
-      "screening": "Nous pouvons vérifier le texte de cet écran pour détecter les abus. Nous ne gardons que le résultat. Ce que l'écran n'affiche pas, comme un mot de passe dans une invite, n'est jamais capturé."
-    },
     "after": {
       "titleNoSite": "A utilisé l'écran",
       "noSite": "Avant d'ouvrir une application"
@@ -21568,8 +21717,6 @@
       "group_female": "Écran de {{name}}"
     },
     "watch": {
-      "notice": "Les programmes de l'ordinateur de {{name}} peuvent voir l'écran et tout ce qui y est tapé ou collé.",
-      "notice_female": "Les programmes de l'ordinateur de {{name}} peuvent voir l'écran et tout ce qui y est tapé ou collé.",
       "step": {
         "desktop_open": "A ouvert {{detail}}",
         "desktop_open_plain": "A ouvert une application",
@@ -21593,14 +21740,13 @@
       }
     },
     "use": {
-      "title": "Applications sur les écrans des agents",
-      "description": "Les agents ouvrent et utilisent ici des applications sur leurs propres écrans, comme le ferait une personne, pendant que les gens regardent depuis la page de chaque agent.",
+      "title": "L'écran de chaque agent",
+      "description": "Ici, chaque agent a un écran à lui, séparé du vôtre, et y utilise des apps avec des fenêtres, comme un navigateur ou un tableur, comme le ferait une personne. Vous regardez depuis la page de l'agent. Linux seulement pour l'instant : il peut ouvrir un écran en plus pour chaque agent sans toucher au vôtre.",
       "ready": "Prêt",
       "off": "Désactivé",
-      "unavailable": "Indisponible",
+      "unavailable": "À préparer",
       "offHelp": "Activez les écrans et les commandes sur cet ordinateur :",
       "offOne": "Cet ordinateur a besoin de l'écran et des commandes activés.",
-      "linuxOnly": "Les agents n'utilisent des applications sur leurs propres écrans que sur les ordinateurs Linux.",
       "agent": "{{name}} ne peut pas encore utiliser d'applications sur son écran sur {{computer}}.",
       "agent_female": "{{name}} ne peut pas encore utiliser d'applications sur son écran sur {{computer}}."
     },

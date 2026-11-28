@@ -4,7 +4,7 @@ import { browserBadgeOf } from "./browser";
 /**
  * The menu bar icon's states (one template image each, src-tauri/icons/tray). `browsing`: a ring
  * on the symbol while an agent is in its browser; `needs`: a filled dot when one needs a person;
- * `attention`: an exclamation mark while one of this computer's essentials needs the person (ADR 0256 §7).
+ * `attention`: an exclamation mark while one of this computer's essentials needs the person (ADR 0265 §7).
  */
 export type TrayState = "idle" | "working" | "paused" | "offline" | "update" | "browsing" | "needs" | "attention";
 

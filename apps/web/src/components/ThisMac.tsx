@@ -21,7 +21,7 @@ import "./this-device-settings.css";
  * This computer, in the agentes.chat desktop app (ADR 0036, ADR 0066): the site knows which of its
  * organizations the computer it runs on works for, pairs it in one click (the app asks the person in its
  * own dialog, then hands the runner's code to the site, which confirms it with the person's session; no code
- * to read) and opens This {{device}}'s settings, the app's own (ADR 0256), where access is granted. agentes.chat
+ * to read) and opens This {{device}}'s settings, the app's own (ADR 0265), where access is granted. agentes.chat
  * included (ADR 0165). Outside the app, and where this computer is set up with a server of its own (a loopback
  * address, the server the app runs here), nothing.
  */
@@ -157,7 +157,7 @@ export function ThisMacButton({
 
 /**
  * This {{device}}'s settings on `section`, scrolled to `focus`, for what is decided on this computer itself (folders,
- * tools, updates, the server here): the app's own layer (ADR 0256), or an older app's Preferences on the matching tab.
+ * tools, updates, the server here): the app's own layer (ADR 0265), or an older app's Preferences on the matching tab.
  */
 export function OpenThisMacButton({
   section,
@@ -183,7 +183,7 @@ const THIS_DEVICE_HEALTH_KEY = ["desktop", "thisDeviceHealth"] as const;
 /** Asked again this often while the settings list is on screen, as well as whenever the window comes back. */
 const THIS_DEVICE_HEALTH_POLL_MS = 60_000;
 
-/** How many things need the person on this computer, and whether the server runs here (ADR 0256 §2); off elsewhere. */
+/** How many things need the person on this computer, and whether the server runs here (ADR 0265 §2); off elsewhere. */
 export function useThisDeviceHealth() {
   return useQuery({
     queryKey: THIS_DEVICE_HEALTH_KEY,
@@ -206,7 +206,7 @@ const SECTION_ICONS: Record<Exclude<ThisDeviceSection, "overview">, IconName> = 
 };
 
 /**
- * Settings › This {{device}} in the desktop app with its own settings layer (ADR 0256 §2): Overview, Folders and tools,
+ * Settings › This {{device}} in the desktop app with its own settings layer (ADR 0265 §2): Overview, Folders and tools,
  * Server on this {{device}} (only while the server runs here), Activity and App settings, each opening that section in
  * the app. Overview carries a dot in the warning colour while something on this computer needs the person. Nothing
  * until the app answers, nothing outside it or in an app without the layer: the group sits at the list's end, so

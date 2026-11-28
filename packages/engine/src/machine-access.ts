@@ -33,6 +33,7 @@ import { insertMessage, messageView } from "./messages";
 import { type NotificationDeps, notify, resolveNotifications } from "./notifications";
 import { requirePermission } from "./organizations";
 import { enqueue } from "./outbox";
+import { folderPickable } from "./runner-update";
 import { replyThreadOf } from "./runs";
 import { hopLimitReached, runStretchOf } from "./stretch";
 import type { ToolContext } from "./tools/types";
@@ -268,6 +269,71 @@ export async function allowMachineTool(
 }
 
 /**
+ * `POST …/machines/{machineId}/access/pick` (an admin or the person who connected it): asks the agentes.chat app on
+ * the computer for a folder, for one agent there or all of them. The app shows who asks and the person there picks
+ * the folder in the system's own picker, or says not now: nothing is allowed from here. With `requestId`, an agent's
+ * pending folder request is shown there again. A computer without the app is refused (`machine.no_app`): the apps
+ * show the terminal command instead.
+ */
+export async function askMachineFolder(
+  deps: AccessDeps & { hub: Pick<MachineCaller, "call" | "status"> },
+  actorId: string,
+  orgId: string,
+  machineId: string,
+  input: { agentId?: string; requestId?: string },
+): Promise<{ asked: true }> {
+  const machine = await requireMachineManager(deps.db, actorId, orgId, machineId);
+  if (machine.kind === "managed") {
+    throw new ForbiddenError(
+      "This is the workspace's own computer: its folders stay as they are",
+      "machine.managed_access",
+    );
+  }
+  if (!folderPickable(machine)) {
+    throw new ValidationError(
+      "This computer has no agentes.chat app that can pick a folder (or it is too old). Allow it on the computer.",
+      "machine.no_app",
+      { name: machine.name },
+    );
+  }
+  let agent: { id: string; name: string } | undefined;
+  if (input.agentId) {
+    const row = await getAgentCached(deps.db, orgId, input.agentId);
+    if (!row || row.machineId !== machine.id)
+      throw new NotFoundError("That agent doesn't work on this computer", "agent.not_found");
+    agent = { id: row.id, name: row.name };
+  }
+  if (input.requestId) {
+    const [request] = await deps.db
+      .select({ status: machineAccessRequests.status })
+      .from(machineAccessRequests)
+      .where(and(eq(machineAccessRequests.id, input.requestId), eq(machineAccessRequests.machineId, machine.id)));
+    if (!request) throw new NotFoundError("Folder request not found", "machine.request_not_found");
+    if (request.status !== "pending") {
+      throw new ConflictError("This request was already answered or has expired", "machine.request_done");
+    }
+  }
+  const status = await deps.hub.status(machine.id);
+  if (!status?.online) throw new MachineOfflineError(machine.name, machine.kind);
+  const [me] = await deps.db.select({ name: schema.users.name }).from(schema.users).where(eq(schema.users.id, actorId));
+  await deps.hub.call(machine.id, {
+    op: "access.pick",
+    by: actorId,
+    byName: me?.name ?? "",
+    ...(agent ? { agentId: agent.id, agentName: agent.name } : {}),
+    ...(input.requestId ? { requestId: input.requestId } : {}),
+  });
+  await recordAudit(deps.db, {
+    orgId,
+    actor: { type: "person", id: actorId },
+    action: "machine.access_pick",
+    target: { type: "machine", id: machine.id },
+    details: { ...(agent ? { agentId: agent.id } : {}), ...(input.requestId ? { requestId: input.requestId } : {}) },
+  });
+  return { asked: true };
+}
+
+/**
  * `POST …/machines/{machineId}/access/ask`: someone else needs a tool on a person's computer ("Pedir ao Rui"). Its
  * owner gets one inbox row per computer and tool (`device.tool_request`) with the same one-click button; done once
  * the tool is on (`storeMachineAccess`). Refused to the owner themselves (they turn it on).
@@ -369,7 +435,7 @@ export async function requestFolderAccess(
   }
   if (machine.protocol < ACCESS_PROTOCOL) {
     throw new ValidationError(
-      `The computer ${machine.name} can't grant folders yet: its owner should install the agentes app (or update the runner).`,
+      `The computer ${machine.name} can't grant folders yet: its owner should install the agentes app (or update agentes.chat there).`,
     );
   }
   const status = await deps.hub.status(machine.id);

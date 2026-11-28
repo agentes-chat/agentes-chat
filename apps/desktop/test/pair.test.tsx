@@ -24,7 +24,7 @@ import { until } from "./until";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-/** The app layer (ADR 0256) on `route` (This computer's settings by default), with `view` drawn in it. */
+/** The app layer (ADR 0265) on `route` (This computer's settings by default), with `view` drawn in it. */
 async function mount(
   route: LayerRoute,
   view: ReactNode,
@@ -183,7 +183,7 @@ describe("pairing from the app", () => {
       expect(el.querySelector(".dk-sh__help")?.textContent).toBe(
         "Change it any time in Settings\u00a0›\u00a0This Mac.",
       );
-      // Nothing to switch, and open at login comes with it (ADR 0256 §7).
+      // Nothing to switch, and open at login comes with it (ADR 0265 §7).
       expect(el.querySelector('[role="switch"]')).toBeNull();
       expect(el.querySelector('[role="checkbox"]')).toBeNull();
       // No card inside the card.
@@ -541,7 +541,7 @@ describe("pairing from the app", () => {
         },
       },
     );
-    // No Local Network on any macOS: it is asked only when an Android phone pairs over Wi-Fi (ADR 0256 §7).
+    // No Local Network on any macOS: it is asked only when an Android phone pairs over Wi-Fi (ADR 0265 §7).
     await mount(SETTINGS, <Settings />, async (el) => {
       await until(() => button(perms(el), "Allow"));
       expect(el.textContent).not.toContain("Local network");

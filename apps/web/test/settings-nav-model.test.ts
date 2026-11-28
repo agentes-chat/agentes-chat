@@ -5,7 +5,7 @@ import { createI18n } from "@/i18n";
 import { SETTINGS_SECTIONS, settingsNavModel } from "@/pages/settings-sections";
 
 /**
- * The settings list as one pure model (ADR 0256 §2): the settings page draws it, and the desktop app's layer shows it
+ * The settings list as one pure model (ADR 0265 §2): the settings page draws it, and the desktop app's layer shows it
  * above This Mac, so both list the same lines with the same words, icons and addresses.
  */
 

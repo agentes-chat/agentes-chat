@@ -18,7 +18,7 @@ import { until } from "./until";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 /**
- * The first run as the app layer draws it (ADR 0256): drawn again from the start when its route names something else
+ * The first run as the app layer draws it (ADR 0265): drawn again from the start when its route names something else
  * (as AppLayer keys it), its route's mode, each time it is shown again, and a connect link's sheet alone.
  */
 function LayerFirstRun() {

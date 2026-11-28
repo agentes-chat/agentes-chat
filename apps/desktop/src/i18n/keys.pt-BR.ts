@@ -28,6 +28,11 @@ export const desktopPtBR = {
   device: { mac: "Mac", windows: "PC", linux: "computador" },
   /** O nome das janelas do próprio app (a lista do Dock, o menu Janela, o Mission Control). */
   windowTitle: { welcome: "Boas-vindas", prefs: "Preferências", settings: "Configurações" },
+  background: {
+    title: "O agentes.chat continua aberto",
+    bodyMac: "Ele fica na barra de menus, no alto da tela. É por lá que você abre o app ou sai dele.",
+    bodyTray: "Ele fica na bandeja do sistema. É por lá que você abre o app ou sai dele.",
+  },
   common: {
     cancel: "Cancelar",
     close: "Fechar",
@@ -87,6 +92,12 @@ export const desktopPtBR = {
         capturing: "tirando um print",
         tabs: "trocando de aba",
       },
+    },
+    apps: {
+      title: "{{agent}} está usando {{app}}",
+      detail: "Seu mouse e teclado continuam seus",
+      stop: "Parar",
+      stopped: "{{agent}} parou de usar seus apps",
     },
     label: "agentes.chat",
     now: "Agora",
@@ -155,6 +166,10 @@ export const desktopPtBR = {
     allowedUndo: "Desfazer",
     allowedOk: "Ok",
     allowedUndone: "Desligado de novo: {{tool}}",
+    pickTitle: "{{name}} pede uma pasta para os agentes",
+    pickTitleAgent: "{{name}} pede uma pasta para {{agent}}",
+    pickBody: "Escolha qual pasta liberar neste {{device}}.",
+    pickChoose: "Escolher pasta",
     quitTitle: "Sair do agentes.chat?",
     quitBody:
       "Os agentes não conseguem usar este {{device}} com o app fechado. O que já está rodando termina e manda o resultado quando você abrir de novo.",
@@ -635,10 +650,15 @@ export const desktopPtBR = {
     done: "Conectado a {{org}}",
     share: "Deixar o workspace todo usar",
     internet: "Agentes usam a internet deste computador",
-    internetOn: "Os sites que os agentes abrem veem a sua localização",
+    internetOn: "Sites e servidores que os agentes acessam veem a sua localização",
     internetOff: "Desligado: os agentes usam a conexão de sempre",
     internetHint:
-      "Os agentes do workspace abrem sites pela conexão deste computador. Só sites e nunca nada da sua própria rede. Enquanto este computador estiver offline, eles usam a conexão de sempre.",
+      "Os agentes do workspace acessam a internet pela conexão deste computador: sites, git, SSH, bancos de dados e outras conexões TCP. Nunca nada da sua própria rede, nem e-mail pela porta 25. A IA dos agentes, consultas de nome, chamadas e outro tráfego UDP usam a conexão de sempre, assim como tudo enquanto este computador estiver offline.",
+    internetHintProxy:
+      "O navegador dos agentes do workspace e os programas que seguem as configurações de proxy (git por HTTPS, curl, a maioria das ferramentas de linha de comando) acessam a internet pela conexão deste computador. SSH, clientes de banco de dados e outros programas que ignoram as configurações de proxy usam a conexão de sempre, assim como a IA dos agentes, consultas de nome e tráfego UDP. Nunca nada da sua própria rede, nem e-mail pela porta 25. Enquanto este computador estiver offline, tudo usa a conexão de sempre.",
+    internetOnly: "Usar só a internet deste computador",
+    internetOnlyHint:
+      "Os agentes usam só a internet deste computador, inclusive a IA, e nunca a conexão de sempre. Enquanto ele estiver offline, ficam sem internet até ele voltar.",
     shareOff: "Só você por enquanto",
     shareHint: "Os agentes de todos em {{org}} podem rodar tarefas nele, com o seu usuário.",
     addFolders: "Adicionar pastas",

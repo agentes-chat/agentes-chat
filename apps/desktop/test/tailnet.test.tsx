@@ -56,7 +56,7 @@ test("Tailscale is read as the window opens and when it comes up again, at most 
   }
 });
 
-test("the fake host: the system's Tailscale only, nothing of the app's own (ADR 0256 §4)", () => {
+test("the fake host: the system's Tailscale only, nothing of the app's own (ADR 0265 §4)", () => {
   const host = createFakeHost("app", "here") as unknown as Record<string, unknown>;
   for (const gone of ["tailnet", "onTailnet", "signInTailnet", "cancelTailnetSignIn", "onTailnetSignIn"])
     expect({ gone, there: gone in host }).toEqual({ gone, there: false });
@@ -126,7 +126,7 @@ test("reach through an address: checked, the server starts again behind the wind
     port: 4310,
   });
   expect((await host.phoneLink()).server).toBe("https://agentes.example.com");
-  // The window stays at loopback (ADR 0256 §5).
+  // The window stays at loopback (ADR 0265 §5).
   expect(host.list.current).toBe("http://127.0.0.1:4310");
   // On again without a way: the saved one.
   expect(await host.setLocalReach(true)).toEqual({ ok: true, url: "https://agentes.example.com" });

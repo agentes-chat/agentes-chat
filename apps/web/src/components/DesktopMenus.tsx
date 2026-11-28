@@ -186,7 +186,7 @@ const navItems = (items: SettingsNavItem[]): DesktopSettingsNavItem[] =>
   items.map((s) => ({ id: s.id, label: navLabel(s.label), icon: s.icon, path: s.path }));
 
 /**
- * This workspace's settings list, for the app's own settings layer to show above This {{device}} (ADR 0256 §2): sent
+ * This workspace's settings list, for the app's own settings layer to show above This {{device}} (ADR 0265 §2): sent
  * whenever it changes (the workspace, the person's role, the language, what the server offers), and taken away
  * (`org: null`) when the workspace's pages leave. Only to an app with the layer.
  */

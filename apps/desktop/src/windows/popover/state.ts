@@ -1,5 +1,5 @@
 /**
- * The menu bar popover's choices, from this computer's state (ADR 0256 §7): the line under its name, the one
+ * The menu bar popover's choices, from this computer's state (ADR 0265 §7): the line under its name, the one
  * essential its banner shows with the action that turns it on again, the server here's state in a word, and "Now" as
  * one row per agent. Pure: `Popover.tsx` and its pieces draw them.
  */
@@ -121,7 +121,7 @@ export type FixPlan =
   | { kind: "layer"; route: LayerRoute };
 
 const overview = (focus: string): LayerRoute => ({ screen: "settings", section: "overview", focus });
-/** Reach's row in Settings › Server on this computer, where its way, its problem and its fix are (ADR 0256 §4). */
+/** Reach's row in Settings › Server on this computer, where its way, its problem and its fix are (ADR 0265 §4). */
 const REACH_ROUTE: LayerRoute = { screen: "settings", section: "server", focus: "reach" };
 
 export function fixPlan(fix: EssentialFix): FixPlan {

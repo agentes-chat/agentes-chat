@@ -210,7 +210,7 @@ pub fn remove(app: &AppHandle, origin: &str) {
 }
 
 /// The main window's cookies of `origin` go. On this computer cookies are per host, not per port, so there only the
-/// sign-in the server here names after its port (`agentes-<PORT>.…`, ADR 0256 §5) goes: another server on 127.0.0.1
+/// sign-in the server here names after its port (`agentes-<PORT>.…`, ADR 0265 §5) goes: another server on 127.0.0.1
 /// keeps its own. From a thread of its own only (`cookies`).
 pub fn drop_cookies(app: &AppHandle, origin: &str) {
     let (Some(page), Ok(url)) = (app.get_webview(crate::main_window::LABEL), origin.parse::<Url>()) else { return };
@@ -265,7 +265,7 @@ pub async fn server_choose(app: AppHandle, server: String, page: Option<String>)
     if page.as_deref().is_some_and(|p| !page_path(p)) {
         return Err("not a page to open".into());
     }
-    // The server here at its address for people (typed, or found by discovery) opens at its loopback one (ADR 0256 §5).
+    // The server here at its address for people (typed, or found by discovery) opens at its loopback one (ADR 0265 §5).
     let origin = crate::local_server::origin_here(&app, &origin);
     choose(&app, &origin);
     let url: Url = format!("{origin}{}", page.as_deref().unwrap_or("")).parse().map_err(|_| "not a URL")?;
@@ -289,7 +289,7 @@ pub async fn server_remove(app: AppHandle, server: String) -> Result<(), String>
     crate::workspaces::trigger(&app);
     match current(&app) {
         Some(next) if showing => crate::main_window::show_url(&app, next)?,
-        // No server left: the window stays, with the first run over it (ADR 0256).
+        // No server left: the window stays, with the first run over it (ADR 0265).
         None => {
             if let Some(page) = app.get_webview(crate::main_window::LABEL) {
                 let _ = page.navigate("about:blank".parse().map_err(|_| "not a URL")?);

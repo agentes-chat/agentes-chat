@@ -49,7 +49,7 @@ const reached: LocalServerStatus = {
   port: 4310,
   reachHealth: "on",
 };
-/** Reached through an address of the person's own (ADR 0256 §4). */
+/** Reached through an address of the person's own (ADR 0265 §4). */
 const addressed: LocalServerStatus = { ...reached, publicUrl: OWN, way: { kind: "address", url: OWN } };
 
 describe("setting it up", () => {
@@ -178,7 +178,7 @@ describe("which screen", () => {
 
   test("the app runs it already: open it at its loopback address, never set it up again", () => {
     expect(hereView(running, null)).toEqual({ kind: "running", server: LOCAL });
-    // With reach on too: the window on this computer never opens it through the tailnet (ADR 0256 §5).
+    // With reach on too: the window on this computer never opens it through the tailnet (ADR 0265 §5).
     expect(hereView(reached, null)).toEqual({ kind: "running", server: LOCAL });
     expect(hereView({ ...running, phase: "failing" }, null).kind).toBe("running");
     // An older app's status without `localUrl`: its loopback `url`.
@@ -275,7 +275,7 @@ describe("what the popover, the cover and Preferences say", () => {
   });
 });
 
-describe("an address of the person's own (ADR 0256 §4)", () => {
+describe("an address of the person's own (ADR 0265 §4)", () => {
   test("its form: an https origin, with a port or not, and nothing after it but a slash", () => {
     expect(addressForm("https://agentes.example.com")).toEqual({ ok: true, url: OWN });
     expect(addressForm("  https://agentes.example.com/  ")).toEqual({ ok: true, url: OWN });

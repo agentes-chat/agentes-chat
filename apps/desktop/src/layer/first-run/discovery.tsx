@@ -1,5 +1,5 @@
 /**
- * Finding and using a server (ADR 0256 §2): discovery on this computer and the person's Tailscale network, shared by
+ * Finding and using a server (ADR 0265 §2): discovery on this computer and the person's Tailscale network, shared by
  * the first screen (the server found, on top) and a company's server (every one found); using one by its address the
  * same way from both; and what's wrong with an address, with the one thing that fixes it where the app can do it.
  */

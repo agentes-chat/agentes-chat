@@ -4,12 +4,17 @@
     "send": "发送"
   },
   "categories": {
-    "where": "#{{channel}} 显示的位置",
-    "whereHelp": "对所有人生效。频道的成员保持不变。",
-    "order": "在列表中的位置",
     "up": "上移",
     "down": "下移",
     "channelPosition": "第 {{at}} 个，共 {{count}} 个。"
+  },
+  "sections": {
+    "title": "分区",
+    "where": "#{{channel}} 在你列表中的位置",
+    "whereHelp": "只改变你的列表。每个人整理自己的分区。",
+    "none": "无分区",
+    "order": "在分区中的位置",
+    "tooLong": "最多 40 个字符。"
   },
   "blocks": {
     "send": "发送",
@@ -59,6 +64,15 @@
     "raw": "原始数据",
     "more": "查看全部 {{count}} 行",
     "gone": "此代码已不再打开。"
+  },
+  "table": {
+    "label_other": "表格 · {{count}} 行",
+    "title": "表格",
+    "rows_other": "{{count}} 行",
+    "copy": "复制表格",
+    "copied": "已复制表格",
+    "more": "查看全部 {{count}} 行",
+    "gone": "此表格已不再打开。"
   },
   "time": {
     "today": "今天",
@@ -172,11 +186,11 @@
       "text": "它可能已停机，或不在你的网络中。恢复后你的聊天会自动显示。",
       "kept": "正在显示应用中已有的内容。"
     },
-    "pinned": "已置顶",
+    "favorites": "收藏",
     "recent": "最近",
     "view": {
       "title": "显示对话",
-      "sectors": "部门",
+      "sections": "分区",
       "dms": "私信",
       "channels": "频道"
     },
@@ -875,6 +889,7 @@
       "admin_ask_channel_agent": "{{names}} 请你把 {{agent}} 加入 #{{label}}",
       "admin_ask_create_agents": "{{names}} 请求获得创建智能体的权限",
       "admin_ask_webhook": "{{names}} 请你为例行任务设置 {{service}} Webhook",
+      "admin_ask_voice": "{{names}} 请你开启语音消息",
       "routine_paused_other": "例行工作已暂停",
       "routine_stalled_other": "例行工作正在等待电脑",
       "agent_unreached_other": "一项例行工作无法呼叫智能体",

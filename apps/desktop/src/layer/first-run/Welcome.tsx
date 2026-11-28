@@ -1,5 +1,5 @@
 /**
- * The first screen (ADR 0256 §2): sign in to agentes.chat first, in this window (Google and Apple through the browser,
+ * The first screen (ADR 0265 §2): sign in to agentes.chat first, in this window (Google and Apple through the browser,
  * e-mail on the site's own page), the team's sky beside it. A server found on this computer or the person's Tailscale
  * network shows on top with Sign in. Under the sign-in, the other ways: run agentes.chat free on this computer (where
  * the build carries the server) and a company's server by its address; installing for a team on a server is the line at

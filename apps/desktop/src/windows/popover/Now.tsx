@@ -1,15 +1,16 @@
 /**
- * "Now": what agents do on this computer at this moment. An agent in its browser is its browser row (what it does
- * there, Open when it asked for help, See and Stop); every other agent is one row, "Ada read src/app.ts", with its
+ * "Now": what agents do on this computer at this moment. An agent in one of the person's apps is that row (with
+ * Stop, ADR 0258); an agent in its browser is its browser row (what it does there, Open when it asked for help, See
+ * and Stop); every other agent is one row, "Ada read src/app.ts", with its
  * workspace and since when. Nothing going on: a calm line (or, paused, that nothing new starts).
  */
-import type { ControlBrowser, ControlJob } from "@agenteschat/adapters/runner-control";
+import type { ControlAppUse, ControlBrowser, ControlJob } from "@agenteschat/adapters/runner-control";
 import { type AgentState, Button, Icon, normalizeAppearance, PixelSpinner } from "@agenteschat/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost, useStore } from "../../app";
 import { saidText } from "../../control/activity";
-import { browserRowState, browsersOf, siteLink } from "../../control/browser";
+import { appUsesOf, browserRowState, browsersOf, siteLink } from "../../control/browser";
 import { homeServer } from "../../control/server";
 import { type Home, orgName } from "../../control/store";
 import { agentOf } from "../../hooks";
@@ -20,6 +21,7 @@ import { agentRows, type AgentRow as Row } from "./state";
 
 export function NowList({ homes, paused, now }: { homes: Home[]; paused: boolean; now: number }) {
   const { t } = useTranslation();
+  const uses = homes.flatMap((home) => appUsesOf(home.status, now).map((use) => ({ home, use })));
   const browsers = homes.flatMap((home) => browsersOf(home.status).map((browser) => ({ home, browser })));
   const inBrowser = new Set(browsers.map(({ home, browser }) => `${home.homeId}:${browser.agentId}`));
   // An agent in its browser shows once, as its browser row (its thinking is what drives it).
@@ -27,7 +29,7 @@ export function NowList({ homes, paused, now }: { homes: Home[]; paused: boolean
     homes,
     (home, job) => job.kind === "brain" && !!job.agent && inBrowser.has(`${home.homeId}:${job.agent.id}`),
   );
-  if (browsers.length + rows.length === 0) {
+  if (uses.length + browsers.length + rows.length === 0) {
     const someone = homes.flatMap((h) => h.status?.agents ?? [])[0];
     return (
       <div className="dk-empty">
@@ -45,6 +47,9 @@ export function NowList({ homes, paused, now }: { homes: Home[]; paused: boolean
   }
   return (
     <div className="dk-now">
+      {uses.map(({ home, use }) => (
+        <AppUseRow key={`apps:${home.homeId}:${use.agentId}`} home={home} use={use} />
+      ))}
       {browsers.map(({ home, browser }) => (
         <BrowserRow key={`browser:${home.homeId}:${browser.agentId}`} home={home} browser={browser} />
       ))}
@@ -192,6 +197,58 @@ function BrowserRow({ home, browser }: { home: Home; browser: ControlBrowser }) 
           title={t("desktop.tray.browser.stop")}
           aria-label={t("desktop.tray.browser.stop")}
           onClick={() => setConfirm(true)}
+        >
+          <Icon name="stop" size={14} />
+        </button>
+      </span>
+    </div>
+  );
+}
+
+/**
+ * An agent using one of the person's apps here (ADR 0258): "Theo is using Mail", through the system's accessibility
+ * (the person's mouse and keyboard stay theirs), with Stop: its next commands in the apps are refused.
+ */
+function AppUseRow({ home, use }: { home: Home; use: ControlAppUse }) {
+  const { t } = useTranslation();
+  const store = useStore();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const agent = agentOf(home, { id: use.agentId, name: t("desktop.tray.browser.someAgent") });
+  const color = normalizeAppearance(agent.look).color;
+  const stop = async () => {
+    setBusy(true);
+    try {
+      await store.request(home.homeId, { type: "apps.stop", agentId: use.agentId });
+      toast(t("desktop.tray.apps.stopped", { agent: agent.name }), "stop");
+    } catch {
+      toast(t("desktop.common.error"), "alert");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="dk-job dk-job--browser">
+      <span className="dk-job__av">
+        <AgentFace agent={agent} size="sm" state="writing" />
+      </span>
+      <span className="dk-job__text">
+        <b>
+          <span>{t("desktop.tray.apps.title", { agent: agent.name, app: use.app })}</span>
+        </b>
+        <small>
+          <PixelSpinner size={14} color={color} />
+          <span className="dk-job__detail">{t("desktop.tray.apps.detail")}</span>
+        </small>
+      </span>
+      <span className="dk-job__acts">
+        <button
+          type="button"
+          className="dk-iconbtn"
+          disabled={busy}
+          title={t("desktop.tray.apps.stop")}
+          aria-label={t("desktop.tray.apps.stop")}
+          onClick={() => void stop()}
         >
           <Icon name="stop" size={14} />
         </button>

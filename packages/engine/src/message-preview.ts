@@ -82,7 +82,7 @@ export interface PreviewMeta {
   bodyCode?: string;
   bodyParams?: Record<string, unknown>;
   interrupted?: { text: string };
-  brainInterrupted?: { brain?: string; text: string; tools?: string[] };
+  brainInterrupted?: { brain?: string; code?: string; text: string; tools?: string[] };
   memoryUpdates?: { action: string; text: string }[];
   noAi?: { reason: string; own?: string; computer?: string; why?: string };
   /** What a computer brain's wait is on, and a usage wait's state: the chat's words depend on them. */
@@ -142,12 +142,13 @@ export function previewMeta(meta: Record<string, unknown> | null | undefined): P
   const interrupted = meta.interrupted as { text?: unknown } | undefined;
   const iText = interrupted && typeof interrupted === "object" ? cut(interrupted.text) : null;
   if (iText !== null) out.interrupted = { text: iText };
-  const b = meta.brainInterrupted as { brain?: unknown; text?: unknown; tools?: unknown } | undefined;
+  const b = meta.brainInterrupted as { brain?: unknown; code?: unknown; text?: unknown; tools?: unknown } | undefined;
   const bText = b && typeof b === "object" ? cut(b.text) : null;
   if (b && bText !== null) {
     out.brainInterrupted = {
       text: bText,
       ...(typeof b.brain === "string" ? { brain: b.brain } : {}),
+      ...(typeof b.code === "string" ? { code: b.code } : {}),
       ...(Array.isArray(b.tools) ? { tools: b.tools.filter((x): x is string => typeof x === "string") } : {}),
     };
   }

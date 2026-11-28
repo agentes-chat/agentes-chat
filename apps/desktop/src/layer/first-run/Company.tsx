@@ -1,5 +1,5 @@
 /**
- * A company's server (ADR 0256 §2): by its address (the one opened in the browser), what discovery found on this
+ * A company's server (ADR 0265 §2): by its address (the one opened in the browser), what discovery found on this
  * computer and the Tailscale network, and how to install one for the team on a server, in the first run's frame. A
  * connect link (`agenteschat://connect`) shows here too, the server in large type: nothing changes before Open.
  */

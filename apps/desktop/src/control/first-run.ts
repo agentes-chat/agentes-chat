@@ -14,7 +14,7 @@ import {
 import { appServer, serverName } from "./server";
 
 /**
- * The first run's screens (ADR 0256 §2): sign in first (`welcome`), a company's server by its address (`company`) and
+ * The first run's screens (ADR 0265 §2): sign in first (`welcome`), a company's server by its address (`company`) and
  * how to install one (`install`), running agentes.chat here in three steps (`here`), and a connect link in large type.
  */
 export type FirstScreen = "welcome" | "company" | "install" | "here" | "link";
@@ -129,7 +129,7 @@ const problemOf = (check: Extract<ServerCheck, { ok: false }>): ConnectProblem =
 };
 
 /**
- * The agentes.chat this computer runs: the address the window opens it at (`open`, its loopback one, ADR 0256 §5), and
+ * The agentes.chat this computer runs: the address the window opens it at (`open`, its loopback one, ADR 0265 §5), and
  * every address it answers at (`all`: that one and, with reach on, its Tailscale one).
  */
 export interface OwnAddresses {
@@ -220,8 +220,8 @@ export function linkView(link: ConnectLink | null, check: ServerCheck | "checkin
 }
 
 /**
- * Run here's own steps before the setup (ADR 0256 §3): who owns it, where it will be used, and how the phone and the
- * team get here (`net`: Tailscale or an address of the person's own, ADR 0256 §4).
+ * Run here's own steps before the setup (ADR 0265 §3): who owns it, where it will be used, and how the phone and the
+ * team get here (`net`: Tailscale or an address of the person's own, ADR 0265 §4).
  */
 export type HereStep = "owner" | "where" | "net";
 
@@ -237,14 +237,14 @@ export const hereSteps = (ask: boolean, needsNet: boolean): HereStep[] => [
 
 /**
  * Whether "How do the phone and the team get here?" shows: used beyond this computer, with the system's Tailscale not
- * on (on, it is used as it is: the step is skipped, ADR 0256 §4). `system` null: not read yet, so asked.
+ * on (on, it is used as it is: the step is skipped, ADR 0265 §4). `system` null: not read yet, so asked.
  */
 export const needsPrivateNetwork = (place: "everywhere" | "here", system: { state: string } | null): boolean =>
   place === "everywhere" && system?.state !== "on";
 
 /**
  * "Where will you use it?" chosen at first: everywhere when the system's Tailscale is on already (nothing left to do
- * for it), else only on this computer (ADR 0256 §4). `system` null: not read yet, so only here.
+ * for it), else only on this computer (ADR 0265 §4). `system` null: not read yet, so only here.
  */
 export const defaultPlace = (system: { state: string } | null): "everywhere" | "here" =>
   system?.state === "on" ? "everywhere" : "here";
@@ -258,7 +258,7 @@ export const phoneLinkRefreshMs = (expiresIn: number) =>
   Math.max(10, Math.min(PHONE_LINK_EVERY_S, expiresIn - 30)) * 1000;
 
 /**
- * The server the first screen offers on top (ADR 0256 §2): the first one discovery found that can be used as it is,
+ * The server the first screen offers on top (ADR 0265 §2): the first one discovery found that can be used as it is,
  * or whose owner page this app can open (`claimable`), this computer's before the Tailscale network's.
  */
 export function topFound(found: readonly Found[], claimable: (server: string) => boolean): Found | null {

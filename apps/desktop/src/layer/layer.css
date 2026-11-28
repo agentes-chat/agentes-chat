@@ -1,5 +1,5 @@
 /*
- * The app layer (ADR 0256, AppLayer.tsx): a web view of its own over the site in the main window. Full: the whole
+ * The app layer (ADR 0265, AppLayer.tsx): a web view of its own over the site in the main window. Full: the whole
  * window, opaque. Sheet (macOS only): transparent, with the scrim and the card of `sheets/sheets.css`. Hidden: nothing.
  */
 :root {

@@ -1,5 +1,5 @@
 /**
- * The first of this computer's essentials that needs the person (ADR 0256 §7), as a banner with its one fix: the
+ * The first of this computer's essentials that needs the person (ADR 0265 §7), as a banner with its one fix: the
  * popover does what it can itself (opening at login, the notification prompt, the permission's list in System
  * Settings, installing updates at night, restarting the server here) and opens This computer's settings on the rest.
  */

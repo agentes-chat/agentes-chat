@@ -25,6 +25,8 @@ import {
   computerStorage,
   desktopTargetOf,
   downloadHref,
+  egressOfflineText,
+  egressViaParts,
   egressViaText,
   folderName,
   foldersOfAgent,
@@ -443,7 +445,7 @@ describe("connected computers helpers (ADR 0036)", () => {
   });
 });
 
-test("an observed exit address updates live and is cleared across connection changes", () => {
+test("an observed exit address updates live, its country left to the server, and is cleared across connection changes", () => {
   const qc = new QueryClient();
   const list = keys.machines("o1");
   qc.setQueryData(list, [{ id: "m1", kind: "managed", online: true, egress: null }]);
@@ -452,7 +454,9 @@ test("an observed exit address updates live and is cleared across connection cha
   const current = () => qc.getQueryData<Machine[]>(list)?.[0]?.egress;
   const first = { ip: "8.8.8.8", country: "US", at: "2026-11-01T12:00:00Z" };
   event({ egress: first });
-  expect(current()).toEqual(first);
+  // The event can't tell whether it was seen on the route the agents take now: no flag until the list says.
+  expect(current()).toEqual({ ip: "8.8.8.8", at: first.at });
+  expect(qc.getQueryState(list)?.isInvalidated).toBe(true);
   event({ egress: { ip: "1.1.1.1", country: 42, at: first.at } });
   expect(current()).toEqual({ ip: "1.1.1.1", at: first.at });
   event({ egress: { ip: "<bad>", at: first.at } });
@@ -880,16 +884,36 @@ describe("one click where a tool is off (ADR 0036 §8)", () => {
   });
 });
 
-test("whose internet the workspace's computer uses: the computer and who connected it, only while it is online", () => {
+test("whose internet a borrowing computer uses: the computer in the line, who connected it on its name's tip", () => {
   const t = ((key: string, o?: Record<string, unknown>) => `${key}${o ? JSON.stringify(o) : ""}`) as never;
   const via = { machineId: "m-ana", name: "Ana's iMac", userName: "Ana" };
   expect(egressViaText(t, { kind: "managed", online: true, egressVia: via })).toBe(
-    'machines.egress.viaBy{"name":"Ana\'s iMac","person":"Ana"}',
-  );
-  expect(egressViaText(t, { kind: "managed", online: true, egressVia: { ...via, userName: null } })).toBe(
     'machines.egress.via{"name":"Ana\'s iMac"}',
   );
+  const words = ((key: string, o?: Record<string, string>) =>
+    key === "machines.egress.via" ? `Agents use the internet of ${o?.name}` : `Connected by ${o?.name}`) as never;
+  expect(egressViaParts(words, { kind: "managed", online: true, egressVia: via })).toEqual({
+    before: "Agents use the internet of ",
+    name: "Ana's iMac",
+    after: "",
+    by: "Connected by Ana",
+  });
+  expect(
+    egressViaParts(words, { kind: "managed", online: true, egressVia: { ...via, userName: null } })?.by,
+  ).toBeNull();
+  expect(egressViaParts(words, { kind: "managed", online: false, egressVia: via })).toBeNull();
   expect(egressViaText(t, { kind: "managed", online: false, egressVia: via })).toBeNull();
-  expect(egressViaText(t, { kind: "connected", online: true, egressVia: via })).toBeNull();
+  // A self-hosted server's own computer, or one marked the workspace's, borrows too (the server sends it only then).
+  expect(egressViaText(t, { kind: "host", online: true, egressVia: via })).toBe(
+    'machines.egress.via{"name":"Ana\'s iMac"}',
+  );
+  expect(egressViaParts(words, { kind: "host", online: true, egressVia: via })?.name).toBe("Ana's iMac");
+  expect(egressViaText(t, { kind: "connected", online: true, egressVia: null })).toBeNull();
+  // Lent "only" and that computer offline: the workspace's computer says its agents have no internet, and whose.
+  expect(egressOfflineText(t, { kind: "managed", egressOffline: via })).toBe(
+    'machines.egress.offline{"name":"Ana\'s iMac"}',
+  );
+  expect(egressOfflineText(t, { kind: "managed", egressOffline: null })).toBeNull();
+  expect(egressOfflineText(t, { kind: "managed" })).toBeNull();
   expect(egressViaText(t, { kind: "managed", online: true, egressVia: null })).toBeNull();
 });

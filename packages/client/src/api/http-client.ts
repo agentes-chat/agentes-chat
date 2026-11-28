@@ -6,6 +6,7 @@ import type { OnboardingStepId } from "../lib/onboarding";
 import { type LodiPrefs, lodiPrefsOf } from "../lib/right-hand-prefs";
 import { browserTimezone } from "../lib/routines";
 import { CLOUD_SERVER, withoutTrailingSlashes } from "../lib/server";
+import { fetchServerRelease } from "../lib/server-release";
 import { createLiveApi } from "../live/api";
 import { consultSeeds } from "../realtime/consults";
 import { steerStore } from "../realtime/steer";
@@ -156,6 +157,7 @@ import type {
   JoinClaim,
   JoinRequest,
   LearnedSkill,
+  LocalSpeech,
   Machine,
   MachineAccess,
   MachineAccount,
@@ -607,6 +609,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         }
       },
       instance: () => request<Instance>("/api/instance"),
+      serverRelease: () => fetchServerRelease(options.fetch ?? ((input, init) => fetch(input, init))),
       telemetry: () => nullOn(404, () => request<ServerTelemetry>("/api/app/telemetry")),
       setTelemetry: (enabled) => request<ServerTelemetry>("/api/app/telemetry", { method: "PUT", json: { enabled } }),
       reportVitals: (report) => request<void>("/api/app/client-vitals", { json: report }),
@@ -637,6 +640,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       speechKey: () => nullOn(404, () => request<SpeechKey>("/api/app/speech-key")),
       saveSpeechKey: (input) => request<SpeechKey>("/api/app/speech-key", { method: "PUT", json: input }),
       removeSpeechKey: () => request<SpeechKey>("/api/app/speech-key", { method: "DELETE" }),
+      speechLocal: () => nullOn(404, () => request<LocalSpeech>("/api/app/speech-local")),
+      installSpeechLocal: () => request<LocalSpeech>("/api/app/speech-local", { method: "PUT", json: {} }),
+      removeSpeechLocal: () => request<LocalSpeech>("/api/app/speech-local", { method: "DELETE" }),
     },
     account: {
       authConfig: () => request<AuthConfig>("/api/app/auth-config"),
@@ -1102,7 +1108,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       exportUrl: (orgId) => `${base}${org(orgId)}/export`,
     },
     voice: {
-      allowed: (orgId) => request<{ allowed: boolean }>(`${org(orgId)}/voice/allowed`),
+      allowed: (orgId) => request<{ allowed: boolean; reason?: "plan" }>(`${org(orgId)}/voice/allowed`),
       send: (orgId, channelId, input) => {
         const form = new FormData();
         const name = input.blob.type.startsWith("audio/webm") ? "voice.webm" : "voice.m4a";
@@ -1242,6 +1248,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
     },
     connectors: {
       catalog: () => request<ConnectorCatalog>("/api/app/connectors/catalog"),
+      toolLabels: async (orgId, locale, keys) =>
+        (await request<{ labels: Record<string, string> }>(`${org(orgId)}/tool-labels`, { json: { locale, keys } }))
+          .labels,
       list: async (orgId, options) =>
         (await request<{ connections: Connection[] }>(`${org(orgId)}/connectors${othersQuery(options)}`)).connections,
       connectWithKey: (orgId, input) => request<Connection>(`${org(orgId)}/connectors`, { json: input }),
@@ -1425,6 +1434,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
           `${org(orgId)}/machines/${enc(machineId)}/access/requests/${enc(requestId)}/refuse`,
           { json: {} },
         ),
+      askFolder: async (orgId, machineId, input) => {
+        await request<unknown>(`${org(orgId)}/machines/${enc(machineId)}/access/pick`, { json: input });
+      },
       checkClis: async (orgId, machineId) => {
         await request<unknown>(`${org(orgId)}/machines/${enc(machineId)}/clis/check`, { json: {} });
       },

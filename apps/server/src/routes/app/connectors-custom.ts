@@ -262,7 +262,7 @@ export function customConnectorRoutes(deps: AppDeps) {
     }),
     async (c) => {
       const started = await connectCustomServer(
-        // Asked at the server's loopback origin: the sign-in comes back there (ADR 0256 §5).
+        // Asked at the server's loopback origin: the sign-in comes back there (ADR 0265 §5).
         { ...custom, atLoopback: requestLoopback(config, c.req.raw.headers) !== null },
         c.get("user").id,
         c.req.valid("param").orgId,

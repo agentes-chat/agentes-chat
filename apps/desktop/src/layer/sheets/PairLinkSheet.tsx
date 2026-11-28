@@ -1,5 +1,5 @@
 /**
- * "Connect this Mac to Acme?" (route `pairLink`, and the first run's connect link, ADR 0256): a pair link from the
+ * "Connect this Mac to Acme?" (route `pairLink`, and the first run's connect link, ADR 0265): a pair link from the
  * web, with who made it and where from, read from its server. Connect starts the runner with the link and waits for
  * its maker to let it in on the web; once in, agentes.chat opens at login and, on a Mac with a permission still off,
  * Prepare follows (route `prepare`). What agents can do here is a switch each, as the link's maker may not be the
@@ -149,7 +149,7 @@ export function PairLinkSheet({ server, code, onClose }: { server: string; code:
       if (gone.current) return void started.cancel();
       const org = await started.done;
       pairing.current = null;
-      // Agents of a computer paired here work while the app runs: open at login, always (ADR 0256 §7).
+      // Agents of a computer paired here work while the app runs: open at login, always (ADR 0265 §7).
       await host.setAutostart(true).catch(() => {});
       const prepare = await needsPrepare(host).catch(() => false);
       if (gone.current) return;

@@ -1,9 +1,9 @@
 /**
- * "Setting everything up" (ADR 0256 §3), in the first run's frame: the steps as the app runs them, each problem on its
+ * "Setting everything up" (ADR 0265 §3), in the first run's frame: the steps as the app runs them, each problem on its
  * own step with what happened and Copy details, Cancel at every step (Esc presses it). A step under way shows its time
  * from 10 s and, from 30 s, that it takes longer than expected. Access from anywhere through Tailscale waits on the
  * person on Tailscale's page with no time limit: it says what is left ("One click left"), with that page a button away
- * and a way to finish without it. Through an address of the person's own (ADR 0256 §4) it checks that the address
+ * and a way to finish without it. Through an address of the person's own (ADR 0265 §4) it checks that the address
  * leads here; when it doesn't, it says why in plain words, with Try again, "Change the address" and "Finish without it".
  */
 import { Button, Icon, PixelSpinner, useNow } from "@agenteschat/ui";

@@ -1,4 +1,4 @@
-//! Tailscale on this computer, the official one the person installs (ADR 0256 §4: the app carries none), through its
+//! Tailscale on this computer, the official one the person installs (ADR 0265 §4: the app carries none), through its
 //! own command-line tool: whether it is connected (Connect's discovery, the way people reach the server here), and
 //! sharing the server here on the person's tailnet (`tailscale serve`, HTTPS inside the tailnet only; never Funnel).
 //! The tool is looked up at the places it installs itself, never at a path from a page.
@@ -181,7 +181,7 @@ fn web_handlers<'a>(serve: &'a Value, device: &str, port: u16) -> Option<&'a Val
 }
 
 /// Whether `serve status --json` shows `device:https` proxying to `target`: `serve` may end well without sharing
-/// anything (it returns once HTTPS isn't coming, ADR 0256 §4), so its own exit code is never the proof.
+/// anything (it returns once HTTPS isn't coming, ADR 0265 §4), so its own exit code is never the proof.
 pub fn served_at(serve: Option<&Value>, device: &str, https: u16, target: &str) -> bool {
     serve
         .and_then(|s| web_handlers(s, device, https))
@@ -228,7 +228,7 @@ pub fn device() -> Result<String, ServeError> {
 
 /// Shares `http://127.0.0.1:<port>` on the tailnet over HTTPS; the address it answers at. When HTTPS isn't allowed in
 /// the tailnet yet, Tailscale names its admin page and waits there until it is: `asks` gets that page at once, and
-/// `serve` goes on by itself once the person allowed it, with no time limit of its own (ADR 0256 §3), until `stopped`
+/// `serve` goes on by itself once the person allowed it, with no time limit of its own (ADR 0265 §3), until `stopped`
 /// says so. Its share is then read back (`served_at`) before it counts.
 pub fn serve(port: u16, asks: &mut dyn FnMut(&str), stopped: &dyn Fn() -> bool) -> Result<String, ServeError> {
     let device = device()?;

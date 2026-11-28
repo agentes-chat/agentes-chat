@@ -7,7 +7,7 @@ import { Glob } from "bun";
  * Tauri refuses an app command the window's capability (src-tauri/capabilities) doesn't allow, some commands
  * refuse other windows themselves, and the call's `.catch` swallows the refusal: the button does nothing. Tests with
  * a fake host never see that, so each window's code is read here for the commands it can reach, and each one has to
- * be allowed in its capability and answer that window. The app layer (`main-app`, ADR 0256) is a web view inside the
+ * be allowed in its capability and answer that window. The app layer (`main-app`, ADR 0265) is a web view inside the
  * main window, which the site shares: its capability names the web view, and its commands check the web view's label.
  */
 
@@ -177,8 +177,9 @@ function commandsOf(label: string) {
     todo.push(...linked(unit));
     for (const [, method = ""] of unit.text.matchAll(/\bhost\s*\??\.\s*(\w+)/g)) {
       const command = COMMAND.get(method);
-      // main.tsx raises a folder request's notification in the popover only (it checks `host.window`).
-      if (command && !(unit.file === "main.tsx" && method === "notify" && label !== "popover")) calls.set(command, key);
+      // main.tsx raises a folder request's notification (`raisePick`) in the popover only (it checks `host.window`).
+      const popoverOnly = unit.file === "main.tsx" || key === "control/notify.ts#raisePick";
+      if (command && !(popoverOnly && method === "notify" && label !== "popover")) calls.set(command, key);
     }
   }
   return calls;

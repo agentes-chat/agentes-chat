@@ -13,10 +13,10 @@ import { EventPill, EventPillAction, EventPillText, ProviderLogo, useReducedMoti
 import { fullLook } from "../agents/edit";
 import { Face } from "../shared/Face";
 import { useOrgId, useWhen } from "../shared/hooks";
-import { ConsultQuote } from "./ConsultGroup";
+import { ConsultPairRow } from "./ConsultGroup";
 import { keepOpen, keptOpen } from "./kept-sizes";
 import { eventLineOf } from "./logic";
-import { plateInset, useQuietInset, useRowLook } from "./look";
+import { useQuietInset } from "./look";
 import { MessageText } from "./MessageText";
 import { useRowDirectory } from "./row-data";
 import { StoppedLine } from "./StoppedLine";
@@ -47,41 +47,34 @@ export const EventLine = memo(function EventLine({
   const keep = `event:${message.id}`;
   const [open, setOpen] = useState(() => keptOpen(keep));
   const inset = useQuietInset();
-  const look = useRowLook();
   // A person stopped one of the agent's tasks (ADR 0128): its own line, with the reason, or a way to give one.
   const stopped = stoppedNoticeOf(message.meta);
   if (stopped) return <StoppedLine message={message} notice={stopped} gap={gap} />;
   if (fold?.fold === "hide") return null;
-  // Farther up than the reply that asked: the same quote of their talk where the answer arrived, on its own (no reply
-  // here to sit in), opening their conversation.
+  // Farther up than the reply that asked: the same row of their talk where the answer arrived, opening their
+  // conversation.
   if (fold?.fold === "line")
     return (
-      <View style={[plateInset(look, inset), { marginTop: gap }]}>
-        <ConsultQuote
-          askerId={fold.consultation.agentId}
-          channelId={message.channelId}
-          items={[fold.consultation]}
-          alone
-        />
+      <View style={{ marginTop: gap }}>
+        <ConsultPairRow askerId={fold.consultation.agentId} channelId={message.channelId} items={[fold.consultation]} />
       </View>
     );
-  // Another agent's request in this agent's DM: its quote on its own, opening the exchange.
+  // Another agent's request in this agent's DM: its row, opening the exchange.
   const handed = handOffOf(message.meta);
   if (handed)
     return (
-      <View style={[plateInset(look, inset), { marginTop: gap }]}>
-        <ConsultQuote
+      <View style={{ marginTop: gap }}>
+        <ConsultPairRow
           askerId={handed.askerId}
           channelId={message.channelId}
           items={[handed.item]}
-          alone
           handed
           askedIn={handed.askedIn}
         />
       </View>
     );
-  // An answer from another agent that carries the consultation, its reply not here: the same quote a reply has, on
-  // its own (who asked whom), never the text written for the agent; a tap opens what they said.
+  // An answer from another agent that carries the consultation, its reply not here: the same row a reply has (who
+  // asked whom), never the text written for the agent; a tap opens what they said.
   const consulted = consultationOfNotice(message.meta);
   const line = eventLineOf(message, {
     author: dir.nameOf(message.author) || t("channel.unknownAgent"),
@@ -91,12 +84,11 @@ export const EventLine = memo(function EventLine({
   });
   if (consulted)
     return (
-      <View style={[plateInset(look, inset), { marginTop: gap }]}>
-        <ConsultQuote
+      <View style={{ marginTop: gap }}>
+        <ConsultPairRow
           askerId={consulted.askerId}
           channelId={message.channelId}
           items={[pairItemOf(consulted.consultation)]}
-          alone
         />
       </View>
     );

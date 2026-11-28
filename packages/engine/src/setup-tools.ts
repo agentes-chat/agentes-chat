@@ -19,7 +19,7 @@ import { agentsByHandle, getAgentCached } from "./agents";
 import type { AiStatusDeps } from "./ai-status";
 import { AGENT_LOOK } from "./appearance";
 import { listApprovals } from "./approvals";
-import { createChannel, listChannels } from "./channels";
+import { createChannel, listChannels, namesChannel, typedChannelName } from "./channels";
 import { findMember } from "./chat-tools";
 import { CONNECTOR_CATALOG } from "./connectors/catalog";
 import { connectorListing, type ServerCatalog } from "./connectors/listing";
@@ -48,6 +48,7 @@ import { type LodiPrefsPatch, setLodiPrefs } from "./right-hand-prefs";
 import { bodyCode } from "./run-tools";
 import { REPORT_SCHEMA, SCHEDULE_INPUT } from "./schedule-tools";
 import { deletes, type WantedLine } from "./settings-proposals";
+import { speechOwnerIn } from "./speech-settings";
 import { noAgentText } from "./team";
 import { OFFER_ANSWERS_TOOL, PROPOSE_TEAM_SCHEMA_PERSONAL, PROPOSE_TEAM_TOOL, teamTools } from "./team-proposals";
 import { SET_TEAM_WEEK_TOOL } from "./team-week";
@@ -91,6 +92,9 @@ export const REQUEST_SETTINGS_TOOL = "request_settings_change";
 export const OFFER_APPROVALS_TOOL = "offer_approvals";
 export const PROPOSE_MEMBER_CHANGES_TOOL = "propose_member_changes";
 export const OFFER_OPEN_PAGE_TOOL = "offer_open_page";
+/** "Ligar mensagens de voz": where nothing on this server turns voice into text yet (ADR 0100). */
+export const OFFER_VOICE_SETUP_TOOL = "offer_voice_setup";
+export const VOICE_SETUP_CARD = "action_voice_setup";
 /** At most this many approvals, or people's changes, on one card. */
 export const MAX_ROWS_PER_CARD = 20;
 /** The cards' `bodyCode`s (`chat.body.action_approvals`, `settings_proposal` with `names`, `action_open_page`). */
@@ -238,6 +242,17 @@ export interface MemberChangesCard {
   kind: "member_changes";
   forUserId: string;
   params: { rows: MemberChangeRow[]; why: string };
+}
+
+/**
+ * "Ligar mensagens de voz": for the server's owner, its button downloads the speech model to the server's computer
+ * when it fits there (or opens the setup's dialog); anyone else asks the owner from it. Done from live data
+ * (`speechState`), so it keeps no state.
+ */
+export interface VoiceSetupCard {
+  kind: "voice_setup";
+  forUserId: string | null;
+  params: { why: string };
 }
 
 /** "Abrir …": opens one of the app's screens (`APP_PAGES`), at an agent or a channel for those two. */
@@ -1444,9 +1459,9 @@ function rightHandCards(deps: { pubsub?: PubSub }): ToolDefinition[] {
           }
           if (page === "channel") {
             const forUserId = await personBehindCall(ctx);
-            const name = str(input.channel).trim().replace(/^#/, "").toLowerCase();
+            const name = typedChannelName(str(input.channel));
             const seen = forUserId ? await listChannels(ctx.db, forUserId, ctx.orgId) : [];
-            const channel = seen.find((c) => c.name === name);
+            const channel = seen.find((c) => namesChannel(c.name, name));
             if (!channel) return { content: `They see no channel #${name}.`, isError: true };
             params.channelId = channel.id;
           }
@@ -1465,6 +1480,42 @@ function rightHandCards(deps: { pubsub?: PubSub }): ToolDefinition[] {
           const may = !needs || (needs === "manage_owners" ? membership?.role === "owner" : can(membership, needs));
           return {
             content: `Posted the card that opens ${APP_PAGES[page].split(":")[0]}.${may ? "" : " This person can't use that screen: say who can (an owner or an admin)."} Nothing changed: they act there.`,
+            data: { actionCard: { messageId } },
+          };
+        } catch (error) {
+          return failed(error);
+        }
+      },
+    },
+    {
+      name: OFFER_VOICE_SETUP_TOOL,
+      description:
+        "Turn on voice messages where nothing on this server turns voice into text yet (your facts say so): a card for this person whose one click does it. For the server's owner it downloads the speech model to the server's computer when it fits there (about 740 MB, it says so), or opens the choice of a provider key or their own server; anyone else asks the owner from it. Use it when they ask about voice, the microphone or a voice message you couldn't hear. Never paste keys in the chat.",
+      scope: SETUP_SCOPE,
+      inputSchema: {
+        type: "object",
+        properties: {
+          why: { type: "string", minLength: 1, maxLength: 300, description: "One short line on the card." },
+        },
+        required: ["why"],
+        additionalProperties: false,
+      },
+      async execute(input, ctx) {
+        try {
+          const at = await cardPlace(ctx);
+          if (!at) return NOBODY_READS;
+          const full = await cardsLeft(ctx);
+          if (full) return full;
+          const forUserId = await personBehindCall(ctx);
+          const card: VoiceSetupCard = { kind: "voice_setup", forUserId, params: { why: str(input.why).trim() } };
+          const messageId = await postCard(deps, ctx, at, `Voice messages: ${card.params.why}`, {
+            ...bodyCode(VOICE_SETUP_CARD),
+            actionCard: card,
+          });
+          const owner = await speechOwnerIn(ctx.db, ctx.orgId);
+          const theirs = owner !== null && owner.userId === forUserId;
+          return {
+            content: `Posted the card.${theirs ? " They turn voice on from it in one click: nothing is downloaded until they press it." : ` Only ${owner ? owner.name : "whoever runs this server"} can choose what turns voice into text: this person asks them from the card.`}`,
             data: { actionCard: { messageId } },
           };
         } catch (error) {

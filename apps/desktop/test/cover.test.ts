@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { readInstance } from "@agenteschat/client/lib/server";
 import { networkFix, networkWords, privateTitle } from "../src/cover/network";
+import { versionProblem } from "../src/control/server";
 import { STUCK_STEPS_MS, stuckAction } from "../src/cover/stuck";
 import { desktopEn } from "../src/i18n/keys.en";
 import { desktopPtBR } from "../src/i18n/keys.pt-BR";
@@ -23,8 +25,8 @@ test("the cover names only fonts its own page loads (it doesn't load the app's s
   for (const family of named) expect(loaded).toContain(family);
 });
 
-describe("a workspace on a private network this computer can't reach (ADR 0256)", () => {
-  test("the system's Tailscale only (ADR 0256 §4): its Mac app, its download page, Windows' icon by the clock", () => {
+describe("a workspace on a private network this computer can't reach (ADR 0265)", () => {
+  test("the system's Tailscale only (ADR 0265 §4): its Mac app, its download page, Windows' icon by the clock", () => {
     expect(networkFix("mac", { state: "off", app: true })).toEqual({ act: "openApp" });
     // Not read yet: its app.
     expect(networkFix("mac", null)).toEqual({ act: "openApp" });
@@ -96,7 +98,7 @@ test("the cover never steps aside on its own while the page hasn't painted", () 
   expect(main).toContain('words.showAnyway, () => void invoke("cover_hide")');
 });
 
-test("over the server here the cover never turns reach off: the window opens it at loopback (ADR 0256 §5)", () => {
+test("over the server here the cover never turns reach off: the window opens it at loopback (ADR 0265 §5)", () => {
   const main = read(join(COVER, "main.ts"));
   expect(main).not.toContain("local_server_reach");
   expect(main).not.toContain("tailnetOff");
@@ -122,4 +124,22 @@ test("the cover's fake answers only while designing in a browser, never in the a
   expect(main).toContain(
     'if (import.meta.env.DEV && !("__TAURI_INTERNALS__" in window)) await import("../dev/fake-cover");',
   );
+});
+
+test("each time a saved server opens, the cover asks its app API again and stays over one this app can't use", () => {
+  const instance = (api: number, minApi: number) =>
+    readInstance("https://chat.example.com", { name: "agentes.chat", version: "1.0.0", api, minApi });
+  expect(versionProblem(instance(2, 2))).toBe("app-too-old");
+  expect(versionProblem(instance(0, 0))).toBe("server-too-old");
+  expect(versionProblem(instance(1, 1))).toBeNull();
+  // Out of reach is the cover's own line, not this one.
+  expect(versionProblem({ ok: false, server: "https://chat.example.com", problem: "unreachable" })).toBeNull();
+  expect(versionProblem(null)).toBeNull();
+  const main = read(join(COVER, "main.ts"));
+  const shown = /function shown\(\) \{[\s\S]*?\n\}/.exec(main)?.[0] ?? "";
+  expect(shown).toContain("checkVersion()");
+  expect(main).toContain('invoke("cover_hold")');
+  const rust = read(join(import.meta.dir, "../src-tauri/src/cover.rs"));
+  // The site's paint doesn't lift a held cover.
+  expect(rust).toContain("if !shown.covering || shown.held {");
 });

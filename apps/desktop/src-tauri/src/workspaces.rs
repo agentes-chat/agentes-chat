@@ -417,7 +417,7 @@ fn logo_data(
 /// domain with `Url::domain`, which is None for an IP address, so the server on this computer
 /// (`http://127.0.0.1:4310`) got no cookie, read as signed out and left the site's workspace menu.
 /// On this computer cookies are per host, not per port: one the server here named after its port (`agentes-<PORT>.…`,
-/// apps/server http/loopback-cookies.ts, ADR 0256 §5) goes only to that port, never to another server on 127.0.0.1.
+/// apps/server http/loopback-cookies.ts, ADR 0265 §5) goes only to that port, never to another server on 127.0.0.1.
 pub fn sent_to<C: CookieLike>(cookie: &C, url: &Url) -> bool {
     cookie_for(cookie.domain_of(), cookie.secure_of(), cookie.path_of(), url) && port_ok(cookie.name_of(), url)
 }
@@ -682,7 +682,7 @@ fn tell(app: &AppHandle, server: &str, org: &Org, count: u64, account: Option<&s
 /// another's.
 #[tauri::command]
 pub fn workspaces_get(app: AppHandle, webview: tauri::Webview) -> Result<Vec<ServerWorkspaces>, String> {
-    // The cover names the workspace it can't reach (ADR 0256): what is kept, never a read of its own.
+    // The cover names the workspace it can't reach (ADR 0265): what is kept, never a read of its own.
     if !matches!(webview.label(), "main-app" | "popover" | "main-cover") {
         return Err("only the app's own windows ask this".into());
     }

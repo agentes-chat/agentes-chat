@@ -1,5 +1,5 @@
 /**
- * The first run, on the main window's app layer (ADR 0256 §2, §3): sign in to agentes.chat first, with the other ways
+ * The first run, on the main window's app layer (ADR 0265 §2, §3): sign in to agentes.chat first, with the other ways
  * under it (running agentes.chat free on this computer in three steps, a company's server by its address, installing
  * one for a team) and a server found on this computer or the Tailscale network on top. A connect link
  * (`agenteschat://connect`) opens here too: the server in large type, nothing changes before Open. Choosing a server

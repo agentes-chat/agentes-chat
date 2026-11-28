@@ -25,6 +25,11 @@
     "prefs": "Preferenze",
     "settings": "Impostazioni"
   },
+  "background": {
+    "title": "agentes.chat è ancora aperto",
+    "bodyMac": "Lo trovi nella barra dei menu, in alto sullo schermo. Da lì puoi aprirlo o uscire.",
+    "bodyTray": "Lo trovi nell'area di notifica. Da lì puoi aprirlo o uscire."
+  },
   "common": {
     "cancel": "Annulla",
     "close": "Chiudi",
@@ -85,6 +90,12 @@
         "capturing": "fa uno screenshot",
         "tabs": "cambia scheda"
       }
+    },
+    "apps": {
+      "title": "{{agent}} sta usando {{app}}",
+      "detail": "Mouse e tastiera restano tuoi",
+      "stop": "Ferma",
+      "stopped": "{{agent}} ha smesso di usare le tue app"
     },
     "label": "agentes.chat",
     "now": "Ora",
@@ -154,6 +165,10 @@
     "allowedUndo": "Annulla",
     "allowedOk": "Va bene",
     "allowedUndone": "Di nuovo disattivato: {{tool}}",
+    "pickTitle": "{{name}} chiede una cartella per gli agenti",
+    "pickTitleAgent": "{{name}} chiede una cartella per {{agent}}",
+    "pickBody": "Scegli quale cartella consentire su questo {{device}}.",
+    "pickChoose": "Scegli cartella",
     "quitTitle": "Uscire da agentes.chat?",
     "quitBody": "Gli agenti non possono usare questo {{device}} mentre l'app è chiusa. Quello che è già in corso finisce e invia il risultato quando la riapri.",
     "quitHereBody": "agentes.chat si ferma su questo {{device}}: nessuno può usarlo, qui, sul tuo telefono o su quelli dei colleghi, finché non riapri l'app.",
@@ -608,9 +623,12 @@
     "done": "Connesso a {{org}}",
     "share": "Fallo usare a tutto lo spazio di lavoro",
     "internet": "Gli agenti usano la connessione internet di questo computer",
-    "internetOn": "I siti che gli agenti aprono vedono la tua posizione",
+    "internetOn": "Siti e server che gli agenti raggiungono vedono la tua posizione",
     "internetOff": "Disattivato: gli agenti usano la connessione abituale",
-    "internetHint": "Gli agenti del workspace aprono i siti tramite la connessione di questo computer. Solo siti web e mai nulla della tua rete. Finché questo computer è offline, usano la connessione abituale.",
+    "internetHint": "Gli agenti del workspace vanno online tramite la connessione di questo computer: siti web, git, SSH, database e altre connessioni TCP. Mai nulla della tua rete, né email sulla porta 25. L’IA degli agenti, le ricerche dei nomi, le chiamate e il resto del traffico UDP usano la connessione abituale, come tutto il resto finché questo computer è offline.",
+    "internetHintProxy": "Il browser degli agenti del workspace e i programmi che seguono le impostazioni del proxy (git via HTTPS, curl, la maggior parte degli strumenti da riga di comando) vanno online tramite la connessione di questo computer. SSH, i client di database e gli altri programmi che ignorano le impostazioni del proxy usano la connessione abituale, come l’IA degli agenti, le ricerche dei nomi e il traffico UDP. Mai nulla della tua rete, né email sulla porta 25. Finché questo computer è offline, tutto usa la connessione abituale.",
+    "internetOnly": "Usa solo l’internet di questo computer",
+    "internetOnlyHint": "Gli agenti usano solo l’internet di questo computer, anche per la loro IA, e mai la connessione abituale. Finché è offline, restano senza internet fino al suo ritorno.",
     "shareOff": "Solo tu per ora",
     "shareHint": "Gli agenti di tutti in {{org}} possono eseguirci attività, con il tuo utente.",
     "addFolders": "Aggiungi cartelle",

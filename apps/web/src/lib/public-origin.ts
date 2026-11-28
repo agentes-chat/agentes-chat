@@ -1,5 +1,5 @@
 /**
- * The address people open, for every link this page hands out (ADR 0256 §5).
+ * The address people open, for every link this page hands out (ADR 0265 §5).
  *
  * The desktop app opens a server that runs on the same computer at its loopback origin (`http://127.0.0.1:<port>`),
  * while everyone else (a phone, the team) uses its `PUBLIC_URL`, the tailnet's address once reach is on. A link copied,

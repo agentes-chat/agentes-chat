@@ -1,5 +1,5 @@
 /**
- * The macOS permissions agents need on this computer (ADR 0165 "Prepare this Mac", ADR 0256 §7): notifications, so
+ * The macOS permissions agents need on this computer (ADR 0165 "Prepare this Mac", ADR 0265 §7): notifications, so
  * the app can say when agents finish or need the person and when an essential falls, Screen Recording, for the
  * screenshots their commands take, and Full Disk Access, so no folder prompt stops them mid-task. The app asks for them
  * and its runners inherit them. macOS says whether each is allowed without asking. Notifications and Screen Recording

@@ -18,6 +18,13 @@ import { ownSignInName } from "@agenteschat/client/lib/ai-accounts";
 import { effortOf } from "@agenteschat/client/lib/brain-advanced";
 import { computerNameOf, setupPortrait, WORKSPACE_COMPUTER_KIND } from "@agenteschat/client/lib/computer";
 import {
+  LEGACY_MOVE,
+  maintenanceLine,
+  maintenanceNamed,
+  maintenanceOf,
+  maintenanceShort,
+} from "@agenteschat/client/lib/computer-maintenance";
+import {
   allowsInApp,
   commandInReason,
   computerKind,
@@ -319,9 +326,11 @@ export function WorkCard({
       {machine && !machine.online && kind !== "model" && (
         <SettingNote icon="pause">
           {machineRow?.moving
-            ? t("machines.moving.named", {
-                computer: computerNameOf(t, org.name, machine.name, isPersonal(org)),
-              })
+            ? maintenanceNamed(
+                t,
+                maintenanceOf(machineRow) ?? LEGACY_MOVE,
+                computerNameOf(t, org.name, machine.name, isPersonal(org)),
+              )
             : edition === "cloud"
               ? t("agentPage.work.offlineCloud", {
                   ...g,
@@ -342,8 +351,7 @@ export function WorkCard({
 
 /**
  * The agent may use apps on its desktop, and its Linux computer says what that still lacks there (ADR 0062):
- * the computer's own words, with the command in them to copy. Mac and Windows computers never have it, which
- * their own page says.
+ * the computer's own words, with the command in them to copy. Mac and Windows computers never have it.
  */
 function DesktopUseNote({ machine: m }: { machine: Machine }) {
   const { t } = useTranslation();
@@ -429,7 +437,7 @@ export function BrowserSteps({ computer, machineId }: { computer: string; machin
       </p>
     </div>
   );
-  // The app's menu item on that computer names it by its kind: "This Mac settings…", "This PC settings…" (ADR 0256).
+  // The app's menu item on that computer names it by its kind: "This Mac settings…", "This PC settings…" (ADR 0265).
   const device = row ? { device: t(`machines.thisMac.device.${computerKind(row.os)}`) } : {};
   const bar = (hit?: boolean) => (
     <div className="brw-mbar">
@@ -608,14 +616,16 @@ function ComputerForm({ onClose }: { onClose: () => void }) {
       ...(brain !== "model" && !has(id, brain)
         ? [t("agentPage.work.computer.alsoBrain", { brain: t(`brain.card.${brain}`) })]
         : []),
-      ...(m && !m.online ? [m.moving ? t("machines.moving.line") : t("agentPage.work.computer.alsoOffline", g)] : []),
+      ...(m && !m.online
+        ? [m.moving ? maintenanceLine(t, maintenanceOf(m) ?? LEGACY_MOVE) : t("agentPage.work.computer.alsoOffline", g)]
+        : []),
     ];
   };
   const status = (m: Machine) =>
     m.online
       ? t("agentPage.work.computer.online")
       : m.moving
-        ? t("machines.moving.short")
+        ? maintenanceShort(t, maintenanceOf(m) ?? LEGACY_MOVE)
         : t("agentPage.work.computer.offline");
   const chosen = pickable.find((m) => m.id === choice);
   const use = async () => {

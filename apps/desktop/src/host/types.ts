@@ -26,7 +26,7 @@ import type { ReportFacts } from "../report/report";
 
 /**
  * The app's screens: the menu bar's popover and the notch (windows of their own), and the app layer (`app`), the
- * main window's web view of the app's own screens (ADR 0256; its Tauri label is `main-app`).
+ * main window's web view of the app's own screens (ADR 0265; its Tauri label is `main-app`).
  */
 export type WindowName = "popover" | "app" | "notch";
 export const WINDOW_NAMES: readonly WindowName[] = ["popover", "app", "notch"];
@@ -169,7 +169,7 @@ export interface Host {
   /** The popover's count of this computer's essentials that need the person, for the site (`thisMacHealth`). */
   publishHealth(health: { needs: number; server: boolean }): Promise<void>;
   /**
-   * What only the system says about this computer's essentials (ADR 0256 §7): open at login, the macOS permissions,
+   * What only the system says about this computer's essentials (ADR 0265 §7): open at login, the macOS permissions,
    * what keeps the server here up and awake (the popover and the layer).
    */
   health(): Promise<Health>;
@@ -224,10 +224,17 @@ export interface Host {
   revealFolder(path: string): Promise<void>;
   pickFolder(): Promise<string | null>;
   setTrayState(state: TrayState): Promise<void>;
-  /** The menu bar icon on a Mac (Windows and Linux always keep theirs, `tray.rs`). */
-  setTrayVisible(show: boolean): Promise<void>;
-  /** The popover (the notch's way to it); every other screen is the app layer's (`showLayer`). */
-  showWindow(name: Exclude<WindowName, "app">): Promise<void>;
+  /**
+   * The menu bar icon on a Mac while a window shows (Windows and Linux always keep theirs, `tray.rs`). `off`: the
+   * person turned it off, so closing the window keeps the Dock icon instead (`background.rs`).
+   */
+  setTrayVisible(show: boolean, off: boolean): Promise<void>;
+  /**
+   * The popover (the notch's way to it); every other screen is the app layer's (`showLayer`). `keep`: the popover,
+   * raised for a request rather than by the person, stays up when it loses focus until it is shown again without it
+   * or hidden.
+   */
+  showWindow(name: Exclude<WindowName, "app">, o?: { keep?: boolean }): Promise<void>;
   hideWindow(name: Exclude<WindowName, "app">): Promise<void>;
   quit(): Promise<void>;
   /**
@@ -299,9 +306,9 @@ export interface Host {
   stopLocalServer(forget: boolean, minutes?: number): Promise<void>;
   restartLocalServer(): Promise<void>;
   /**
-   * Reach from the person's other devices, on or off (ADR 0256 §4): through the system's Tailscale or an address of the
+   * Reach from the person's other devices, on or off (ADR 0265 §4): through the system's Tailscale or an address of the
    * person's own (`way`; on without one: the saved way, else Tailscale). The main window stays on the server here's
-   * loopback address, signed in (ADR 0256 §5); the server starts again behind it.
+   * loopback address, signed in (ADR 0265 §5); the server starts again behind it.
    */
   setLocalReach(on: boolean, way?: ReachWay): Promise<ReachResult>;
   /** What `setLocalReach` is doing while it takes. */
@@ -310,7 +317,7 @@ export interface Host {
   stopLocalReach(): Promise<void>;
   /**
    * Whether an address of the person's own leads to the server here (`local_server_check_address`): its form, then the
-   * server's id asked through it and at loopback (ADR 0256 §4). Needs the server running.
+   * server's id asked through it and at loopback (ADR 0265 §4). Needs the server running.
    */
   checkAddress(url: string): Promise<AddressCheck>;
   /** The usage-statistics switch (`TELEMETRY` in its settings; it starts again). */

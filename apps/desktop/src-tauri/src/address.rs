@@ -1,4 +1,4 @@
-//! An address of the person's own for the server here (ADR 0256 §4): a tunnel, a reverse proxy or a domain of theirs,
+//! An address of the person's own for the server here (ADR 0265 §4): a tunnel, a reverse proxy or a domain of theirs,
 //! running on this computer, that leads to the server's loopback port. The app never makes or runs it; it only checks
 //! that it leads here. The server answers `GET /api/native/here-id` with an id made when its process starts, for any
 //! Host (apps/server `http/native-hosts.ts`): the same id through the address and at the loopback origin means the

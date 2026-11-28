@@ -173,6 +173,10 @@ describe("older pages", () => {
     );
     expect(chat).toContain("const gone = error === undefined || (error instanceof ApiError && error.status === 404);");
     expect(chat).toContain('toast({ title: gone ? t("channel.jumpMissing") : t("common.loadFailed"), icon: "x" });');
+    // In a thread, one of the conversation outside it (a long work's report) opens in the conversation, at it.
+    expect(chat).not.toContain("if (isThread || (around?.id === seek && around.done))");
+    expect(chat).toContain(".messages(orgId, channelId, { around: seek, limit: 1 })");
+    expect(chat).toContain("router.push(chatHref(channelId, null, seek));");
     // Away from the latest page: newer pages as the person scrolls down, never pinned to that end.
     expect(chat).toContain("onEndReached={gap ? loadNewer : undefined}");
     expect(chat).toContain("maintainScrollAtEnd={readHold || gap ? false : GLIDE}");
@@ -367,11 +371,14 @@ describe("an empty conversation's greeting and the keyboard", () => {
 });
 
 describe("a table wider than its message", () => {
-  test("its scroll redraws it only when an edge's fade turns on or off", () => {
+  test("its scroll never redraws it: the standing column, its edge and the fade follow the scroll on the UI thread", () => {
     const spans = src("features/chat/MessageSpans.tsx");
-    expect(spans).not.toContain("onScroll={(e) => setX(e.nativeEvent.contentOffset.x)}");
-    expect(spans).toContain("if (now.left !== hidden.left || now.right !== hidden.right) setX(offset);");
-    expect(spans).toContain("onScroll={(e) => onScroll(e.nativeEvent.contentOffset.x)}");
+    expect(spans).not.toContain("setX(");
+    expect(spans).toContain("const TableScroller = Animated.createAnimatedComponent(GestureScrollView);");
+    expect(spans).toContain("const onScroll = useAnimatedScrollHandler({");
+    expect(spans).toContain("onScroll={onScroll}");
+    expect(spans).toContain("transform: [{ translateX: Math.max(0, x.value) }],");
+    expect(spans).toContain("opacity: Math.min(1, Math.max(0, (total - frame - x.value) / TABLE_FADE)),");
   });
 });
 
@@ -402,7 +409,7 @@ describe("a voice message's row", () => {
     expect(row).toContain("if (id !== clipId || scrubbing.value) return;");
     const pan = between(row, "const pan = usePanGesture({", "const tap =");
     expect(pan).toContain("scrubbing.value = true;");
-    expect(pan).toContain("const at = width > 0 ? waveAt(e.x, width) : progress.value;");
+    expect(pan).toContain("const at = width > 0 ? waveAt(e.x, width, BAR_HANDLE) : progress.value;");
     expect(pan).toContain("scheduleOnRN(endScrub, at);");
   });
 

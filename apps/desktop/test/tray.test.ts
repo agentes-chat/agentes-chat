@@ -117,7 +117,7 @@ describe("macStateOf", () => {
   });
 });
 
-describe("the popover's head (ADR 0256 §7)", () => {
+describe("the popover's head (ADR 0265 §7)", () => {
   test("what needs the person first, then paused, then out of reach, else all set", () => {
     expect(headLine({ needs: 2, pause: { until: null }, offline: true })).toEqual({ kind: "needs", count: 2 });
     expect(headLine({ needs: 0, pause: { until: "2026-11-26T18:00:00.000Z" }, offline: true })).toEqual({
@@ -172,7 +172,7 @@ describe("the popover's essentials banner", () => {
     expect(fixPlan({ kind: "permission", permission: "disk" })).toEqual({ kind: "privacy", pane: "disk" });
     expect(fixPlan({ kind: "autoUpdate" })).toEqual({ kind: "autoUpdate" });
     expect(fixPlan({ kind: "restartServer" })).toEqual({ kind: "restart" });
-    // Reach, either way (ADR 0256 §4): its row in Settings › Server on this computer, where its fix is.
+    // Reach, either way (ADR 0265 §4): its row in Settings › Server on this computer, where its fix is.
     const reach = { kind: "layer", route: { screen: "settings", section: "server", focus: "reach" } };
     for (const fix of [
       { kind: "reach" },

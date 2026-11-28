@@ -260,7 +260,7 @@ export async function ensureOAuthClient(
   meta: AuthServerMetadata,
   /**
    * `redirectUris`: the return addresses to register, `PUBLIC_URL`'s callback first (`oauthRedirectUris`). One a
-   * server refuses beside the first (an http loopback address, ADR 0256 §5) is left out of a second try.
+   * server refuses beside the first (an http loopback address, ADR 0265 §5) is left out of a second try.
    */
   input: { redirectUris: string[]; scope: string | null },
 ): Promise<OAuthClientRow | NotApproved | null> {

@@ -394,7 +394,7 @@ export function accountRoutes(deps: AppDeps) {
             socialProviders: z.object({ google: z.boolean(), github: z.boolean(), apple: z.boolean() }),
             publicUrl: z.string().openapi({
               description:
-                "The address people open (`PUBLIC_URL`, without a trailing slash): links the apps hand out (to copy, share or open elsewhere) use it, also from a native server's loopback address (ADR 0256 §5).",
+                "The address people open (`PUBLIC_URL`, without a trailing slash): links the apps hand out (to copy, share or open elsewhere) use it, also from a native server's loopback address (ADR 0265 §5).",
             }),
             signupOpen: z
               .boolean()
@@ -495,7 +495,7 @@ export function accountRoutes(deps: AppDeps) {
       return c.json(
         {
           // Sign-in by email alone where a provider's return can't land: a registered host, or a native server's
-          // loopback address while people use another (ADR 0256 §5).
+          // loopback address while people use another (ADR 0265 §5).
           ...authUiConfig(config, Boolean(look) || atLoopbackBesidePublic(config, host)),
           publicUrl: config.PUBLIC_URL.replace(/\/$/, ""),
           signupOpen: await signupOpen(db, config, users),

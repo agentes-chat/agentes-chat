@@ -24,7 +24,7 @@ const need = (permission: PermissionNeed["permission"], trigger: string): Permis
   since: "2026-11-26T18:00:00.000Z",
 });
 
-/** The app layer on the permission sheet (ADR 0256), as the popover opens it for a new wait. */
+/** The app layer on the permission sheet (ADR 0265), as the popover opens it for a new wait. */
 async function sheet(check: (el: HTMLElement, host: FakeHost, store: DesktopStore) => Promise<void>) {
   const host = createFakeHost("app", "selfhost", { route: { screen: "permissionAsk" } });
   const store = new DesktopStore(host, {});

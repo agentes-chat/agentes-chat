@@ -1,7 +1,7 @@
 /**
  * The server here's own controls, shared by the first run, Settings and the popover: what turning reach on is doing,
  * why it didn't turn on (the system's Tailscale by what it is doing on this computer, or an address of the person's
- * own, ADR 0256 §4), and "Copy details"; and a server's tile by where it runs. How people get here is chosen with
+ * own, ADR 0265 §4), and "Copy details"; and a server's tile by where it runs. How people get here is chosen with
  * `ReachWayPicker` (reach-way.tsx).
  */
 import { Button, Icon, type IconName, PixelSpinner } from "@agenteschat/ui";

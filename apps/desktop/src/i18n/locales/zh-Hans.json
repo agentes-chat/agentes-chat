@@ -25,6 +25,11 @@
     "prefs": "偏好设置",
     "settings": "设置"
   },
+  "background": {
+    "title": "agentes.chat 仍在运行",
+    "bodyMac": "它在屏幕顶部的菜单栏中。可以从那里打开或退出。",
+    "bodyTray": "它在系统托盘中。可以从那里打开或退出。"
+  },
   "common": {
     "cancel": "取消",
     "close": "关闭",
@@ -83,6 +88,12 @@
         "capturing": "正在截图",
         "tabs": "正在切换标签页"
       }
+    },
+    "apps": {
+      "title": "{{agent}} 正在使用 {{app}}",
+      "detail": "鼠标和键盘仍归你使用",
+      "stop": "停止",
+      "stopped": "{{agent}} 已停止使用你的应用"
     },
     "label": "agentes.chat",
     "now": "当前",
@@ -148,6 +159,10 @@
     "allowedUndo": "撤销",
     "allowedOk": "知道了",
     "allowedUndone": "已再次关闭：{{tool}}",
+    "pickTitle": "{{name}} 为智能体请求一个文件夹",
+    "pickTitleAgent": "{{name}} 为 {{agent}} 请求一个文件夹",
+    "pickBody": "选择要在这台 {{device}} 上允许的文件夹。",
+    "pickChoose": "选择文件夹",
     "quitTitle": "退出 agentes.chat？",
     "quitBody": "应用关闭期间，智能体无法使用这台 {{device}}。已在运行的工作会完成，并在你再次打开应用时发送结果。",
     "quitHereBody": "agentes.chat 将在这台 {{device}} 上停止运行：在你再次打开应用之前，任何人都无法使用它，无论是在这里、你的手机上还是队友的手机上。",
@@ -598,9 +613,12 @@
     "done": "已连接到 {{org}}",
     "share": "让整个工作区使用",
     "internet": "智能体使用这台电脑的网络",
-    "internetOn": "智能体打开的网站会看到你的位置",
+    "internetOn": "智能体访问的网站和服务器会看到你的位置",
     "internetOff": "已关闭：智能体使用平常的连接",
-    "internetHint": "工作区的智能体通过这台电脑的连接打开网站。仅限网站，绝不会访问你自己网络中的任何内容。这台电脑离线时，它们使用平常的连接。",
+    "internetHint": "工作区的智能体通过这台电脑的连接上网：网站、git、SSH、数据库及其他 TCP 连接。绝不会访问你自己网络中的任何内容，也不会通过 25 端口发送邮件。智能体的 AI、域名解析、通话等 UDP 流量使用平常的连接。这台电脑离线时，所有流量都使用平常的连接。",
+    "internetHintProxy": "工作区智能体的浏览器和遵循代理设置的程序（通过 HTTPS 的 git、curl、大多数命令行工具）通过这台电脑的连接上网。SSH、数据库客户端等忽略代理设置的程序使用平常的连接，智能体的 AI、域名解析和 UDP 流量也一样。绝不会访问你自己网络中的任何内容，也不会通过 25 端口发送邮件。这台电脑离线时，所有流量都使用平常的连接。",
+    "internetOnly": "只用这台电脑的网络",
+    "internetOnlyHint": "智能体只用这台电脑的网络，包括 AI 在内，绝不使用平常的连接。这台电脑离线时，智能体在它恢复前都无法上网。",
     "shareOff": "目前只有你",
     "shareHint": "{{org}} 所有人的智能体都能以你的用户身份在上面运行任务。",
     "addFolders": "添加文件夹",

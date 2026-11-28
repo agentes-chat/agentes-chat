@@ -1,4 +1,4 @@
-/* The menu bar popover (Popover.tsx, ADR 0256 §7): its head, the server here's row, "Now" and the menu below. */
+/* The menu bar popover (Popover.tsx, ADR 0265 §7): its head, the server here's row, "Now" and the menu below. */
 .dk-pop.dk-tray {
   padding: 12px;
 }

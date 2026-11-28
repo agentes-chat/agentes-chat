@@ -1,28 +1,40 @@
-import type { ComputerDevice, DeviceAudience, Machine, PermissionNeed, PhoneDevice } from "@agenteschat/client";
-import { useMachinePause, useMachines } from "@agenteschat/client";
+import type {
+  ComputerDevice,
+  ComputerMaintenance,
+  DeviceAudience,
+  Machine,
+  PermissionNeed,
+  PhoneDevice,
+} from "@agenteschat/client";
+import { useAuthConfig, useMachinePause, useMachines } from "@agenteschat/client";
 import {
   deviceName,
+  doctorShown,
   findPhone,
   iosOf,
   iphoneOverWifi,
   lendingDevice,
   mayChangeTasks,
-  osName,
   permissionWaitLines,
   personInControl,
   phoneLink,
   phoneSystem,
   powerChoice,
+  processorText,
+  RUNNER_DOCTOR_COMMAND,
   RUNNER_UPDATE_COMMAND,
   SPILL_USES,
+  shareInternetHint,
   shareInternetText,
   spillOfUse,
   spillUseOf,
   statusLook,
   statusSentence,
+  systemText,
   taskChoices,
   taskLimitLine,
   tasksAutoText,
+  terminalInstall,
 } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { clockAt } from "@agenteschat/client/lib/format";
@@ -47,13 +59,14 @@ import {
   ProviderLogo,
   Select,
   Switch,
+  Tip,
 } from "@agenteschat/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorState, LoadingList } from "@/components/Loading";
 import { MachineAccessCards, MachineAgents, MachineFactsExtra, MachinePage } from "@/components/Machines";
-import { CommandBlock } from "@/components/machine-bits";
+import { CommandBlock, MaintenanceHint } from "@/components/machine-bits";
 import { PrefRow } from "@/components/NoticePrefs";
 import { useOrg } from "@/components/org-context";
 import { OrgMark } from "@/components/ProfilePhoto";
@@ -173,6 +186,8 @@ function StatusLine({
   action,
   ios,
   text,
+  maintenance,
+  cli,
 }: {
   status: PhoneDevice["status"];
   host?: string;
@@ -182,16 +197,21 @@ function StatusLine({
   ios?: string | null;
   /** In place of the status's own sentence, as typed (it carries a person's name). */
   text?: string | null;
+  /** What we do to the computer (ADR 0257): its line, with its ⓘ. */
+  maintenance?: ComputerMaintenance | null;
+  /** Installed from the Terminal (`terminalInstall`). */
+  cli?: boolean;
 }) {
   const { t, i18n } = useTranslation();
-  const sentence = text ?? statusSentence(t, i18n.language, status, { host, hostOs, ios });
+  const sentence = text ?? statusSentence(t, i18n.language, status, { host, hostOs, ios, maintenance, cli });
   const label = status.kind === "in_use" && status.label ? status.label : null;
   if (!sentence && !action) return null;
   return (
     <div className="dv-statusline" data-status={statusLook(status)} role="status">
-      <span className="dv-statusline__text">
+      <span className={maintenance ? "dv-statusline__text ac-hintline" : "dv-statusline__text"}>
         {text ?? (sentence && codeAndBold(sentence, "cb", [host]))}
         {label && <small> · {label}</small>}
+        {maintenance && <MaintenanceHint maintenance={maintenance} />}
       </span>
       {action}
     </div>
@@ -327,6 +347,7 @@ function ComputerPage({ machineId }: { machineId: string }) {
   const toast = useToast();
   const devices = useDevices(org.id);
   const machines = useMachines(org.id);
+  const auth = useAuthConfig();
   const update = useUpdateComputer(org.id);
   const back = useBackToList();
   const [renaming, setRenaming] = useState<DeviceTarget | null>(null);
@@ -369,27 +390,35 @@ function ComputerPage({ machineId }: { machineId: string }) {
   // This server's own computer stops being used here (and can be again), it isn't removed.
   const host = d.machineKind === "host";
   const removeWords = host ? t("machines.host.stop") : t("devices.remove");
-  // At a glance its system (and when it was last seen while offline); its size, toolchains, way out and folder are
-  // behind "Detalhes".
-  const facts = [
-    { label: t("devices.facts.system"), value: osName(t, d.os) },
-    ...(d.status.kind === "offline" && d.lastSeenAt
+  // At a glance when it was last seen while offline; its system, size, toolchains, way out and folder are behind
+  // "Detalhes".
+  const facts =
+    d.status.kind === "offline" && d.lastSeenAt
       ? [{ label: t("devices.facts.lastSeen"), value: clockAt(i18n.language, d.lastSeenAt) }]
-      : []),
-  ];
+      : [];
+  const processor = processorText(t, d);
   const more = [
-    ...(d.cpus ? [{ label: t("devices.facts.cpu"), value: String(d.cpus) }] : []),
+    { label: t("devices.facts.system"), value: systemText(t, d) },
+    ...(processor
+      ? [
+          {
+            label: t("devices.facts.cpu"),
+            value: processor.cores ? (
+              <Tip tip={processor.cores} look="ac-msg__tip" tabIndex={0}>
+                {processor.name}
+                <span className="ac-visually-hidden">, {processor.cores}</span>
+              </Tip>
+            ) : (
+              processor.name
+            ),
+          },
+        ]
+      : []),
     ...(d.memoryGb ? [{ label: t("devices.facts.memory"), value: t("devices.memory", { gb: d.memoryGb }) }] : []),
     ...(Object.keys(d.toolchains).length > 0
       ? [{ label: t("devices.facts.toolchains"), value: <Toolchains tools={d.toolchains} />, wide: true }]
       : []),
   ];
-  const extra = Boolean(
-    machine &&
-      ((machine.workspace && machine.mode !== "system") ||
-        (machine.kind === "managed" &&
-          (machine.networkTransition || (machine.online && (machine.egress?.ip || machine.egressVia))))),
-  );
   return (
     <>
       <BackToDevices />
@@ -436,7 +465,11 @@ function ComputerPage({ machineId }: { machineId: string }) {
         />
         <StatusLine
           status={status}
-          text={pausedFromApps ?? (status.kind === "busy" ? taskLimitLine(t, d, tasksEditable) : null)}
+          text={
+            pausedFromApps ?? (status.kind === "busy" && !d.maintenance ? taskLimitLine(t, d, tasksEditable) : null)
+          }
+          maintenance={d.maintenance}
+          cli={terminalInstall(machine)}
         />
         {(d.permissions ?? []).map((need) => (
           <PermissionWait key={need.permission} need={need} computer={d.name} />
@@ -448,20 +481,24 @@ function ComputerPage({ machineId }: { machineId: string }) {
             {machine.update === "command" && <CommandBlock command={RUNNER_UPDATE_COMMAND} />}
           </>
         )}
-        <Facts facts={facts} />
-        {status.kind === "paused" && !pausedFromApps && <span className="small muted">{t("machines.pausedHint")}</span>}
-        {more.length > 0 || extra || d.systemMode ? (
-          <Disclosure summary={t("common.details")}>
-            {more.length > 0 && <Facts facts={more} />}
-            {machine && <MachineFactsExtra machine={machine} />}
-            {d.systemMode ? (
-              <p className="ac-setnote ac-iconline">
-                <Icon name="code" size={14} />
-                <span>{t("machines.agentUsers")}</span>
-              </p>
-            ) : null}
+        {machine?.canManage && doctorShown(status, machine) && (
+          <Disclosure summary={t("devices.technical.title")}>
+            <span className="small muted">{t("devices.technical.doctor")}</span>
+            <CommandBlock command={RUNNER_DOCTOR_COMMAND} />
           </Disclosure>
-        ) : null}
+        )}
+        {facts.length > 0 && <Facts facts={facts} />}
+        {status.kind === "paused" && !pausedFromApps && <span className="small muted">{t("machines.pausedHint")}</span>}
+        <Disclosure summary={t("common.details")}>
+          <Facts facts={more} />
+          {machine && <MachineFactsExtra machine={machine} />}
+          {d.systemMode ? (
+            <p className="ac-setnote ac-iconline">
+              <Icon name="code" size={14} />
+              <span>{t("machines.agentUsers")}</span>
+            </p>
+          ) : null}
+        </Disclosure>
         {machine && <MachineAgents machine={machine} />}
       </Card>
       {/* Who may change it: its owner and the admins. Everyone else reads. */}
@@ -573,7 +610,7 @@ function ComputerPage({ machineId }: { machineId: string }) {
               id="dv-pc-internet"
               icon="globe"
               label={t("devices.shareInternet")}
-              hint={t("devices.shareInternetHint")}
+              hint={shareInternetHint(t, auth.data)}
               status={shareInternetText(t, d, lending)}
               {...(mayPick
                 ? {
@@ -602,6 +639,24 @@ function ComputerPage({ machineId }: { machineId: string }) {
                       />
                     ),
                   })}
+            />
+          )}
+          {/* Under the switch while it lends: nothing of the agents' goes their usual way, AI calls included. Its
+              owner's to turn on, as the switch is; an admin may only turn it off. */}
+          {internet?.on && internet.only !== undefined && (d.mayManage || internet.only) && (
+            <PrefRow
+              id="dv-pc-internet-only"
+              nested
+              label={t("devices.shareInternetOnly")}
+              hint={t("devices.shareInternetOnlyHint")}
+              control={
+                <Switch
+                  id="dv-pc-internet-only-switch"
+                  checked={internet.only}
+                  disabled={!d.mayManage || (!owner && !internet.only)}
+                  onCheckedChange={(on) => save({ id: d.id, internetOnly: on })}
+                />
+              }
             />
           )}
           {admin && d.machineKind === "connected" && (

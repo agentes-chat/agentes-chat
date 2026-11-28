@@ -7,6 +7,7 @@ import { GROK_ACCOUNT_HOMES } from "@agenteschat/adapters/command-policy";
 import { type KnownLabel, scrubLogLine } from "@agenteschat/adapters/error-scrub";
 import {
   cgroupCounters,
+  cpuAndSystem,
   diskFigures,
   diskSpace,
   LoadWindow,
@@ -96,6 +97,7 @@ import {
   systemLauncher,
   trustedNetworkLauncher,
 } from "./agent-users";
+import { AppControl } from "./apps";
 import { BrainManager, readyRoom } from "./brain";
 import { CodexAppServers } from "./brain-codex-app";
 import { BrowserManager } from "./browser";
@@ -134,7 +136,15 @@ import { DesktopManager } from "./desktop";
 import { DesktopSessions, type DesktopUser, runnerUser, systemDesktopUser } from "./desktop-session";
 import { diskLayout, keepDiskParts, keptDiskParts, measureDiskParts } from "./disk-parts";
 import { EgressObservation, probeEgress } from "./egress";
-import { EGRESS_RELAY_SOCKET, startEgressRelay } from "./egress-relay";
+import {
+  EGRESS_RELAY_SOCKET,
+  egressProxyState,
+  hasOwnProxy,
+  setEgressProxy,
+  startEgressProxy,
+  startEgressRelay,
+  writeEgressPolicy,
+} from "./egress-relay";
 import { EgressShare } from "./egress-share";
 import { NetworkChangingError, RUNNER_VERSION, RunnerError } from "./errors";
 import { cachedExecutors, EXECUTORS_TTL_MS, type ExecutorRun, inHomeDirs, setCodexForAgents } from "./executors";
@@ -148,6 +158,7 @@ import { tailLines } from "./logfile";
 import { addUsualDirs, adoptLoginPath } from "./login-path";
 import { LoopbackGuard, loopbackEndpoints, runnerEndpoints } from "./loopback-guard";
 import { McpBridge, type McpTaskInfo, mcpSocketPath } from "./mcp";
+import { machineModel } from "./model";
 import {
   AgentNetworks,
   desktopUsesHostNetwork,
@@ -181,7 +192,7 @@ import {
   systemShared,
   withShared,
 } from "./shared-folder";
-import { ackStandby, readStandby, STANDBY_POLL_MS, standbyOn, watchStandby } from "./standby";
+import { ackStandby, readStandby, refusesStandby, STANDBY_POLL_MS, standbyOn, watchStandby } from "./standby";
 import { prepareSystemStartPage } from "./start-page";
 import { DataSockets, RELAYED_FILE, RelayCount } from "./streams";
 import {
@@ -352,13 +363,14 @@ export function previousMachineFor(
   return prev?.machineId && prev.server === server && token ? { machineId: prev.machineId, token } : undefined;
 }
 
-/** What `POST /api/machines/device` is told about this computer. */
-export function deviceInfo(name?: string, previous?: { machineId: string; token: string }) {
+/** What `POST /api/machines/device` is told about this computer; `model` (`machineModel`) names it there. */
+export function deviceInfo(name?: string, previous?: { machineId: string; token: string }, model?: string) {
   return {
     ...(name ? { name } : {}),
     os: machineOs(),
     arch: os.arch(),
     hostname: os.hostname(),
+    ...(model ? { model } : {}),
     version: RUNNER_VERSION,
     ...(previous ? { previousMachineId: previous.machineId, previousToken: previous.token } : {}),
   };
@@ -403,6 +415,8 @@ interface Session {
   streams: DataSockets;
   /** The agents' use of their desktops (ADR 0062): its helpers end with the session, the desktops don't. */
   desktopUse: DesktopManager;
+  /** The person's apps (ADR 0258); never in system mode. */
+  apps: AppControl;
   connection: RunnerConnection;
   /** System mode: the agents' workers, where all their work runs. */
   supervisor: Supervisor | null;
@@ -513,6 +527,15 @@ export class RunnerDaemon implements RequestObserver {
   /** ADR 0237: what this computer lends (a person's), and the socket the workspace's own computer offers its guard. */
   private egressShare: EgressShare | undefined;
   private egressRelay: { close(): void } | null = null;
+  /**
+   * ADR 0237 on a self-hosted server: the loopback proxy of a computer that borrows a person's internet. Once up it
+   * stays up (processes started while it lent keep its address); `egressLent` says whether it asks the server.
+   */
+  private egressProxy: Promise<{ port: number; close(): void }> | null = null;
+  private egressPort: number | null = null;
+  private egressLent = false;
+  /** ADR 0237 (amendment 2026-11-27 c): the workspace uses only the lending computer's internet. */
+  private egressOnly = false;
   private refusedNetworkKey: string | null = null;
   private networkWriteFailed = false;
   private egressGeneration = 0;
@@ -611,6 +634,8 @@ export class RunnerDaemon implements RequestObserver {
   private standby = false;
   /** The last standby ask answered (`standby-ack.json`). */
   private standbyAsk: string | null = null;
+  /** The last standby ask turned down for a running turn: it never applies, even once the turn ends. */
+  private standbyRefused: string | null = null;
   /** A park (`park.ts`) under way: the next ask waits for it. */
   private parking = false;
   /** A fix of the Mac's own Xcode (`xcode.fix`, the desktop app's iPhone window), made on its first request. */
@@ -626,6 +651,8 @@ export class RunnerDaemon implements RequestObserver {
   private readonly refreshPath: (() => void) | undefined;
   /** `hello.windowsBuild` (`CODEX_UNELEVATED_PROTOCOL`): a Windows computer's build; null elsewhere. */
   private readonly windowsBuild: string | null;
+  /** `hello.size.cpuModel`, `cores` and `system`, read once: macOS asks `sw_vers` and `sysctl`. */
+  private readonly specs = cpuAndSystem();
 
   constructor(private readonly opts: DaemonOptions) {
     this.uidNetworks = new AgentNetworks({}, readNetworkPins(opts.home));
@@ -1315,6 +1342,7 @@ export class RunnerDaemon implements RequestObserver {
       privateNetwork: Boolean(
         (this.session?.network ?? c)?.networkLauncher || (this.session?.network ?? c)?.networkMark,
       ),
+      egressProxy: egressProxyState(),
       ...(c ? { commitHost: new URL(c.server).hostname } : {}),
       limits: {
         maxConcurrentTasks: this.taskLimit(c),
@@ -1512,9 +1540,12 @@ export class RunnerDaemon implements RequestObserver {
       ...(this.opts.caffeinate !== undefined ? { caffeinate: this.opts.caffeinate } : {}),
     });
     await tasks.init();
+    // The bridge comes next: a process's run asks for its tools through it.
+    let bridge: McpBridge | null = null;
     const brains = new BrainManager({
       root: path.join(home, "brains"),
       mcp: mcpCommand,
+      prefetchTools: (id) => bridge?.prefetch(id),
       runnerHome: home,
       idleMs: (config.brainIdleMinutes ?? DEFAULT_LIMITS.brainIdleMinutes) * 60_000,
       maxProcesses: config.brainMaxProcesses ?? DEFAULT_LIMITS.brainMaxProcesses,
@@ -1538,8 +1569,10 @@ export class RunnerDaemon implements RequestObserver {
       socketPath,
       task: (taskId) => tasks.mcpTask(taskId) ?? brains.mcpTask(taskId) ?? codexRuns.get(taskId) ?? null,
       onCall: (taskId, delta) => brains.bridgeCall(taskId, delta),
+      onList: (taskId, at, ms) => brains.bridgeList(taskId, at, ms),
       log,
     });
+    bridge = mcp;
     await mcp
       .listen()
       .catch((err: unknown) => log(`mission tools unavailable: ${err instanceof Error ? err.message : String(err)}`));
@@ -1576,6 +1609,16 @@ export class RunnerDaemon implements RequestObserver {
     void browser.closeAll();
     // Single-user: every agent works as this runner's own user, so no `uids` and desktop use stays off (ADR 0062
     // §3). System mode: each agent's worker serves it as the agent's own user.
+    // The person's apps (ADR 0258): only where agents work as the person's own user.
+    const apps = new AppControl({
+      home,
+      log,
+      systemMode: config.mode === "system",
+      ...(config.managedBy === "desktop"
+        ? { needs: (p, trigger, agentId) => void this.permissionNeeds.add(p, trigger, agentId) }
+        : {}),
+      onChange: () => this.queueStatus(),
+    });
     const desktopUse = new DesktopManager({
       desktops: this.desktops,
       workers: config.mode === "system",
@@ -1681,6 +1724,7 @@ export class RunnerDaemon implements RequestObserver {
                 ...(readStoredConfig(home)?.services ?? []),
                 ...runnerEndpoints(),
                 ...loopbackEndpoints([config.server]),
+                ...(this.egressPort ? [`tcp/${this.egressPort}`] : []),
               ],
               log,
             });
@@ -1835,6 +1879,7 @@ export class RunnerDaemon implements RequestObserver {
         request: (agent, req) => this.accessRequest(agent, req),
         reduce: (req) => this.accessReduce(req),
         allow: (req) => this.accessAllow(req),
+        pick: (req) => this.accessPick(req),
       },
       browser,
       accounts: this.accounts,
@@ -1843,6 +1888,7 @@ export class RunnerDaemon implements RequestObserver {
       streams,
       browserViews: views,
       desktopUse,
+      apps,
       desktopTaken: (agentId) => {
         if (supervisor) supervisor.desktopTaken(agentId);
         else {
@@ -1863,6 +1909,8 @@ export class RunnerDaemon implements RequestObserver {
       xcodeOpen: () => this.iphoneSetup().open("xcode"),
       reportParts: () => this.reportParts(),
       egressShare: this.egressShare,
+      egressProxy: (on) => this.borrowEgress(on),
+      egressOnly: (on) => this.useOnlyLent(on),
       streamStarting: (streamId) => void this.send({ type: "stream.starting", streamId }),
     };
     // `hello` lists the accounts it already knows; a fresh look (each runs its CLI) never delays connecting:
@@ -1890,6 +1938,7 @@ export class RunnerDaemon implements RequestObserver {
           desktop: this.desktops.info(),
           terminal: this.terminals.info(),
           desktopUse: desktopUse.info(),
+          apps: apps.info(),
           ...(this.copies ? { clis: this.copies.info() } : {}),
           ...(accounts ? { accounts } : {}),
           ...usage,
@@ -1923,7 +1972,11 @@ export class RunnerDaemon implements RequestObserver {
         this.setConnState(state);
       },
       onWelcome: (welcome) => {
+        // Renamed in the apps (or given its default name there): the app on this computer says the new one.
+        if (welcome.name && this.stored && this.stored.name !== welcome.name)
+          this.write({ ...this.stored, name: welcome.name });
         this.observeEgress = welcome.observeEgress;
+        this.egressOnly = welcome.egressOnly === true;
         this.egressRelay?.close();
         this.egressRelay = welcome.egressRelay
           ? startEgressRelay({
@@ -1931,6 +1984,8 @@ export class RunnerDaemon implements RequestObserver {
               dial: (streamId, target) => streams.dial(streamId, "egress", undefined, target),
             })
           : null;
+        if (this.egressRelay) this.writeEgressPolicy();
+        void this.borrowEgress(welcome.egressProxy);
         this.sentNetworkTransition = "";
         this.observeNetwork();
         this.egressGeneration++;
@@ -1976,6 +2031,7 @@ export class RunnerDaemon implements RequestObserver {
       browser,
       streams,
       desktopUse,
+      apps,
       connection,
       supervisor,
       agentUser,
@@ -2002,7 +2058,12 @@ export class RunnerDaemon implements RequestObserver {
   /** An operator's standby (ADR 0176), asked in `standby.json`: while it is in force, no link to the server. */
   private checkStandby() {
     const ask = readStandby(this.opts.home);
-    const on = standbyOn(ask);
+    // A standby drops the link, and a sleep after it freezes the CLI: with a turn running, the computer stays up and
+    // the one who asked (the guard, before a pause) hears why. That ask is void; the next one is asked again.
+    const turns = this.session?.connection.turns ?? 0;
+    const refuse = refusesStandby(ask, this.standbyAsk, this.standby, turns);
+    if (refuse && ask) this.standbyRefused = ask.id;
+    const on = standbyOn(ask) && ask?.id !== this.standbyRefused;
     if (on !== this.standby) {
       this.standby = on;
       const s = this.session;
@@ -2018,7 +2079,12 @@ export class RunnerDaemon implements RequestObserver {
     if (ask && ask.id !== this.standbyAsk) {
       this.standbyAsk = ask.id;
       try {
-        ackStandby(this.opts.home, ask.id);
+        if (refuse) this.opts.log(`standby refused: ${turns} agent turn${turns === 1 ? "" : "s"} running`);
+        ackStandby(
+          this.opts.home,
+          ask.id,
+          refuse ? "An agent's turn is running on this computer: no standby now." : undefined,
+        );
       } catch (err) {
         this.opts.log(`standby: ${err instanceof Error ? err.message : String(err)}`);
       }
@@ -2222,6 +2288,59 @@ export class RunnerDaemon implements RequestObserver {
     }
   }
 
+  /**
+   * ADR 0237 on a self-hosted server: this computer borrows a person's internet (`on`) or no longer does. Never where
+   * the runner itself goes out through its operator's proxy: theirs wins.
+   */
+  private async borrowEgress(on: boolean): Promise<boolean> {
+    const server = this.config?.server;
+    if (on && server && !hasOwnProxy(process.env, this.session?.network ?? this.config)) {
+      this.egressProxy ??= startEgressProxy({
+        home: this.opts.home,
+        dial: (streamId, target) =>
+          this.session
+            ? this.session.streams.dial(streamId, "egress", undefined, target)
+            : Promise.reject(new Error("offline")),
+        lent: () => this.egressLent,
+        only: () => this.egressOnly,
+      });
+      const proxy = await this.egressProxy.catch((error: unknown) => {
+        this.opts.log(`The web proxy for agents didn't start: ${String(error)}`);
+        this.egressProxy = null;
+        return null;
+      });
+      this.egressPort = proxy?.port ?? null;
+      this.egressLent = proxy !== null;
+      setEgressProxy(
+        proxy
+          ? { port: proxy.port, direct: [new URL(server).hostname], ...(this.egressOnly ? { only: true } : {}) }
+          : null,
+      );
+    } else {
+      this.egressLent = false;
+      setEgressProxy(null);
+    }
+    this.session?.supervisor?.stateChanged();
+    return this.egressLent;
+  }
+
+  /** The guard's file next to the relay socket (`EGRESS_RELAY_POLICY`): a failed write keeps the last one. */
+  private writeEgressPolicy() {
+    try {
+      writeEgressPolicy(this.opts.home, this.egressOnly);
+    } catch (error) {
+      this.opts.log(`Could not write the network guard's lent-internet policy: ${String(error)}`);
+    }
+  }
+
+  /** `egress.only`: the workspace now uses only the lending computer's internet, or no longer. */
+  private async useOnlyLent(on: boolean): Promise<boolean> {
+    this.egressOnly = on;
+    if (this.egressRelay) this.writeEgressPolicy();
+    if (this.egressLent) await this.borrowEgress(true);
+    return on;
+  }
+
   private async closeSession(s: Session) {
     this.egressRelay?.close();
     this.egressRelay = null;
@@ -2354,7 +2473,12 @@ export class RunnerDaemon implements RequestObserver {
       exec: access.tools.commands,
       paused: this.pauseState(),
       access,
-      size: { ...machineSize(workspaceReal), maxTasks: this.taskLimit(this.stored), ...this.taskRoom() },
+      size: {
+        ...machineSize(workspaceReal),
+        ...this.specs,
+        maxTasks: this.taskLimit(this.stored),
+        ...this.taskRoom(),
+      },
       ...this.loginHello(),
       ...(this.accounts.authEgressGroup() ? { authEgressGroup: true as const } : {}),
       ...(this.stored?.managedBy === "desktop" ? { app: true as const } : {}),
@@ -2630,6 +2754,7 @@ export class RunnerDaemon implements RequestObserver {
       agents: this.agents.map((a) => ({ ...a })),
       access: this.access(),
       browsers,
+      apps: this.session?.apps.using() ?? [],
       ...(this.phones ? { phones: this.phones.list() } : {}),
       permissions: this.permissionNeeds.list(),
       // In system mode each agent runs as a user of its own, not as the runner's.
@@ -2690,6 +2815,16 @@ export class RunnerDaemon implements RequestObserver {
     const out = await s.browser.stop({ id: agentId, handle: agent?.handle ?? "agent" });
     this.browsersChanged();
     return out;
+  }
+
+  /** The menu bar's Stop on "<Agent> is using <App>": that agent's commands in the person's apps are refused a while. */
+  appsStop(agentId: string): { stopped: boolean } {
+    this.requirePaired();
+    const s = this.session;
+    if (!s || !agentId) return { stopped: false };
+    const agent = this.agents.find((a) => a.id === agentId);
+    this.opts.log(`apps use of ${agent?.handle ?? agentId} stopped from the app`);
+    return s.apps.stop(agentId);
   }
 
   /** The desktop app's iPhone setup asking to look at the iPhone again now (`phone.look`). */
@@ -2849,63 +2984,72 @@ export class RunnerDaemon implements RequestObserver {
     this.pairing?.abort();
     const ac = new AbortController();
     this.pairing = ac;
-    void devicePair(
-      url,
-      { ...deviceInfo(label, previousMachineFor(this.stored, url)), ...(link ? { link } : {}) },
-      (code) =>
-        this.emit({
-          kind: "pair.code",
-          userCode: code.userCode,
-          verificationUrl: code.verificationUrl,
-          expiresAt: new Date(this.now() + code.expiresIn * 1000).toISOString(),
-        }),
-      {
-        signal: ac.signal,
-        ...(this.opts.fetch ? { fetch: this.opts.fetch } : {}),
-        ...(this.opts.pairSleep ? { sleep: this.opts.pairSleep } : {}),
-        now: this.now,
-      },
-    ).then(
-      (grant) => {
-        if (this.pairing !== ac) return;
-        this.pairing = null;
-        try {
-          const prev = this.stored;
-          const base = this.opts.workspaceBase ?? expandHome("~/agentes");
-          const workspace = prepareWorkspace(prev?.workspace ?? uniqueWorkspace(base, grant.org.name || grant.name));
-          this.write(
-            configFromGrant(prev, {
-              server: url,
-              grant,
-              workspace,
-              ...(label ? { name: label } : {}),
-              tools: { claude: tools?.claude === true, codex: tools?.codex === true, commands: false },
-              desktop: true,
+    void machineModel()
+      .then((model) =>
+        devicePair(
+          url,
+          { ...deviceInfo(label, previousMachineFor(this.stored, url), model), ...(link ? { link } : {}) },
+          (code) =>
+            this.emit({
+              kind: "pair.code",
+              userCode: code.userCode,
+              verificationUrl: code.verificationUrl,
+              expiresAt: new Date(this.now() + code.expiresIn * 1000).toISOString(),
             }),
-          );
-          const org = grant.org.name || url;
-          this.record({ kind: "pair", summary: `connected to ${org}`, said: { key: "connected", org }, result: "ok" });
-          const c = this.requirePaired();
-          this.emit({
-            kind: "pair.done",
-            org: { id: grant.org.id, name: grant.org.name },
-            machine: { id: c.machineId, name: c.name },
-          });
-        } catch (err) {
-          this.emit({
-            kind: "pair.failed",
-            code: "internal",
-            message: err instanceof Error ? err.message : String(err),
-          });
-        }
-      },
-      (err: unknown) => {
-        if (this.pairing === ac) this.pairing = null;
-        const code = err instanceof PairingError ? err.code : "internal";
-        if (code === "canceled") return;
-        this.emit({ kind: "pair.failed", code, message: err instanceof Error ? err.message : String(err) });
-      },
-    );
+          {
+            signal: ac.signal,
+            ...(this.opts.fetch ? { fetch: this.opts.fetch } : {}),
+            ...(this.opts.pairSleep ? { sleep: this.opts.pairSleep } : {}),
+            now: this.now,
+          },
+        ),
+      )
+      .then(
+        (grant) => {
+          if (this.pairing !== ac) return;
+          this.pairing = null;
+          try {
+            const prev = this.stored;
+            const base = this.opts.workspaceBase ?? expandHome("~/agentes");
+            const workspace = prepareWorkspace(prev?.workspace ?? uniqueWorkspace(base, grant.org.name || grant.name));
+            this.write(
+              configFromGrant(prev, {
+                server: url,
+                grant,
+                workspace,
+                ...(label ? { name: label } : {}),
+                tools: { claude: tools?.claude === true, codex: tools?.codex === true, commands: false },
+                desktop: true,
+              }),
+            );
+            const org = grant.org.name || url;
+            this.record({
+              kind: "pair",
+              summary: `connected to ${org}`,
+              said: { key: "connected", org },
+              result: "ok",
+            });
+            const c = this.requirePaired();
+            this.emit({
+              kind: "pair.done",
+              org: { id: grant.org.id, name: grant.org.name },
+              machine: { id: c.machineId, name: c.name },
+            });
+          } catch (err) {
+            this.emit({
+              kind: "pair.failed",
+              code: "internal",
+              message: err instanceof Error ? err.message : String(err),
+            });
+          }
+        },
+        (err: unknown) => {
+          if (this.pairing === ac) this.pairing = null;
+          const code = err instanceof PairingError ? err.code : "internal";
+          if (code === "canceled") return;
+          this.emit({ kind: "pair.failed", code, message: err instanceof Error ? err.message : String(err) });
+        },
+      );
     return { started: true };
   }
 
@@ -3105,6 +3249,35 @@ export class RunnerDaemon implements RequestObserver {
       );
     }
     return { access: this.access() };
+  }
+
+  /**
+   * `access.pick` from the apps (`FOLDER_PICK_PROTOCOL`): someone who manages this computer asks for a folder. The
+   * agentes.chat app here shows who asks, and the person here picks it (or says not now): nothing is allowed by this
+   * call itself. With `requestId`, an agent's pending request is shown again. Without the app, nobody here would see it.
+   */
+  async accessPick(req: Extract<MachineRequest, { op: "access.pick" }>): Promise<MachineReplies["access.pick"]> {
+    if (this.stored?.managedBy !== "desktop") {
+      throw new RunnerError("bad_request", "no_app: this computer has no agentes.chat app to pick a folder in");
+    }
+    const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "");
+    const requestId = str(req.requestId, 100);
+    if (requestId && !this.requests.get(requestId)) {
+      throw new RunnerError("not_found", "That request is gone (answered or expired)");
+    }
+    const agentId = str(req.agentId, 100);
+    const agentName = str(req.agentName, 80);
+    this.emit({
+      kind: "access.pick",
+      pick: {
+        byName: str(req.byName, 80),
+        ...(agentId ? { agentId } : {}),
+        ...(agentName ? { agentName } : {}),
+        ...(requestId ? { requestId } : {}),
+        at: new Date().toISOString(),
+      },
+    });
+    return { asked: true };
   }
 
   /** Pending requests that a new grant now covers (a terminal `folders allow`, a config edit) are granted. */

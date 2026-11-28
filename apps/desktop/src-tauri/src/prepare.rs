@@ -28,7 +28,7 @@ pub struct Resumed(AtomicBool);
 
 #[derive(Debug, PartialEq)]
 pub struct Resume {
-    /// The app layer's screen to open again (ADR 0256): the pairing's Prepare step, or This computer's settings.
+    /// The app layer's screen to open again (ADR 0265): the pairing's Prepare step, or This computer's settings.
     pub route: Route,
     /// The main window's page when the setup was kept.
     pub page: Option<Url>,
@@ -292,7 +292,7 @@ pub async fn network_ask() -> Result<(), String> {
 }
 
 /// System Settings › Privacy & Security on one pane; or Notifications on the app's own entry (the way back once the
-/// person turned the app's notifications off: no prompt asks twice, ADR 0256).
+/// person turned the app's notifications off: no prompt asks twice, ADR 0265).
 fn pane_url(pane: &str) -> Option<String> {
     if pane == "notifications" {
         return Some("x-apple.systempreferences:com.apple.preference.notifications?id=chat.agentes.desktop".into());

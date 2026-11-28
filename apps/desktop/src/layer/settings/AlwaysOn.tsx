@@ -1,5 +1,5 @@
 /**
- * The Overview's "Always ready" (ADR 0256 §7): this computer's essentials, one row each with what it is, a line, and
+ * The Overview's "Always ready" (ADR 0265 §7): this computer's essentials, one row each with what it is, a line, and
  * at the end "On" in the ok colour or its one fix. What needs the person comes first. The three macOS permissions are
  * one row ("macOS permissions"): on when all are, else the ones still off and the fix for the first. Asking for Screen
  * Recording or Full Disk Access keeps Settings to open again when macOS reopens the app.
@@ -52,7 +52,7 @@ export function Lead({ icon }: { icon: IconName }) {
   );
 }
 
-/** Reach's lead by the way people get here (ADR 0256 §4): Tailscale's own tile, or a link for the person's address. */
+/** Reach's lead by the way people get here (ADR 0265 §4): Tailscale's own tile, or a link for the person's address. */
 export function ReachLead({ way }: { way: ReachWay | null }) {
   return way?.kind === "address" ? <Lead icon="link" /> : <ServerTile kind="tailnet" small />;
 }

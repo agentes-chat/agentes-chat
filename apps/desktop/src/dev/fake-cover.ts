@@ -6,7 +6,7 @@
  * `?server=` picks what the window opens: `private` (the default: a workspace on a Tailscale address, out of reach),
  * `other` (a server on the internet, out of reach: "Can't reach…") or `here` (the server on this computer,
  * `?phase=starting|updating|stopped|failing`). For `private`: `?tailscale=off|missing|on` (the system's Tailscale, the
- * only one, ADR 0256 §4; off by default; `&app=0` a Mac with only its command-line tool), `?org=` (the workspace's
+ * only one, ADR 0265 §4; off by default; `&app=0` a Mac with only its command-line tool), `?org=` (the workspace's
  * name, Acme by default; empty: several workspaces),
  * `?platform=mac|windows|linux` (the cover reads it from the browser's user agent). Dark: the browser's own dark
  * mode (the cover follows the system).

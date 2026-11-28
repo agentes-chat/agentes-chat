@@ -107,7 +107,7 @@ fn route(url: &Url, site: &Url) -> Route {
 }
 
 /// The route for `url` against the server open now; with none, only the blank page the window opens with stays in it
-/// (the window exists before any server is chosen: the app layer's first run is over it, ADR 0256).
+/// (the window exists before any server is chosen: the app layer's first run is over it, ADR 0265).
 fn route_now(app: &AppHandle, url: &Url) -> Route {
     match site(app) {
         Some(site) => route(url, &site),
@@ -124,7 +124,7 @@ fn open_outside(app: &AppHandle, url: &Url) {
         return;
     }
     // A page of the server here at its address for people (a link the site hands out): this computer opens it at its
-    // loopback address, in the window (ADR 0256 §5), never in a browser that may not reach the tailnet. What goes to the
+    // loopback address, in the window (ADR 0265 §5), never in a browser that may not reach the tailnet. What goes to the
     // browser by design (a provider's sign-in, GitHub's, help) still does.
     let by_design = matches!(url.path(), BROWSER_SIGN_IN | GITHUB_APP_MANIFEST) || url.path().starts_with(HELP);
     if !by_design && crate::local_server::is_people_page(app, url) {
@@ -291,7 +291,7 @@ fn build(app: &AppHandle, page: Option<Url>) -> Result<(), String> {
         // older apps don't take them), that it lists the other servers' workspaces (`workspaces`,
         // ADR 0154), that it takes the person's app icon (`appIcon`, ADR 0179) and how this computer draws
         // (`renderer`, and Linux's `system` facts: graphics.rs), and that this computer's settings are the app's own
-        // screens (`settings`, ADR 0256: the site lists them and asks for one with `this_mac` `settings`); nothing else.
+        // screens (`settings`, ADR 0265: the site lists them and asks for one with `this_mac` `settings`); nothing else.
         .initialization_script(format!(
             "window.__agentesDesktop = Object.freeze({{ version: {version:?}, platform: {PLATFORM:?}, servers: true, files: true, connectorReturn: true, signedInLink: true, workspaces: true, appIcon: true, settings: 1, renderer: {renderer:?}, system: {system} }});",
             renderer = crate::graphics::renderer(),
@@ -891,6 +891,7 @@ fn quarantine(_path: &Path) {}
 /// The window in front, typing in what shows on top (`focus_top`).
 pub fn front(app: &AppHandle) -> Result<(), String> {
     let window = app.get_window(LABEL).ok_or("window not found")?;
+    crate::background::showing(app);
     let _ = window.unminimize();
     window.show().map_err(|e| e.to_string())?;
     window.set_focus().map_err(|e| e.to_string())?;
@@ -924,7 +925,7 @@ pub fn focus_top(app: &AppHandle, only_if_key: bool) {
 /// What the site may ask of this computer: which of its organizations this computer works for (`status`),
 /// pairing it with one (`connect`: the system's own dialog asks first, then the site confirms the runner's
 /// code with its own session), reconnecting it (`reconnect`), This computer's settings on a section (`settings`, and
-/// `prefs` on a tab from older sites: the app layer, ADR 0256), its own settings list for the layer's (`settingsNav`),
+/// `prefs` on a tab from older sites: the app layer, ADR 0265), its own settings list for the layer's (`settingsNav`),
 /// how many of this computer's essentials need the person and whether the server runs here (`thisMacHealth`), the menu
 /// bar's access requests (`requests`), the Dock's badge (`badge`), the Go menu's organizations (`orgs`), a
 /// notification while the app is in the background (`notify`), System Settings on a permission it was refused
@@ -980,10 +981,10 @@ const MAX_WAITING: usize = 16;
 /// Organizations in the Go menu (⌘⌥1–9 for the first nine).
 const MAX_ORGS: usize = 20;
 const PREF_TABS: &[&str] = &["folders", "tools", "updates", "servers"];
-/// The permissions the site may open System Settings on, where macOS refused it one (a voice message, Wi-Fi pairing).
+/// The System Settings lists a page may open (control/this-mac.ts `PRIVACY_PANES`): a voice message, Wi-Fi pairing.
 const PRIVACY_PANES: &[&str] = &["microphone", "network"];
 
-/// The app layer's route for an older site's `prefs{tab}` (ADR 0256): the tabs became sections of This computer's
+/// The app layer's route for an older site's `prefs{tab}` (ADR 0265): the tabs became sections of This computer's
 /// settings. `servers` is the server here's section when it runs here, else the app's own list of servers.
 fn prefs_route(tab: &str, runs_here: bool) -> crate::app_layer::Route {
     use crate::app_layer::{Route, Section};
@@ -1095,7 +1096,7 @@ fn checked(request: &Value) -> Result<Value, String> {
             Some(tab) if PREF_TABS.contains(&tab) => Ok(json!({ "kind": "prefs", "tab": tab })),
             _ => Err("unknown tab".into()),
         },
-        // This computer's settings (the app layer, ADR 0256), on one of its sections and one of its rows.
+        // This computer's settings (the app layer, ADR 0265), on one of its sections and one of its rows.
         Some("settings") => {
             let mut out = json!({ "kind": "settings" });
             if let Some(section) = text("section") {
@@ -1119,6 +1120,7 @@ fn checked(request: &Value) -> Result<Value, String> {
         }
         Some("thisMacHealth") => Ok(json!({ "kind": "thisMacHealth" })),
         Some("localNetwork") => Ok(json!({ "kind": "localNetwork" })),
+        // System Settings on one permission's list: the page's way out where the system refused it something.
         Some("privacy") => match text("pane") {
             Some(pane) if PRIVACY_PANES.contains(&pane) => Ok(json!({ "kind": "privacy", "pane": pane })),
             _ => Err("unknown pane".into()),
@@ -1444,7 +1446,7 @@ pub async fn this_mac(app: AppHandle, webview: tauri::Webview, request: Value) -
             crate::app_layer::show(&app, route)?;
             return Ok(json!({}));
         }
-        // This computer's settings, never the site's to draw (ADR 0256).
+        // This computer's settings, never the site's to draw (ADR 0265).
         Some("settings") => {
             let route = settings_route(&request).ok_or("unknown section")?;
             crate::app_layer::open_from_site(&app, route)?;
@@ -1760,6 +1762,12 @@ mod tests {
         assert!(checked(&json!({ "kind": "connect" })).is_err());
         assert_eq!(checked(&json!({ "kind": "prefs", "tab": "folders" })), Ok(json!({ "kind": "prefs", "tab": "folders" })));
         assert!(checked(&json!({ "kind": "prefs", "tab": "advanced" })).is_err());
+        assert_eq!(checked(&json!({ "kind": "prefs", "tab": "servers" })), Ok(json!({ "kind": "prefs", "tab": "servers" })));
+        assert_eq!(
+            checked(&json!({ "kind": "privacy", "pane": "microphone", "x": 1 })),
+            Ok(json!({ "kind": "privacy", "pane": "microphone" }))
+        );
+        assert!(checked(&json!({ "kind": "privacy", "pane": "screen" })).is_err());
         assert_eq!(checked(&json!({ "kind": "reconnect", "orgId": "o1" })), Ok(json!({ "kind": "reconnect", "orgId": "o1" })));
         assert!(checked(&json!({ "kind": "reconnect" })).is_err());
         assert_eq!(checked(&json!({ "kind": "requests", "x": 1 })), Ok(json!({ "kind": "requests" })));

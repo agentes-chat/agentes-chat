@@ -202,7 +202,7 @@ function Settings({
   // People joins a personal workspace's short list once someone else is a member (a family).
   const { others } = usePersonalView();
   const short = settingsShort(org, server, others);
-  // The same list the desktop app's layer shows above This {{device}} (ADR 0256 §2).
+  // The same list the desktop app's layer shows above This {{device}} (ADR 0265 §2).
   const nav = settingsNavModel(t, org, server, others);
   const open = visible.map((s) => s.id);
   const marked = settingsNavEntry(current, open, short);
@@ -357,7 +357,7 @@ function Settings({
               </ul>
             </div>
           )}
-          {/* In the desktop app with its own settings layer: This {{device}}'s sections, opened there (ADR 0256 §2). */}
+          {/* In the desktop app with its own settings layer: This {{device}}'s sections, opened there (ADR 0265 §2). */}
           <ThisDeviceSettingsGroup />
         </div>
       </nav>

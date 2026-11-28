@@ -102,6 +102,8 @@ export function setupI18n(): typeof i18n {
     interpolation: { escapeValue: false },
     initAsync: false,
     parseMissingKeyHandler: missingKey,
+    // Words added later (a connector tool's, `useToolLabelSource`) redraw what reads them.
+    react: { bindI18nStore: "added" },
   });
   // i18next's own `list` format is Intl.ListFormat, which Hermes lacks.
   if (typeof Intl.ListFormat === "undefined")

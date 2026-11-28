@@ -14,7 +14,9 @@ import {
   messagesQuery,
   rolesQuery,
   sidebarItemsQuery,
+  type ThreadInfo,
 } from "@agenteschat/client";
+import { opensInConversation } from "@agenteschat/client/lib/threads";
 import type { QueryClient } from "@tanstack/react-query";
 
 /**
@@ -91,4 +93,31 @@ export function prefetchThread(qc: QueryClient, api: ApiClient, orgId: string, t
     queryFn: () => api.threads.get(orgId, threadId),
     staleTime: 15_000,
   });
+}
+
+/**
+ * The thread a link names, when it opens in its conversation (`opensInConversation`) and that conversation is in my
+ * lists (an archived channel's isn't: its page would say it isn't there): read once unless held already (awaited:
+ * where it lives decides the page). Null: its own page, which also says when a thread is gone.
+ */
+export async function threadInConversation(
+  qc: QueryClient,
+  api: ApiClient,
+  orgId: string,
+  threadId: string,
+): Promise<ThreadInfo | null> {
+  const [thread, channels, dms] = await Promise.all([
+    qc
+      .ensureQueryData({
+        queryKey: keys.threadInfo(orgId, threadId),
+        queryFn: () => api.threads.get(orgId, threadId),
+        staleTime: 15_000,
+      })
+      .catch(() => null),
+    qc.ensureQueryData(channelsQuery(api, orgId)).catch((): Channel[] => []),
+    qc.ensureQueryData(dmsQuery(api, orgId)).catch((): DirectMessage[] => []),
+  ]);
+  if (!thread || !opensInConversation(thread)) return null;
+  const listed = channels.some((c) => c.id === thread.channelId) || dms.some((d) => d.channelId === thread.channelId);
+  return listed ? thread : null;
 }

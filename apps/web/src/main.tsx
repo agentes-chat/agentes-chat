@@ -31,10 +31,13 @@ import {
   checkAppVersion,
   createVersionWatch,
   fetchIndexHtml,
+  loadedBuild,
   loadedEntry,
   reloadForNewVersion,
+  reloadWhenSafe,
   startVersionWatch,
   VERSION_CHECK_MS,
+  watchTyping,
 } from "./lib/app-version";
 import {
   applyDesktopDevice,
@@ -44,7 +47,7 @@ import {
   desktopRenderer,
   inDesktopApp,
 } from "./lib/desktop";
-import { tolerateForeignDomEdits } from "./lib/dom-guard";
+import { dropKeylessKeyEvents, tolerateForeignDomEdits } from "./lib/dom-guard";
 import { announceConfirmation, emailConfirmedToast } from "./lib/email-confirmation";
 import { catchEarlyErrors, reportError, setErrorScope, startErrorReports } from "./lib/error-reports";
 import { pageScrollReset } from "./lib/page-scroll";
@@ -71,6 +74,7 @@ if (onUnknownHost()) {
 // fail to load (the locale's chunk): a boot that breaks is reported too.
 catchEarlyErrors();
 tolerateForeignDomEdits();
+dropKeylessKeyEvents();
 const api = createApiClient();
 const authConfig = api.account.authConfig();
 // The session and the server's facts are asked now, beside the language's file, instead of after it, the snapshot
@@ -85,7 +89,7 @@ void authConfig.then(
   (config) => startErrorReports(config.errorReports ?? null),
   () => startErrorReports(null),
 );
-// The address people open, for the links this page hands out (ADR 0256 §5: the desktop app's own server opens here at
+// The address people open, for the links this page hands out (ADR 0265 §5: the desktop app's own server opens here at
 // its loopback address).
 void authConfig.then(
   (config) => rememberPublicUrl(config.publicUrl ?? null),
@@ -203,16 +207,21 @@ router.subscribe("onResolved", () => {
   });
 });
 
-// A deploy while this tab is open: say so, and the next page change loads the new app.
+// A deploy while this tab is open: say so; the next page change loads the new app, and so does the first moment
+// nothing would be lost and nobody is using the tab.
+watchTyping();
 const versionWatch = startVersionWatch(
   createVersionWatch({
     loaded: loadedEntry(),
+    built: loadedBuild(),
     fetchHtml: fetchIndexHtml,
-    onStale: () =>
+    onStale: () => {
       toasts.show(i18n.t("common.newVersion"), "info", {
         label: i18n.t("common.reload"),
         run: () => window.location.reload(),
-      }),
+      });
+      reloadWhenSafe(versionWatch);
+    },
   }),
 );
 router.subscribe("onBeforeNavigate", ({ toLocation, fromLocation }) => {

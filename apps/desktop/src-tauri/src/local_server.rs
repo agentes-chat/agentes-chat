@@ -17,10 +17,10 @@
 //!
 //! It starts the server with the app (at login too), restarts it after a crash (1 s doubling to 60 s), stops it
 //! gracefully on quit, and listens only on 127.0.0.1. Reach from the person's other devices is the way they chose
-//! (ADR 0256 §4, `Way`): the Tailscale they installed (its `serve`, `tailscale.rs`, shared only while the server runs
+//! (ADR 0265 §4, `Way`): the Tailscale they installed (its `serve`, `tailscale.rs`, shared only while the server runs
 //! here), or an address of their own (a tunnel on this computer that leads to the loopback port, checked by
 //! `address.rs`). Either one becomes `PUBLIC_URL`. The main window on this computer always opens it at its loopback
-//! address (ADR 0256 §5): the address for people is for the phone, the team and links, so reach turning on or off, or
+//! address (ADR 0265 §5): the address for people is for the phone, the team and links, so reach turning on or off, or
 //! that address being down, never moves or signs out the window here.
 //!
 //! Other programs and accounts on this computer can listen on the loopback port too, so only the app's own
@@ -296,7 +296,7 @@ pub enum Place {
     Here,
 }
 
-/// How the phone and the team reach the server here (ADR 0256 §4, control/local-server.ts `ReachWay`): the Tailscale
+/// How the phone and the team reach the server here (ADR 0265 §4, control/local-server.ts `ReachWay`): the Tailscale
 /// the person installed, or an address of their own (`url`, an https origin, `address::normalize`).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
@@ -608,7 +608,7 @@ pub fn sign_in_owner(was: Option<&str>, owner: Option<&str>) -> bool {
 }
 
 /// The window comes back to the server here at its loopback address `url` after it was signed in elsewhere as `was`
-/// (an older app's tailnet address, ADR 0256 §5): signed in as the owner when it was the owner (`sign_in_owner`), else
+/// (an older app's tailnet address, ADR 0265 §5): signed in as the owner when it was the owner (`sign_in_owner`), else
 /// on the sign-in page, where the owner still continues on this computer in one click.
 fn sign_in_again(app: &AppHandle, folder: &Folder, port: u16, url: &str, was: Option<String>) -> Result<(), String> {
     if was.is_some() {
@@ -954,7 +954,7 @@ struct HereFile {
     /// A folder each new backup is copied to as well ("Copy to").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     backup_copy: Option<String>,
-    /// How people reach it (ADR 0256 §4), kept once reach turned on that way: reach turned on again without a way
+    /// How people reach it (ADR 0265 §4), kept once reach turned on that way: reach turned on again without a way
     /// uses it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     way: Option<Way>,
@@ -1216,7 +1216,7 @@ pub fn phase(app: &AppHandle) -> Phase {
 }
 
 /// A page of the server here at its address for people (a link someone shared, a deep link, a notification, a page
-/// typed in) opens at its loopback address, the one the window on this computer signs in at (ADR 0256 §5).
+/// typed in) opens at its loopback address, the one the window on this computer signs in at (ADR 0265 §5).
 pub fn page_here(app: &AppHandle, url: Url) -> Url {
     let (Some(people), Some(local)) = (people_url(app), loopback(app)) else { return url };
     moved_page(url, &people, &local)
@@ -1259,7 +1259,7 @@ pub struct Status {
     phase: Phase,
     /// Its loopback address (a terminal install's too, from its `server.json`).
     url: Option<String>,
-    /// The address the window on this computer opens: the app's own server's loopback one (ADR 0256 §5).
+    /// The address the window on this computer opens: the app's own server's loopback one (ADR 0265 §5).
     local_url: Option<String>,
     /// Its address for people (the phone, the team, links): the Tailscale one or the person's own with reach on, else
     /// None.
@@ -1364,7 +1364,7 @@ pub struct ReachFacts {
     pub down: bool,
 }
 
-/// Reach in one word (`Status.reachHealth`, ADR 0256 §7): `off`, `on`, or what keeps the phone and the team from it
+/// Reach in one word (`Status.reachHealth`, ADR 0265 §7): `off`, `on`, or what keeps the phone and the team from it
 /// now: `approve` (HTTPS waits for the tailnet's admin), `down` (Tailscale isn't connected here), `address` (the
 /// person's own address doesn't lead here now).
 pub fn reach_health(f: ReachFacts) -> &'static str {
@@ -2060,7 +2060,7 @@ pub fn load(app: &AppHandle) {
 }
 
 /// An older app kept the server here in its list at its address for people (the Tailscale one, which its window
-/// opened while reach was on, ADR 0256 §5): the list names its loopback address instead, once, before the window
+/// opened while reach was on, ADR 0265 §5): the list names its loopback address instead, once, before the window
 /// opens. The window's sign-in there was the tailnet address's own (cookies are per origin), so once the server
 /// answers the owner is signed in again at the loopback address (`sign_in_after_migration`).
 fn migrate_list(app: &AppHandle) {
@@ -2336,7 +2336,7 @@ fn install(app: &AppHandle, choice: &Choice) -> Result<(), String> {
     go_on(app)?;
     step(app, "account", "done");
     // The window is in at once, at the loopback address, before this computer's part and Tailscale are ready (ADR
-    // 0256 §3, §5): signed in as the owner, or else on the sign-in page, whose "Continue on this computer" signs the
+    // 0265 §3, §5): signed in as the owner, or else on the sign-in page, whose "Continue on this computer" signs the
     // owner in. A setup that doesn't finish takes it out of the list again (`set_up`).
     open_window_here(app, port, token);
 
@@ -2346,7 +2346,7 @@ fn install(app: &AppHandle, choice: &Choice) -> Result<(), String> {
     step(app, "computer", "done");
 
     if choice.place == Place::Everywhere {
-        // The way the person chose (ADR 0256 §4): Tailscale's share and HTTPS's approval, which waits on the person
+        // The way the person chose (ADR 0265 §4): Tailscale's share and HTTPS's approval, which waits on the person
         // with no time limit until it is done, Cancel or quitting; or checking their own address, now that the server
         // answers. Reach not done is a warning, never the setup's failure: the server runs here, and Settings turns
         // reach on later.
@@ -2359,7 +2359,7 @@ fn install(app: &AppHandle, choice: &Choice) -> Result<(), String> {
         }
     }
 
-    // Every step is done: it is kept, and nothing from here on undoes it. Open at login with it (ADR 0256 §7).
+    // Every step is done: it is kept, and nothing from here on undoes it. Open at login with it (ADR 0265 §7).
     let _ = fs::remove_file(folder.pending());
     let here = state(app).here.clone();
     save_here(app, &here);
@@ -2429,7 +2429,7 @@ fn reach_stage(app: &AppHandle, stage: &'static str, url: Option<&str>) {
     }
 }
 
-/// Reach on (ADR 0256 §3–§5), the way given, else the one saved, else Tailscale: its address for people, or why it
+/// Reach on (ADR 0265 §3–§5), the way given, else the one saved, else Tailscale: its address for people, or why it
 /// didn't work. The window stays on the loopback address, signed in, through all of it. Switching ways stops
 /// Tailscale's share when it was the way before. Each stage is said as it starts (`REACH_EVENT`).
 fn reach_on(app: &AppHandle, way: Option<Way>) -> Result<String, crate::tailscale::ServeError> {
@@ -2554,7 +2554,7 @@ fn reach_by_address(app: &AppHandle, typed: &str) -> Result<String, crate::tails
 }
 
 /// Its address for people moves from `old` to `new` (`PUBLIC_URL`) and it starts again with it. The window stays on
-/// the loopback address (ADR 0256 §5). When it doesn't answer again, back to `old`, and with Tailscale (`tailscale`)
+/// the loopback address (ADR 0265 §5). When it doesn't answer again, back to `old`, and with Tailscale (`tailscale`)
 /// its share at `new` stops when `old` was this computer's own, so the switch never says on while nobody reaches it.
 fn move_address(app: &AppHandle, folder: &Folder, old: Option<&str>, new: &str, tailscale: bool) -> Result<(), ()> {
     write_env(folder, &[("PUBLIC_URL", new.to_string())]).map_err(|_| ())?;
@@ -2850,7 +2850,7 @@ fn diagnostics(app: &AppHandle) -> String {
             String::from_utf8_lossy(tail).into_owned()
         })
         .unwrap_or_default();
-    // The way people reach it (ADR 0256 §4), and the Tailscale installed here.
+    // The way people reach it (ADR 0265 §4), and the Tailscale installed here.
     let way = match &status.way {
         Some(Way::Tailscale) => "Tailscale",
         Some(Way::Address { .. }) => "their own address",
@@ -3082,7 +3082,7 @@ pub(crate) fn app_window(webview: &tauri::Webview, allowed: &[&str]) -> Result<(
     }
 }
 
-/// The app layer (ADR 0256), the popover and the main window's cover.
+/// The app layer (ADR 0265), the popover and the main window's cover.
 const ANY: &[&str] = &["main-app", "popover", "main-cover"];
 
 /// Async, as every command here that reads files or runs a program: a sync command runs on the main thread, and every
@@ -3287,8 +3287,8 @@ pub async fn local_server_restart(app: AppHandle, webview: tauri::Webview) -> Re
 }
 
 /// Reach on or off: its address for people (`url`: Tailscale's or the person's own, or this computer's when turned
-/// off), or the reason when it didn't turn on. On takes the way (ADR 0256 §4); without one, the way saved. The main
-/// window stays on the loopback address, signed in (ADR 0256 §5); the server starts again behind it.
+/// off), or the reason when it didn't turn on. On takes the way (ADR 0265 §4); without one, the way saved. The main
+/// window stays on the loopback address, signed in (ADR 0265 §5); the server starts again behind it.
 #[tauri::command]
 pub async fn local_server_reach(
     app: AppHandle,
@@ -3316,7 +3316,7 @@ pub async fn local_server_reach(
     .map_err(|e| e.to_string())?
 }
 
-/// The phone's QR code (ADR 0256 §3): a one-time sign-in for the phone app, made with the window's own session at the
+/// The phone's QR code (ADR 0265 §3): a one-time sign-in for the phone app, made with the window's own session at the
 /// loopback address (`POST /api/app/phone-sign-in`, as the phone asks: no `Origin`, `X-Agentes-Client: mobile`), so
 /// it is tied to that session and its rate limit, and gone once it signs out. `{ link, server, expiresIn }`, with the
 /// address for people in the link. Refused while Tailscale doesn't share it (`not_served`: no phone reaches it), and
@@ -3361,7 +3361,7 @@ pub async fn local_server_phone_link(app: AppHandle, webview: tauri::Webview) ->
     tauri::async_runtime::spawn_blocking(move || phone_link(&app)).await.map_err(|e| e.to_string())?
 }
 
-/// Whether an address of the person's own leads to the server here (ADR 0256 §4, control/local-server.ts
+/// Whether an address of the person's own leads to the server here (ADR 0265 §4, control/local-server.ts
 /// `AddressCheck`): only an https origin, asked for the server's id through it and at the loopback address, each with
 /// `address::CHECK_WAIT`. Refused with `not_running` while the server here doesn't answer (nothing to compare with):
 /// the first run checks it in the setup's reach step.

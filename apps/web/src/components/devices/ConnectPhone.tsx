@@ -324,7 +324,7 @@ function WifiSteps({ pair, host, mac }: { pair: WifiPair; host: ComputerDevice; 
   const { t } = useTranslation();
   const { org } = useOrg();
   const computer = host.name;
-  // In the app on that very Mac, the Local Network permission is asked here, just in time (ADR 0256 §7): as the first
+  // In the app on that very Mac, the Local Network permission is asked here, just in time (ADR 0265 §7): as the first
   // pairing starts (once: after that the app opens System Settings, which a pairing shouldn't do by itself), and again
   // from the failure it causes.
   const here = useIsThisMac(org.id, host.id);
@@ -573,7 +573,7 @@ export function AndroidFlow({
   if (paired && host) return <PhoneConnected phone={paired} host={host} onClose={onClose} />;
   if (stage.kind === "ready" && host) return <PhoneConnected phone={stage.phone} host={host} onClose={onClose} />;
   // The address the phone opens: this server's public one, never the loopback address of the computer that runs it
-  // (ADR 0256 §5).
+  // (ADR 0265 §5).
   const origin = typeof window === "undefined" ? "" : publicOrigin();
   const guide =
     host && PHONE_APP_IN_STORE.android

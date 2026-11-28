@@ -25,6 +25,11 @@
     "prefs": "Preferensi",
     "settings": "Pengaturan"
   },
+  "background": {
+    "title": "agentes.chat masih berjalan",
+    "bodyMac": "Temukan di bar menu di bagian atas layar. Buka atau keluar dari sana.",
+    "bodyTray": "Temukan di baki sistem. Buka atau keluar dari sana."
+  },
   "common": {
     "cancel": "Batal",
     "close": "Tutup",
@@ -83,6 +88,12 @@
         "capturing": "mengambil tangkapan layar",
         "tabs": "berpindah tab"
       }
+    },
+    "apps": {
+      "title": "{{agent}} sedang menggunakan {{app}}",
+      "detail": "Mouse dan keyboard tetap milik Anda",
+      "stop": "Hentikan",
+      "stopped": "{{agent}} berhenti menggunakan aplikasi Anda"
     },
     "label": "agentes.chat",
     "now": "Sekarang",
@@ -148,6 +159,10 @@
     "allowedUndo": "Urungkan",
     "allowedOk": "Oke",
     "allowedUndone": "Mati lagi: {{tool}}",
+    "pickTitle": "{{name}} meminta folder untuk para agen",
+    "pickTitleAgent": "{{name}} meminta folder untuk {{agent}}",
+    "pickBody": "Pilih folder mana yang diizinkan di {{device}} ini.",
+    "pickChoose": "Pilih folder",
     "quitTitle": "Keluar dari agentes.chat?",
     "quitBody": "Agen tidak bisa memakai {{device}} ini selama aplikasi tertutup. Yang sudah berjalan akan selesai dan mengirim hasilnya saat kamu membukanya lagi.",
     "quitHereBody": "agentes.chat berhenti di {{device}} ini: tidak ada yang bisa memakainya, di sini, di ponselmu, atau di ponsel rekan timmu, sampai kamu membuka aplikasinya lagi.",
@@ -598,9 +613,12 @@
     "done": "Terhubung ke {{org}}",
     "share": "Izinkan seluruh ruang kerja memakainya",
     "internet": "Agen memakai internet komputer ini",
-    "internetOn": "Situs yang dibuka agen melihat lokasimu",
+    "internetOn": "Situs dan server yang dijangkau agen melihat lokasimu",
     "internetOff": "Mati: agen memakai koneksi biasa mereka",
-    "internetHint": "Agen di workspace membuka situs lewat koneksi komputer ini. Hanya situs web dan tidak pernah apa pun di jaringanmu sendiri. Selama komputer ini offline, mereka memakai koneksi biasa.",
+    "internetHint": "Agen di workspace terhubung ke internet lewat koneksi komputer ini: situs web, git, SSH, database, dan koneksi TCP lainnya. Tidak pernah apa pun di jaringanmu sendiri, dan tidak pernah email lewat port 25. AI agen, pencarian nama, panggilan, dan lalu lintas UDP lainnya memakai koneksi biasa mereka, begitu juga semuanya selama komputer ini offline.",
+    "internetHintProxy": "Browser agen di workspace dan program yang mengikuti pengaturan proxy (git lewat HTTPS, curl, sebagian besar alat baris perintah) terhubung ke internet lewat koneksi komputer ini. SSH, klien database, dan program lain yang mengabaikan pengaturan proxy memakai koneksi biasa mereka, begitu juga AI agen, pencarian nama, dan lalu lintas UDP. Tidak pernah apa pun di jaringanmu sendiri, dan tidak pernah email lewat port 25. Selama komputer ini offline, semuanya memakai koneksi biasa.",
+    "internetOnly": "Pakai hanya internet komputer ini",
+    "internetOnlyHint": "Agen hanya memakai internet komputer ini, termasuk untuk AI mereka, dan tidak pernah koneksi biasa. Selama komputer ini offline, agen tidak punya internet sampai komputer ini kembali.",
     "shareOff": "Hanya kamu untuk saat ini",
     "shareHint": "Agen semua orang di {{org}} bisa menjalankan tugas di sana sebagai penggunamu.",
     "addFolders": "Tambahkan folder",

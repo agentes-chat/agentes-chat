@@ -1,7 +1,7 @@
 /**
  * The cover over a workspace on a private network (a Tailscale address) that this computer can't reach now: what turns
  * the network on here, from what the system's Tailscale says (the official app the person installs; the app never
- * carries Tailscale itself, ADR 0256 §4). Its Mac app opens, a missing one is downloaded from its official page,
+ * carries Tailscale itself, ADR 0265 §4). Its Mac app opens, a missing one is downloaded from its official page,
  * Windows' sits by the clock, and elsewhere (Linux, a Mac with only the command-line tool) the person turns it on as
  * they set it up. Never a command to type. Null: Tailscale is on, so the network isn't why (the server itself doesn't
  * answer).

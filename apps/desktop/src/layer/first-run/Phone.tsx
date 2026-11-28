@@ -1,7 +1,7 @@
 /**
- * "Done, take it to your phone" (ADR 0256 §3): once agentes.chat runs here and people reach it, the phone's code beside
+ * "Done, take it to your phone" (ADR 0265 §3): once agentes.chat runs here and people reach it, the phone's code beside
  * its steps (Tailscale on the phone too when it is the way here; an address of the person's own needs nothing more,
- * ADR 0256 §4), and the address people use with Copy. The code is a one-time sign-in made with this window's own
+ * ADR 0265 §4), and the address people use with Copy. The code is a one-time sign-in made with this window's own
  * session (`phoneLink`), asked again before it runs out while it shows.
  */
 import { Button, Icon, PixelSpinner, QrCode } from "@agenteschat/ui";

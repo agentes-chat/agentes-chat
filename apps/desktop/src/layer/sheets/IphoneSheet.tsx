@@ -1,5 +1,5 @@
 /**
- * The iPhone setup (route `iphone`, ADR 0256: a sheet over the site, opened from Settings › This Mac's phones): the
+ * The iPhone setup (route `iphone`, ADR 0265: a sheet over the site, opened from Settings › This Mac's phones): the
  * Mac does what it can by itself and says what only the person can do. Xcode (or the App Store, and the step goes on
  * once it's there), the iOS platform's download, the Apple Account in Xcode, then the iPhone's own steps as it reports
  * them (plugged in and trusted, Developer Mode, UI Automation, the test helper the Mac builds). Once our phone app is

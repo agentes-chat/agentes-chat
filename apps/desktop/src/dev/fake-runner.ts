@@ -341,6 +341,20 @@ export class FakeRunner {
     this.emit({ kind: "status", status: this.status() });
   }
 
+  /** Dev controls: someone asks from the apps for a folder here (`access.pick`), for the first agent or all. */
+  askPick(forAgent = false) {
+    const a = this.seed?.agents[0];
+    if (!this.seed) return;
+    this.emit({
+      kind: "access.pick",
+      pick: {
+        byName: "Bia Rocha",
+        ...(forAgent && a ? { agentId: a.id, agentName: a.name } : {}),
+        at: new Date().toISOString(),
+      },
+    });
+  }
+
   /** Dev controls: an agent asks for a folder now. */
   raiseRequest() {
     const s = this.seed;

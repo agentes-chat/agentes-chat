@@ -4,12 +4,17 @@
     "send": "Invia"
   },
   "categories": {
-    "where": "Dove appare #{{channel}}",
-    "whereHelp": "Cambia per tutti. Chi partecipa al canale resta lo stesso.",
-    "order": "Posizione nell'elenco",
     "up": "Sposta su",
     "down": "Sposta giù",
     "channelPosition": "{{at}} di {{count}}."
+  },
+  "sections": {
+    "title": "Sezione",
+    "where": "Dove sta #{{channel}} per te",
+    "whereHelp": "Cambia solo la tua lista. Ognuno ordina le proprie sezioni.",
+    "none": "Nessuna sezione",
+    "order": "Posto nella sezione",
+    "tooLong": "Usa al massimo 40 caratteri."
   },
   "blocks": {
     "send": "Invia",
@@ -61,6 +66,19 @@
     "raw": "Originale",
     "more": "Vedi tutte le {{count}} righe",
     "gone": "Questo codice non è più aperto."
+  },
+  "table": {
+    "label_one": "Tabella · {{count}} riga",
+    "label_many": "Tabella · {{count}} righe",
+    "label_other": "Tabella · {{count}} righe",
+    "title": "Tabella",
+    "rows_one": "{{count}} riga",
+    "rows_many": "{{count}} righe",
+    "rows_other": "{{count}} righe",
+    "copy": "Copia la tabella",
+    "copied": "Tabella copiata",
+    "more": "Vedi tutte le {{count}} righe",
+    "gone": "Questa tabella non è più aperta."
   },
   "time": {
     "today": "Oggi",
@@ -182,11 +200,11 @@
       "text": "Potrebbe essere offline o fuori dalla tua rete. Le chat compaiono da sole appena torna disponibile.",
       "kept": "Mostra quello che era già nell'app."
     },
-    "pinned": "Fissati",
+    "favorites": "Preferiti",
     "recent": "Recenti",
     "view": {
       "title": "Mostra le conversazioni",
-      "sectors": "Settori",
+      "sections": "Sezioni",
       "dms": "Messaggi diretti",
       "channels": "Canali"
     },
@@ -961,6 +979,7 @@
       "admin_ask_channel_agent": "{{names}} ti chiede di aggiungere {{agent}} a #{{label}}",
       "admin_ask_create_agents": "{{names}} chiede di poter creare agenti",
       "admin_ask_webhook": "{{names}} ti chiede di configurare il webhook di {{service}} per le routine",
+      "admin_ask_voice": "{{names}} ti chiede di attivare i messaggi vocali",
       "routine_paused_one": "Routine in pausa",
       "routine_paused_many": "Routine in pausa",
       "routine_paused_other": "Routine in pausa",

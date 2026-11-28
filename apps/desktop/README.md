@@ -1,13 +1,13 @@
 # agentes.chat (desktop app)
 
-Tauri 2 app for macOS, Windows and Linux (ADR 0036, ADR 0256). Rust in `src-tauri/` keeps to the window, the tray, the
+Tauri 2 app for macOS, Windows and Linux (ADR 0036, ADR 0265). Rust in `src-tauri/` keeps to the window, the tray, the
 server list, links, the children it runs (the runners and, for "Run agentes.chat on this computer", the server),
 notifications and self-update. The main window is the app's only window: it loads the server's own pages, with the
 app's own TypeScript in `src/` over them (the cover, and the app layer: the first run, the sheets over the site and
 Settings › This Mac); the tray popover and the notch are the TypeScript in `src/` too. The app carries no network
 software of its own: the phone and the team reach a server on this computer through the Tailscale the person installed,
 or through an address of their own (a tunnel or proxy on this computer), chosen in the first run and in
-Settings › This Mac › Server on this Mac (ADR 0256 §4).
+Settings › This Mac › Server on this Mac (ADR 0265 §4).
 
 CI runs the Rust tests on Linux (`cargo test` in `src-tauri`, with stand-ins for what the app bundles: see the
 `test-desktop-rust` job in `.github/workflows/ci.yml`) and the TypeScript tests in `test/`. Code behind
@@ -71,8 +71,7 @@ there (`src-tauri/src/bench.rs`, only with `AGENTES_BENCH_OUT` set, never a sett
 - **Memory**: the app's own process and its web view's, 50 s after the site painted with the window shown, then after
   60 s with it hidden. macOS: footprint, the web view being WebKit's processes working for the app (its web content,
   GPU and network processes). Windows: private bytes of everything under the app (WebView2's). Linux: anonymous
-  resident memory of everything under the app (WebKitGTK's). On Linux closing the window minimizes it, which the
-  runner's virtual screen can't do (it has no window manager), so there the hidden rows stand in for minimized.
+  resident memory of everything under the app (WebKitGTK's).
 - **Idle CPU**: the CPU time the app and its web view used over 30 idle seconds, shown and hidden, in % of one core.
 - **Floor**, beside each: what the site adds is the difference.
 

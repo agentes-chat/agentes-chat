@@ -11,7 +11,7 @@ import { createFakeApi, fakeMachinesOf, ORG_ID, seedState } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
 
 /**
- * agentes for Mac (ADR 0036, ADR 0256): the site in the app's window connects this Mac in one click (the app hands over
+ * agentes for Mac (ADR 0036, ADR 0265): the site in the app's window connects this Mac in one click (the app hands over
  * the runner's code, the site confirms it), opens This Mac's settings in the app for what is granted on the Mac itself,
  * lists them in the site's settings, and tells the app its own settings list.
  */

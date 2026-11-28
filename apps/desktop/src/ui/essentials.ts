@@ -1,5 +1,5 @@
 /**
- * This computer's essentials kept current in a screen (ADR 0256 §7): what the system says (`health`), read when the
+ * This computer's essentials kept current in a screen (ADR 0265 §7): what the system says (`health`), read when the
  * screen opens, whenever the app comes back to the front (Rust's `health://changed`) and when the popover is brought
  * up, with the server here's status, the update check and the night's install switch. The popover keeps the tray, the
  * notifications and the site's count with them (`useEssentialsWatch`); the app layer draws the list.

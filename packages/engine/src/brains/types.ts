@@ -150,6 +150,11 @@ export interface BrainSession {
   partsRead?: string | null;
   /** With `partsRead`: that run's blocks of what it can do here, so the turn says only their changed lines. */
   refreshRead?: string[];
+  /**
+   * A new session where the conversation had a recent one: why that one wasn't picked up, `size`, and the names of
+   * the parts of its prompt key that changed (`Transcript.promptParts`), else `prompt`.
+   */
+  notPickedUp?: string[];
 }
 
 export interface BrainTurn {
@@ -286,6 +291,8 @@ export type BrainEvent =
       /** Claude Code (runner protocol 50): why the provider refused or failed it, and its HTTP status. */
       cause?: ProviderFailureCause;
       httpStatus?: number;
+      /** How the turn went until it failed (`done.timings`), from a newer runner. */
+      timings?: BrainTurnTimings;
     }
   /** Messages handed mid-turn (`BrainIO.steerable`) that the turn read, by their `uuid`. */
   | { type: "steer_read"; uuids: string[] }

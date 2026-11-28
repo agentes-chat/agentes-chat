@@ -1,5 +1,5 @@
 /**
- * How the phone and the team get to the server here (ADR 0256 §4), shared by the first run and Settings: two rows with
+ * How the phone and the team get to the server here (ADR 0265 §4), shared by the first run and Settings: two rows with
  * a hairline, a tile and the kit's Radio, and under the chosen row its own part, with no card. Through Tailscale: the
  * official app the person installs (its download page, its app, its icon by the clock or the command to connect it),
  * read again every 2 s while it isn't on, with no time limit, and `onReady` once it turns on. Through an address of

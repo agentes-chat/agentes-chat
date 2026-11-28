@@ -40,7 +40,7 @@ export const thisComputer = (list: DevicesList | undefined, home: Home): Compute
 
 /**
  * The server a home's devices are asked on, with the window's session there: the server here's homes point at its
- * loopback address, which is where the window on this computer opens it and signs in (ADR 0256 §5).
+ * loopback address, which is where the window on this computer opens it and signs in (ADR 0265 §5).
  */
 export const deviceServer = (
   home: Home,

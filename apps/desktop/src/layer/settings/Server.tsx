@@ -1,7 +1,7 @@
 /**
- * Settings › This computer › Server on this computer (ADR 0256 §7): agentes.chat as the app runs it here. Its state
+ * Settings › This computer › Server on this computer (ADR 0265 §7): agentes.chat as the app runs it here. Its state
  * and Restart on top; "Reach from anywhere": its address for people with Copy and the way it goes (Tailscale or the
- * person's own address, ADR 0256 §4, changed with the picker inline), the phone's QR code (a one-time sign-in made
+ * person's own address, ADR 0265 §4, changed with the picker inline), the phone's QR code (a one-time sign-in made
  * with the window's own session, asked again while it shows) and inviting someone from the team; while something keeps
  * reach from working, only that with its one fix (the phone and the invite would lead nowhere); off, one row with Turn on, which opens the same picker; its backups (every night, a
  * copy elsewhere); and a quiet line of what is done less often (Back up now, Restore…, Stop, Stop running here…, Erase

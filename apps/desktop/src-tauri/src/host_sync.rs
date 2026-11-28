@@ -133,7 +133,7 @@ pub fn start(app: &AppHandle) {
             if app.state::<crate::runners::Runners>().is_quitting() {
                 return;
             }
-            // Tailscale turned off here since, or the person's own address no longer leading here (ADR 0256 §4): its
+            // Tailscale turned off here since, or the person's own address no longer leading here (ADR 0265 §4): its
             // line says nobody else reaches it, until it is shared again.
             local_server::check_reach(&app);
             local_server::ensure_served(&app);

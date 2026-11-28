@@ -97,6 +97,10 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "onboarding.computer.payment.",
   ],
   selfhost: [
+    // Settings › About's newer release and computers ahead: self-hosted servers only (`useServerUpdate`).
+    "settings.about.update.",
+    "settings.about.computersAhead_one",
+    "settings.about.computersAhead_other",
     // A server that sends no e-mail can't confirm a new address: only there (`email.no_mail`).
     "shell.email.noMail",
     // Who read a piece of the workspace: off agentes.chat's own servers, whoever runs this one (`details.cloud`).
@@ -181,6 +185,12 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     // No speech engine yet: Settings › Voice, a tab only a self-hosted server shows.
     "voice.settings.noEngineAsk",
     "voice.settings.noEngineHere",
+    // The microphone's first press with no engine (`speechState`): never on the Cloud, whose engines are always set.
+    "voice.setup.",
+    // The speech model on the server's own computer (`/api/app/speech-local`, 404 on the Cloud).
+    "voice.local.",
+    // The right hand's card to turn voice on: it asks only where voice doesn't become text (never on the Cloud).
+    "voice.offer.askOwner",
     // Deleting: computers people connected, and the person who set up the server, only a self-hosted server has.
     "deleteOrg.goes.computers",
     "deleteAccount.computers_one",
@@ -250,6 +260,8 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "help.selfhost.run-on-your-computer.sections.10.blocks.4.list.3",
     "help.selfhost.run-on-your-computer.sections.10.blocks.4.list.4",
     "desktop.prefs.general.menuBarTitle",
+    // The first close's notice on a Mac (background.rs picks it there, `bodyTray` elsewhere).
+    "desktop.background.bodyMac",
     // The app icon's hint shows only in the Mac's desktop app (AppIconPicker.tsx): its Dock and Finder.
     "appIcon.hintMac",
     "desktop.prefs.updates.",

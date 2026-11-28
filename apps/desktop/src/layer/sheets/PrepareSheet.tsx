@@ -1,5 +1,5 @@
 /**
- * "macOS asks three things, once" (route `prepare`, ADR 0256 §7): right after this Mac was made ready, the
+ * "macOS asks three things, once" (route `prepare`, ADR 0265 §7): right after this Mac was made ready, the
  * permissions agents need, asked now so nothing stops them later. Each row reads its state live (`useMacGrants`: when
  * the window comes back to the front, and every few seconds while one is off): "On" in the ok colour, or Allow. Allow
  * raises the system's prompt the first time and opens System Settings after that (always for Full Disk Access); the

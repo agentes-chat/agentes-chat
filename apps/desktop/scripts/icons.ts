@@ -146,7 +146,7 @@ function trayCoverage(state: TrayState, px: number, py: number): boolean {
     }
   }
   if (state === "attention") {
-    // One of this computer's essentials fell (ADR 0256 §7): the update badge's place, a filled disc with an
+    // One of this computer's essentials fell (ADR 0265 §7): the update badge's place, a filled disc with an
     // exclamation mark cut out of it (the update badge draws its arrow alone, the needs dot has no mark).
     const bx = 27;
     const by = 27;

@@ -1,11 +1,12 @@
 {
   "identifier": "cover",
-  "description": "The main window's cover (cover.rs): a page of the app over the server's page. It may drag the window, ask which server is open, load it again once it is reachable, or step aside; for the server here, start it, copy its details or send a report of them (with this computer's system, size, the web view's memory and the opening's time), for a workspace on a Tailscale network it can't reach, name it (the workspaces the app keeps), read Tailscale's state (whether it is installed, on, and has its app to open) and open or download it (ADR 0256 §4); for a server out of reach or the server here stopped, open the first run on another server (the app layer, ADR 0256) or another server of the app's list. Nothing of the server's page, the runners or this computer.",
+  "description": "The main window's cover (cover.rs): a page of the app over the server's page. It may drag the window, ask which server is open, load it again once it is reachable, step aside, or stay over a server whose app API this app doesn't speak; for the server here, start it, copy its details or send a report of them (with this computer's system, size, the web view's memory and the opening's time), for a workspace on a Tailscale network it can't reach, name it (the workspaces the app keeps), read Tailscale's state (whether it is installed, on, and has its app to open) and open or download it (ADR 0265 §4); for a server out of reach or the server here stopped, open the first run on another server (the app layer, ADR 0265) or another server of the app's list. Nothing of the server's page, the runners or this computer.",
   "webviews": ["main-cover"],
   "permissions": [
     "core:window:allow-start-dragging",
     "allow-cover-retry",
     "allow-cover-hide",
+    "allow-cover-hold",
     "allow-cover-server",
     "allow-cover-details",
     "allow-servers-get",

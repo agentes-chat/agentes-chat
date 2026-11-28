@@ -83,6 +83,7 @@ import { teamWeekRoutes } from "./routes/app/team-week";
 import { telemetryRoutes } from "./routes/app/telemetry";
 import { threadRoutes } from "./routes/app/threads";
 import { thumbRoutes } from "./routes/app/thumbs";
+import { toolLabelRoutes } from "./routes/app/tool-labels";
 import { vaultRoutes } from "./routes/app/vault";
 import { speechKeyRoutes, voiceRoutes } from "./routes/app/voice";
 import { waitingRoutes } from "./routes/app/waiting";
@@ -144,7 +145,7 @@ export interface AppOptions {
  * - `/api/machines/*`     connected computers' runner: device-code connection, uploads, install.sh, a connect link's info (ADR 0025, 0036)
  * - `/api/desktop/*`      public: the desktop app's latest build and its download (ADR 0036)
  * - `/api/native/*`       public: the packages that run agentes.chat without Docker, for the installer (ADR 0060);
- *                         `/api/native/here-id` is answered in front of the app by a native server only (ADR 0256 §4)
+ *                         `/api/native/here-id` is answered in front of the app by a native server only (ADR 0265 §4)
  * - `/api/hooks/*`        public: a webhook routine's own address (its chosen methods, ADR 0106)
  * - `/api/waitlist`       public: join the waiting list and confirm the email (the landing page, only with LANDING_URL)
  * - `/api/partners/waitlist` public: join the partner program's waiting list (the landing page, only with LANDING_URL)
@@ -230,6 +231,7 @@ export function createApp(options: AppOptions) {
     api.route("/app", desktopRoutes(deps));
     api.route("/app", notificationRoutes(deps));
     api.route("/app", waitingRoutes(deps));
+    api.route("/app", toolLabelRoutes(deps));
     api.route("/app", pushRoutes(deps));
     api.route("/app", secretRoutes(deps));
     api.route("/app", vaultRoutes(deps));
@@ -386,7 +388,7 @@ export function createApp(options: AppOptions) {
     const h = c.res.headers;
     if (!h.has("x-frame-options")) h.set("x-frame-options", "DENY");
     if (!h.has("content-security-policy")) h.set("content-security-policy", APP_CSP);
-    // Never on a loopback address: a native server's own window opens it over http there (ADR 0256 §5).
+    // Never on a loopback address: a native server's own window opens it over http there (ADR 0265 §5).
     if (httpsPublicUrl && !h.has("strict-transport-security") && !isLoopbackHost(c.req.header("host"))) {
       h.set("strict-transport-security", "max-age=63072000");
     }

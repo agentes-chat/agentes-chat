@@ -73,3 +73,12 @@ test("every overlay that reaches the window's top starts under the buttons", asy
     "var(--window-top) 0 0",
   ]);
 });
+
+test("in the app, the sidebar's workspace header and the work's sheet start on one line under the title bar", async () => {
+  const wide = atRule(await web("desktop.css"), "@media (min-width: 761px)");
+  const top = (selector: string) => value(wide, selector, "padding-top");
+  expect(top("html[data-desktop] .shell__work")).toEqual(["0"]);
+  // The same on every system: Windows and Linux draw the app's bar too, under their own.
+  expect(top("html[data-desktop] .shell .sidebar")).toEqual(top("html[data-desktop] .shell__work"));
+  expect(top("html[data-desktop] .shell .sidebar :is(.sidebar__col, .sidebar__main)")).toEqual(["0"]);
+});

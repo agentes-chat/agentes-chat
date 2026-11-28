@@ -1,5 +1,5 @@
 /**
- * Settings › This computer on the main window's app layer (ADR 0256 §7). With the workspace's page there, its own
+ * Settings › This computer on the main window's app layer (ADR 0265 §7). With the workspace's page there, its own
  * settings sections (as the site sent them) lead the list, and each moves the site there; This computer's sections
  * follow: Overview, Folders and tools, Server on this computer (only while the app runs it), Activity and App
  * settings. Without the site (offline, its server down, signed out) the list is This computer's alone and a quiet

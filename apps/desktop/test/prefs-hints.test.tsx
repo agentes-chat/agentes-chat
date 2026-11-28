@@ -3,6 +3,8 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
 
+import type { ComputerDevice } from "@agenteschat/client";
+import { CLOUD_SERVER } from "@agenteschat/client/lib/server";
 import { act, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
@@ -19,12 +21,13 @@ import { Settings } from "../src/layer/settings/Settings";
 import { sectionFor, sectionsOf } from "../src/layer/settings/sections";
 import { About, Updates } from "../src/layer/settings/Updates";
 import { ToastProvider } from "../src/ui/Toast";
+import { InternetRow } from "../src/windows/InternetRow";
 import { until } from "./until";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 /**
- * Settings › This computer (ADR 0256) on a fake host, once `ready` says it shows what the test looks at.
+ * Settings › This computer (ADR 0265) on a fake host, once `ready` says it shows what the test looks at.
  * `options.host` changes the host before the screen first reads it.
  */
 async function pane(
@@ -370,7 +373,7 @@ describe("Settings › This computer › Server on this computer", () => {
       (el) => el.querySelector(".dk-sx__qr svg"),
       async (el, host) => {
         expect(row(el, "ana-mac.tail1234.ts.net")?.line).toBe("Through Tailscale, with a lock");
-        // Choosing the way again and turning access off: quiet links under its row (ADR 0256 §4).
+        // Choosing the way again and turning access off: quiet links under its row (ADR 0265 §4).
         const links = [...(rowEl(el, "ana-mac.tail1234.ts.net")?.querySelectorAll(".dk-sx__rowlinks button") ?? [])];
         expect(links.map((b) => b.textContent)).toEqual(["Change", "Turn off"]);
         expect(row(el, "On your phone")?.line).toBe(
@@ -854,7 +857,7 @@ describe("Settings › This computer › App settings", () => {
       },
     ));
 
-  test("reach's switch turns on through the picker under it, and says the way once on (ADR 0256 §4)", () =>
+  test("reach's switch turns on through the picker under it, and says the way once on (ADR 0265 §4)", () =>
     pane(
       "here",
       <Settings section="app" />,
@@ -1248,5 +1251,51 @@ describe("App settings: Compatibility mode (Linux)", () => {
           expect(compatRow(el)).toBeUndefined();
         },
       );
+  });
+});
+
+describe("Agents use this computer's internet: what goes through it, by server", () => {
+  const computer = {
+    id: "m-desk",
+    mayManage: true,
+    shareInternet: { on: true, inUse: false },
+  } as unknown as ComputerDevice;
+  test("all TCP on agentes.chat; what follows proxy settings on a self-hosted server", async () => {
+    for (const [server, has] of [
+      [CLOUD_SERVER, "websites, git, SSH, databases and other TCP connections"],
+      ["https://agents.example.com", "ignore proxy settings use their usual connection"],
+    ] as const)
+      await pane(
+        "selfhost",
+        <InternetRow server={server} orgId="o-1" computer={computer} />,
+        (el) => row(el, "Agents use this computer's internet"),
+        (el) => {
+          expect(row(el, "Agents use this computer's internet")?.hint).toContain(has);
+          expect(row(el, "Agents use this computer's internet")?.hint).toContain("port 25");
+        },
+      );
+  });
+
+  test("use only this computer's internet: nested under the switch while it lends, none from an older server", async () => {
+    const lent = { ...computer, shareInternet: { on: true, inUse: false, only: false } } as ComputerDevice;
+    await pane(
+      "selfhost",
+      <InternetRow server={CLOUD_SERVER} orgId="o-1" computer={lent} />,
+      (el) => row(el, "Use only this computer's internet"),
+      (el) => {
+        const only = row(el, "Use only this computer's internet");
+        expect(only?.hint).toContain("their AI included");
+        const line = el.querySelector("#internet-m-desk-only")?.closest(".dk-crow");
+        expect(line?.getAttribute("data-nested")).toBe("true");
+      },
+    );
+    await pane(
+      "selfhost",
+      <InternetRow server={CLOUD_SERVER} orgId="o-1" computer={computer} />,
+      (el) => row(el, "Agents use this computer's internet"),
+      (el) => {
+        expect(row(el, "Use only this computer's internet")).toBeUndefined();
+      },
+    );
   });
 });

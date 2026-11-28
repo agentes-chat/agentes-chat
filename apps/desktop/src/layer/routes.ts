@@ -1,5 +1,5 @@
 /**
- * The app layer's routes (ADR 0256): the old Preferences tab names (the popover's menu, older sites) as This
+ * The app layer's routes (ADR 0265): the old Preferences tab names (the popover's menu, older sites) as This
  * computer's settings sections, which sheets show over the site, and when a route names something new to show.
  */
 import type { LayerRoute } from "../host/types";

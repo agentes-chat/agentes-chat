@@ -386,7 +386,7 @@ export function connectorRoutes(deps: AppDeps) {
     }),
     async (c) => {
       const { orgId, connector } = c.req.valid("param");
-      // Asked at the server's loopback origin: an MCP server's sign-in comes back there (ADR 0256 §5).
+      // Asked at the server's loopback origin: an MCP server's sign-in comes back there (ADR 0265 §5).
       const atLoopback = requestLoopback(config, c.req.raw.headers) !== null;
       const { authorizeUrl } = await startOAuth(
         { ...connectorDeps, atLoopback },
@@ -428,7 +428,7 @@ export function connectorRoutes(deps: AppDeps) {
         error: query.error ?? (query.status === "failed" ? "connector.unfinished" : undefined),
       };
       // Back to the origin the provider returned to: `PUBLIC_URL`, or the server's loopback origin for a sign-in
-      // started there (ADR 0256 §5).
+      // started there (ADR 0265 §5).
       const base = (requestLoopback(config, c.req.raw.headers) ?? config.PUBLIC_URL).replace(/\/$/, "");
       // Started by the phone app: the system browser has no session of ours. Hand what the provider sent back
       // to the app, which finishes with its own session (the state stays bound to the person who started it).

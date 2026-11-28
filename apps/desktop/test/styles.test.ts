@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { LOGO_PLATES } from "@agenteschat/ui/org-logo";
 
-/** The first run's own CSS (ADR 0256: `layer/first-run/`), and the app's shared one. */
+/** The first run's own CSS (ADR 0265: `layer/first-run/`), and the app's shared one. */
 const firstRunCss = () => Bun.file(new URL("../src/layer/first-run/first-run.css", import.meta.url).pathname).text();
 const ruleIn = (css: string) => (selector: string) => css.split(`\n${selector} {`)[1]?.split("}")[0];
 
@@ -45,7 +45,7 @@ describe("Run here's frame", () => {
     expect(rule(".dk-flow__foot")).toContain("border-top: 1px solid var(--line);");
   });
 
-  test("how the phone and the team get here: rows with a hairline, no card and no bar behind them (ADR 0256 §4)", async () => {
+  test("how the phone and the team get here: rows with a hairline, no card and no bar behind them (ADR 0265 §4)", async () => {
     const css = await Bun.file(new URL("../src/ui/reach-way.css", import.meta.url).pathname).text();
     const rule = ruleIn(css);
     expect(rule(".dk-way")).toContain("border-top: 1px solid var(--line);");

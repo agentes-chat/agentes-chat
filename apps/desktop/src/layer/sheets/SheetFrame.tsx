@@ -1,5 +1,5 @@
 /**
- * The app layer's sheets (ADR 0256): one frame and one layout for every question the app asks over the site.
+ * The app layer's sheets (ADR 0265): one frame and one layout for every question the app asks over the site.
  *
  * `SheetFrame` is where a sheet sits. Sheet mode (macOS with the site there): the layer is transparent, so it draws a
  * scrim over the site, the card in the middle and, over the scrim's top 48pt, a strip that drags the window as the

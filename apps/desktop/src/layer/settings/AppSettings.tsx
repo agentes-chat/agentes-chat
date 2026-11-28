@@ -1,5 +1,5 @@
 /**
- * Settings › This computer › App settings (ADR 0256 §7): the app's own choices. Its notifications; the app itself
+ * Settings › This computer › App settings (ADR 0265 §7): the app's own choices. Its notifications; the app itself
  * (language, opening at login, the menu bar icon, the notch, Linux's compatibility mode); with the server here, whether
  * people reach it from their devices and its usage statistics; the servers and accounts this app opens; updates and
  * About; and, while agents work here, the advanced limits.
@@ -49,8 +49,8 @@ export function AppSettings({ ctx }: { ctx: SettingsContext }) {
   const [reopening, setReopening] = useState(false);
   const iconShown = menuBarShown(menuBar, works || local.run);
   useEffect(() => {
-    void host.setTrayVisible(iconShown).catch(() => {});
-  }, [host, iconShown]);
+    void host.setTrayVisible(iconShown, menuBar === false).catch(() => {});
+  }, [host, iconShown, menuBar]);
 
   // Pairing turns it on: read again when a workspace joins.
   // biome-ignore lint/correctness/useExhaustiveDependencies: the count is the trigger
@@ -305,7 +305,7 @@ export function AppSettings({ ctx }: { ctx: SettingsContext }) {
 
 /**
  * The server here's own choices: whether people reach it from their devices (off, it is only on this computer;
- * turning it on chooses how, with the picker inline, ADR 0256 §4; turning it off asks first) and its usage statistics
+ * turning it on chooses how, with the picker inline, ADR 0265 §4; turning it off asks first) and its usage statistics
  * (changing it restarts it a moment).
  */
 function HereChoices() {

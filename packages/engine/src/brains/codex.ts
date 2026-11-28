@@ -29,6 +29,7 @@ import {
   accountFields,
   accountUnavailable,
   busyRefusal,
+  callTurnThroughDrops,
   cliOutdated,
   contextFields,
   speedFields,
@@ -346,7 +347,7 @@ export class CodexBrain implements Brain {
         : {
             type: "error",
             code: "exec_disabled",
-            message: "Commands are turned off on the computer (its runner was started with --no-exec).",
+            message: "Commands are turned off on the computer (agentes.chat there was started with --no-exec).",
             retryable: true,
           };
       return;
@@ -355,7 +356,7 @@ export class CodexBrain implements Brain {
       yield {
         type: "error",
         code: "runner_outdated",
-        message: `The runner on the computer is too old for agents that think with ${name}. ${runnerUpdateWay(status)}`,
+        message: `The agentes.chat program on the computer is too old for agents that think with ${name}. ${runnerUpdateWay(status)}`,
         retryable: true,
       };
       return;
@@ -366,7 +367,7 @@ export class CodexBrain implements Brain {
       yield {
         type: "error",
         code: "runner_outdated",
-        message: `The runner on the computer is too old for agents that think with ${name} on Windows. ${runnerUpdateWay(status)}`,
+        message: `The agentes.chat program on the computer is too old for agents that think with ${name} on Windows. ${runnerUpdateWay(status)}`,
         retryable: true,
       };
       return;
@@ -418,7 +419,7 @@ export class CodexBrain implements Brain {
       yield {
         type: "error",
         code: "runner_outdated",
-        message: `The runner on the computer is too old to keep ${name} within this agent's permissions. ${runnerUpdateWay(status)}`,
+        message: `The agentes.chat program on the computer is too old to keep ${name} within this agent's permissions. ${runnerUpdateWay(status)}`,
         retryable: true,
       };
       return;
@@ -430,7 +431,7 @@ export class CodexBrain implements Brain {
       yield {
         type: "error",
         code: "runner_outdated",
-        message: `The runner on the computer is too old to keep ${name} to the right hand's tools. ${runnerUpdateWay(status)}`,
+        message: `The agentes.chat program on the computer is too old to keep ${name} to the right hand's tools. ${runnerUpdateWay(status)}`,
         retryable: true,
       };
       return;
@@ -479,7 +480,7 @@ export class CodexBrain implements Brain {
         onEvent: (event) => events.push(event),
       })
       .catch((error: unknown) => {
-        state.failure = error ?? new Error("The runner failed");
+        state.failure = error ?? new Error("agentes.chat on the computer failed");
       })
       .finally(() => events.end());
 
@@ -585,9 +586,11 @@ export class AntigravityBrain extends CodexBrain {
  * so the turn ends even if a published event is lost.
  */
 export function hubBrainLink(deps: {
-  hub: Pick<MachineCaller, "call" | "status">;
+  hub: Pick<MachineCaller, "call" | "status" | "wake">;
   pubsub: PubSub;
   timeoutMs?: number;
+  /** Tests: `HELD_TURN_WAIT_MS`. */
+  heldTurnWaitMs?: number;
   /** After the request's result, how long to wait for the stream's last events (default 1.5 s). */
   finalGraceMs?: number;
 }): ComputerBrainLink {
@@ -612,11 +615,11 @@ export function hubBrainLink(deps: {
         options.onEvent(withFailureCause(event as BrainEvent));
       });
       try {
-        const reply = await deps.hub.call<"brain.turn">(
-          machineId,
-          { op: "brain.turn", ...request },
-          { signal: options.signal, ...(deps.timeoutMs ? { timeoutMs: deps.timeoutMs } : {}) },
-        );
+        const reply = await callTurnThroughDrops(deps.hub, machineId, request, {
+          signal: options.signal,
+          ...(deps.timeoutMs ? { timeoutMs: deps.timeoutMs } : {}),
+          ...(deps.heldTurnWaitMs !== undefined ? { waitMs: deps.heldTurnWaitMs } : {}),
+        });
         if (!streamEnded) {
           await new Promise<void>((resolve) => {
             const timer = setTimeout(resolve, deps.finalGraceMs ?? 1500);

@@ -37,6 +37,7 @@ import {
   ISSUES_VIEW_MAX_LABELS,
   ISSUES_VIEW_PRIORITIES,
   inviteMany,
+  isAgentesCloud,
   listAgentChannels,
   listInvitationsWithStatus,
   listMembers,
@@ -59,11 +60,17 @@ import {
   resendInvitation,
   rotateCredential,
   runErrorDetail,
+  SIDEBAR_DM_SHOWS,
+  SIDEBAR_FAVORITE_LIMIT,
   SIDEBAR_ITEMS,
   SIDEBAR_PIN_LIMIT,
   SIDEBAR_PLACES,
+  SIDEBAR_SECTION_CHANNELS,
+  SIDEBAR_SECTION_LIMIT,
+  SIDEBAR_SECTION_NAME_MAX,
   SIDEBAR_SECTIONS,
   type SidebarItem,
+  SPEECH_STATES,
   START_PAGES,
   STATUS_EMOJI_MAX,
   STATUS_TEXT_MAX,
@@ -87,6 +94,7 @@ import {
   setWorkspaceApprovalsLevel,
   sidebarPlaceAllowed,
   speakerOf,
+  speechOwnerIn,
   taskManager,
   taskSteps,
   updateInvitation,
@@ -119,6 +127,7 @@ import {
   CanceledReturn,
   ChatPrefs,
   Credential,
+  MaintenanceView,
   Model,
   ModelTier,
   OutsideOf,
@@ -255,6 +264,14 @@ const Settings = z
     }),
     voiceAvailable: z.boolean().openapi({
       description: "Read only: this server has a speech engine now, from its environment or from its owner's Settings.",
+    }),
+    speechState: z.enum(SPEECH_STATES).openapi({
+      description:
+        "Read only: whether voice becomes text on this server. `ready`; `installing` (an engine is on its way); `failed` (the one set up here stopped); `none`. Recording works in every state: without `ready` a voice message goes as audio people play (`noWords`).",
+    }),
+    speechOwner: z.object({ userId: z.string(), name: z.string() }).nullable().openapi({
+      description:
+        "Read only: who chooses what turns voice into text here (the installation's owner, Settings › Voice), when they are a member of this workspace. Null on agentes.chat's servers.",
     }),
     gifsAvailable: z.boolean().openapi({
       description:
@@ -578,7 +595,8 @@ const ManagedTask = z
         moving: z
           .boolean()
           .optional()
-          .openapi({ description: "Its computer is away moving to another server: it comes back by itself." }),
+          .openapi({ description: "Its computer is away for what we do to it (`maintenance`): back by itself." }),
+        maintenance: MaintenanceView.optional(),
       })
       .nullable()
       .openapi({
@@ -657,10 +675,12 @@ export function managementRoutes(deps: AppDeps) {
   app.use("/organizations/*", requireSession(deps.auth));
   const AgentParams = OrgParams.extend({ agentId: z.uuid() });
   /** What this server can do for GIFs and agents' stickers (ADR 0091 §5), so no switch does nothing. */
-  const mediaAvailable = async () => ({
+  const mediaAvailable = async (orgId: string) => ({
     // The provider follows the installation's key, which its owner may add or remove at any time.
     gifsAvailable: adapters.gifs?.available() ?? false,
     voiceAvailable: deps.extras?.speech?.available() ?? false,
+    speechState: deps.extras?.speech?.state() ?? ("none" as const),
+    speechOwner: isAgentesCloud(config.PUBLIC_URL) ? null : await speechOwnerIn(db, orgId),
     agentMediaAvailable: Boolean((await deps.extras?.jevKey?.view())?.source),
   });
 
@@ -680,7 +700,10 @@ export function managementRoutes(deps: AppDeps) {
       const actor = c.get("user").id;
       const settings = await getOrgSettings(db, actor, orgId);
       const [seesCost, viewer] = await Promise.all([canViewCost(db, actor, orgId), getMembership(db, actor, orgId)]);
-      return c.json({ ...settingsFor(settings, seesCost, can(viewer, "configure")), ...(await mediaAvailable()) }, 200);
+      return c.json(
+        { ...settingsFor(settings, seesCost, can(viewer, "configure")), ...(await mediaAvailable(orgId)) },
+        200,
+      );
     },
   );
 
@@ -745,7 +768,7 @@ export function managementRoutes(deps: AppDeps) {
       if (input.mode !== undefined) await publishWorkspaceMode(adapters.pubsub, orgId, settings.mode);
       const seesCost = await canViewCost(db, actor, orgId);
       // Only who configures the workspace gets here (`updateOrgSettings`).
-      return c.json({ ...settingsFor(settings, seesCost, true), ...(await mediaAvailable()) }, 200);
+      return c.json({ ...settingsFor(settings, seesCost, true), ...(await mediaAvailable(orgId)) }, 200);
     },
   );
 
@@ -1230,8 +1253,30 @@ export function managementRoutes(deps: AppDeps) {
         .object({ agents: PinIds, channels: PinIds, people: PinIds })
         .nullable()
         .openapi({
-          description: `"Fixar no topo": agent, channel and user ids on top of their own section, at most ${SIDEBAR_PIN_LIMIT} each. \`null\` until you first pin or dismiss: the apps then pin your own agents.`,
+          description: `The pins of before Favoritos (ADR 0260): agent, channel and user ids, at most ${SIDEBAR_PIN_LIMIT} each. Read only to start \`favorites\` while it is \`null\`.`,
         }),
+      favorites: z.array(z.string().min(3).max(80)).max(SIDEBAR_FAVORITE_LIMIT).nullable().optional().openapi({
+        description:
+          "Favoritos, in order: `agent:<id>`, `channel:<id>` or `person:<user id>`. `null` until you first change it: the apps start it from `pins`, else your own agents. Left out: kept as stored.",
+      }),
+      sections: z
+        .array(
+          z.object({
+            id: z.string().min(1).max(64),
+            name: z.string().max(SIDEBAR_SECTION_NAME_MAX * 2),
+            channelIds: z.array(z.string().min(1).max(64)).max(SIDEBAR_SECTION_CHANNELS),
+          }),
+        )
+        .max(SIDEBAR_SECTION_LIMIT)
+        .nullable()
+        .optional()
+        .openapi({
+          description:
+            "Your own channel sections, in order, each with its channels in order (a channel in one at most). A section with no channel or no name is dropped. Left out: kept as stored.",
+        }),
+      dms: z.enum(SIDEBAR_DM_SHOWS).optional().openapi({
+        description: "Mensagens diretas lists everyone (`all`) or only who you talked to (`recent`). Left out: kept.",
+      }),
     })
     .openapi("SidebarView");
 
@@ -1241,7 +1286,7 @@ export function managementRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/me/sidebar/view",
       tags: ["Members"],
       security,
-      summary: "How your sidebar shows the agents, and what you pinned, in this workspace",
+      summary: "How your sidebar shows the agents, your Favoritos and your channel sections, in this workspace",
       request: { params: OrgParams },
       responses: { 200: json(z.object({ view: SidebarView })), ...errors },
     }),
@@ -1257,8 +1302,9 @@ export function managementRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/me/sidebar/view",
       tags: ["Members"],
       security,
-      summary: "Keep how your sidebar shows the agents, and what you pinned, in this workspace",
-      description: "Yours alone, on every device. Replaces the view; the tools' places and the orders stay.",
+      summary: "Keep how your sidebar shows the agents, your Favoritos and your channel sections, in this workspace",
+      description:
+        "Yours alone, on every device. Replaces the fields given; a field left out, the tools' places and the orders stay.",
       request: { params: OrgParams, body: body(z.object({ view: SidebarView })) },
       responses: { 200: json(z.object({ view: SidebarView })), ...errors },
     }),

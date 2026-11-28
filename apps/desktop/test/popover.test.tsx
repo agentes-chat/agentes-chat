@@ -3,6 +3,7 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
 
+import { readInstance } from "@agenteschat/client/lib/server";
 import { Icon, type IconName } from "@agenteschat/ui";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -12,6 +13,7 @@ import { AppProvider } from "../src/app";
 import { ControlError } from "../src/control/client";
 import { siteApi } from "../src/control/devices";
 import { ESSENTIALS_NOTIFIED_PREF } from "../src/control/essentials";
+import { raisePick } from "../src/control/notify";
 import { MAC_ASKED_PREF } from "../src/control/permissions";
 import { DesktopStore, pairedHomes } from "../src/control/store";
 import { AUTO_UPDATE_PREF } from "../src/control/version";
@@ -206,6 +208,31 @@ describe("the menu's banners say only what matters there", () => {
         (el) => banners(el).length > 0,
       );
     }));
+
+  test("a saved server whose app API this app no longer speaks, or doesn't yet: the welcome window's words", async () => {
+    const tooNew = createFakeHost("popover", "cloud");
+    tooNew.checkServer = async (server) =>
+      readInstance(server, { name: "agentes.chat", version: "9.0.0", api: 3, minApi: 2, url: server });
+    await withMenu(
+      (el) =>
+        expect(banners(el)).toEqual([
+          { title: "Update the app to use agentes.chat.", line: null, actions: ["Check for updates"] },
+        ]),
+      tooNew,
+      (el) => banners(el).length > 0,
+    );
+    const tooOld = createFakeHost("popover", "cloud");
+    tooOld.checkServer = async (server) =>
+      readInstance(server, { name: "agentes.chat", version: "0.0.1", api: 0, minApi: 0, url: server });
+    await withMenu(
+      (el) =>
+        expect(banners(el)).toEqual([
+          { title: "agentes.chat needs an update to work with this app.", line: null, actions: [] },
+        ]),
+      tooOld,
+      (el) => banners(el).length > 0,
+    );
+  });
 
   test("agentes.chat not starting here: its title, why and where to look, Copy details, the logs and Try again", () =>
     withMenu(
@@ -431,7 +458,7 @@ test("the site's This computer: the Mac pairs with commands on, then the app lay
       });
       const norte = () => pairedHomes(store.getSnapshot()).find((h) => h.status?.org?.id === "o-norte");
       await until(() => norte()?.access?.tools.commands === true);
-      // Prepare this Mac, as a sheet on the main window's app layer (ADR 0256).
+      // Prepare this Mac, as a sheet on the main window's app layer (ADR 0265).
       await until(() => host.layer.route?.screen === "prepare");
       expect(host.layer.route).toEqual({ screen: "prepare", org: "Estúdio Norte", server: FAKE_SERVER });
       expect(await host.autostart()).toBe(true);
@@ -441,7 +468,7 @@ test("the site's This computer: the Mac pairs with commands on, then the app lay
   );
 });
 
-describe("this computer's essentials (ADR 0256 §7)", () => {
+describe("this computer's essentials (ADR 0265 §7)", () => {
   const screenOff = (host: FakeHost) => host.notified.filter((n) => n.title === "Screen Recording is off").length;
 
   test("one that falls by itself: the tray turns to attention, one notification however often it is read, the count for the site", async () => {
@@ -538,7 +565,7 @@ describe("this computer's essentials (ADR 0256 §7)", () => {
   });
 });
 
-describe("the head, the essentials' banner and the menu (ADR 0256 §7)", () => {
+describe("the head, the essentials' banner and the menu (ADR 0265 §7)", () => {
   const head = (el: HTMLElement) => el.querySelector(".dk-trayhead small");
   const press = async (el: HTMLElement, selector: string, text: string) => {
     const button = [...el.querySelectorAll<HTMLButtonElement>(selector)].find((b) => b.textContent?.includes(text));
@@ -606,7 +633,7 @@ describe("the head, the essentials' banner and the menu (ADR 0256 §7)", () => {
     );
   });
 
-  test("reach kept from people (ADR 0256 §4): its own words each way, and Fix it opens the server's reach row", async () => {
+  test("reach kept from people (ADR 0265 §4): its own words each way, and Fix it opens the server's reach row", async () => {
     writePref(ESSENTIALS_NOTIFIED_PREF, null);
     const address = createFakeHost("popover", "here", {
       macReady: true,
@@ -734,4 +761,71 @@ describe("the head, the essentials' banner and the menu (ADR 0256 §7)", () => {
       createFakeHost("popover", "cloud"),
       (el) => el.querySelector(".dk-tray__menu"),
     ));
+});
+
+test("a folder asked for from agentes.chat: its card says who asks and for whom, and the folder picked here is allowed for that agent", () => {
+  const host = createFakeHost("popover", "here");
+  return withMenu(async (el, store) => {
+    const home = pairedHomes(store.getSnapshot())[0];
+    const agent = home?.status?.agents[0];
+    const runner = home ? host.runners.get(home.homeId) : undefined;
+    await act(async () => runner?.askPick(true));
+    const card = () => [...el.querySelectorAll(".dk-req")].find((c) => c.textContent?.includes("asks for a folder"));
+    await until(card);
+    expect(card()?.querySelector("b")?.textContent).toBe(`Bia Rocha asks for a folder for ${agent?.name}`);
+    expect(card()?.textContent).toContain("Choose which folder to allow on this Mac.");
+    const choose = [...(card()?.querySelectorAll("button") ?? [])].find((b) => b.textContent === "Choose folder");
+    await act(async () => (choose as HTMLElement).click());
+    await until(() => !card());
+    const folders = pairedHomes(store.getSnapshot())[0]?.access?.folders ?? [];
+    expect(folders.some((f) => agent && f.agents.includes(agent.id))).toBe(true);
+    expect(document.querySelector(".dk-toast")?.textContent).toContain(`allowed for ${agent?.name}`);
+  }, host);
+});
+
+test("a folder asked for from the apps keeps the popover up until it is answered, then it hides on focus loss again", () => {
+  const host = createFakeHost("popover", "here");
+  const t = createDesktopI18n("en", host.platform).t;
+  return withMenu(async (el, store) => {
+    const home = pairedHomes(store.getSnapshot())[0];
+    if (!home) throw new Error("no home");
+    raisePick(host, t, home, { byName: "Bia Rocha", at: new Date().toISOString() });
+    expect(host.shown.at(-1)).toEqual({ name: "popover", keep: true });
+    const runner = host.runners.get(home.homeId);
+    await act(async () => runner?.askPick());
+    const card = () => [...el.querySelectorAll(".dk-req")].find((c) => c.textContent?.includes("asks for a folder"));
+    await until(card);
+    const button = (name: string) =>
+      [...(card()?.querySelectorAll("button") ?? [])].find((b) => b.textContent === name) as HTMLElement;
+    // The picker closed without a folder: one picker, and the popover no longer kept.
+    let picks = 0;
+    host.pickFolder = async () => {
+      picks++;
+      return null;
+    };
+    await act(async () => button("Choose folder").click());
+    await until(() => host.shown.at(-1)?.keep === false);
+    expect(picks).toBe(1);
+    expect(card()).toBeTruthy();
+    // Not now: the card goes, the popover is no longer kept either.
+    host.shown.length = 0;
+    await act(async () => button("Not now").click());
+    await until(() => !card());
+    expect(host.shown).toEqual([{ name: "popover", keep: false }]);
+  }, host);
+});
+
+test("an agent's folder request raised from the apps: answered, the popover is no longer kept up", async () => {
+  const host = createFakeHost("popover", "here");
+  const t = createDesktopI18n("en", host.platform).t;
+  await withMenu(async (el, store) => {
+    const home = pairedHomes(store.getSnapshot())[0];
+    const request = home?.requests[0];
+    if (!home || !request) throw new Error("no request");
+    raisePick(host, t, home, { requestId: request.requestId, byName: "Bia Rocha", at: new Date().toISOString() });
+    expect(host.shown.at(-1)).toEqual({ name: "popover", keep: true });
+    const allow = [...el.querySelectorAll(".dk-req button")].find((b) => b.textContent === "Allow") as HTMLElement;
+    await act(async () => allow.click());
+    await until(() => host.shown.at(-1)?.keep === false);
+  }, host);
 });

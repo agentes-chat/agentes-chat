@@ -4,7 +4,7 @@
  * may work here for it, `agentsHere`): which of its organizations this computer works for, pairing it with
  * one, reconnecting it, the access requests (the popover), System Settings on a permission the page was refused,
  * the Local Network permission an Android phone over Wi-Fi needs, and on the server here the folder of its files
- * (Storage's "Show the folder"). Rust answers the rest itself (This computer's settings, ADR 0256). The popover
+ * (Storage's "Show the folder"). Rust answers the rest itself (This computer's settings, ADR 0265). The popover
  * answers, since it owns the runners. Pairing starts the device-code sign-in with the page's own server; the site confirms the code with its own session
  * and the machine's token stays with the runner. Rust already asked the person (the system's own dialog)
  * before a `connect` gets here.
@@ -37,7 +37,7 @@ export type ThisMacRequest =
   | { kind: "files"; local?: boolean }
   /** The page's one way out where macOS refused it something: that permission's own list in System Settings. */
   | { kind: "privacy"; pane: PrivacyPane }
-  /** An Android phone pairs over Wi-Fi: the Local Network permission, asked just in time (ADR 0256 §7). */
+  /** An Android phone pairs over Wi-Fi: the Local Network permission, asked just in time (ADR 0265 §7). */
   | { kind: "localNetwork" };
 
 export type PrefsTab = "folders" | "tools" | "updates" | "servers";

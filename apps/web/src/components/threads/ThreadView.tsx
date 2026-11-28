@@ -4,7 +4,7 @@ import { errorText } from "@agenteschat/client/lib/errors";
 import { formatTime, joinNames, relativeTime } from "@agenteschat/client/lib/format";
 import { textOrMedia } from "@agenteschat/client/lib/media";
 import { quoteExcerpt } from "@agenteschat/client/lib/reply";
-import { threadTitle, timeSpan } from "@agenteschat/client/lib/threads";
+import { opensInConversation, threadTitle, timeSpan } from "@agenteschat/client/lib/threads";
 import { appAuthor } from "@agenteschat/client/lib/via";
 import {
   AppMark,
@@ -122,7 +122,8 @@ function ThreadTitle({ thread }: { thread: ThreadInfo }) {
 /**
  * The thread's header: back to the channel, who is in it (their faces, not a generic icon), the title,
  * where it lives with its replies and last activity, its state and ⋯. In the panel over a channel
- * (`onClose`): no way back (the channel is right there), "Abrir em tela cheia" and close; "Ver em #canal" there
+ * (`onClose`): no way back (the channel is right there), close, and "Abrir em tela cheia" for a mission's thread only
+ * (any other opens in this panel wherever its link is followed); "Ver em #canal" there
  * (`onSeeInChannel`) closes the panel and jumps to the thread's message in the channel below, or returns false for a
  * thread of another channel, which navigates as on the full page.
  */
@@ -259,17 +260,20 @@ export function ThreadHeader({
       </Menu>
       {onClose && (
         <>
-          <Button
-            size="sm"
-            variant="ghost"
-            iconOnly
-            icon="external"
-            aria-label={t("threads.side.expand")}
-            title={t("threads.side.expand")}
-            onClick={() =>
-              void navigate({ to: "/org/$orgId/threads/$threadId", params: { orgId: org.id, threadId: thread.id } })
-            }
-          />
+          {/* A mission's thread has a page of its own (its plan on top); any other opens right here. */}
+          {!opensInConversation(thread) && (
+            <Button
+              size="sm"
+              variant="ghost"
+              iconOnly
+              icon="external"
+              aria-label={t("threads.side.expand")}
+              title={t("threads.side.expand")}
+              onClick={() =>
+                void navigate({ to: "/org/$orgId/threads/$threadId", params: { orgId: org.id, threadId: thread.id } })
+              }
+            />
+          )}
           <Button
             size="sm"
             variant="ghost"

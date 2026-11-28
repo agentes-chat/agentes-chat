@@ -1,5 +1,5 @@
 /**
- * Settings › This computer › Overview (ADR 0256 §7): this computer's picture and name (renamed here for every
+ * Settings › This computer › Overview (ADR 0265 §7): this computer's picture and name (renamed here for every
  * workspace), whether something needs the person, the workspaces whose agents use it and the app's version; then
  * "Always ready", what keeps agents working here without anyone looking, and "Who uses this computer".
  */

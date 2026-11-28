@@ -1,4 +1,4 @@
-//! This computer's essentials as the system says them (ADR 0256 §7): opening at login, the macOS permissions agents
+//! This computer's essentials as the system says them (ADR 0265 §7): opening at login, the macOS permissions agents
 //! need (notifications, Screen Recording, Full Disk Access), what keeps the server here up after a restart or a power
 //! cut, and whether this Mac stays awake while it serves. One call reads them all (`health_get`), and they are read
 //! again whenever the main window comes back to the front (`health://changed`, at most every 15 s), so the popover

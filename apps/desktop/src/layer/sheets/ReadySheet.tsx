@@ -1,5 +1,5 @@
 /**
- * "Get this Mac ready for Acme's agents?" (route `pairOffer`, ADR 0256 §7): shown once after sign-in for a workspace
+ * "Get this Mac ready for Acme's agents?" (route `pairOffer`, ADR 0265 §7): shown once after sign-in for a workspace
  * this computer doesn't work for yet. The card is the ask, so no system dialog follows. It says what agents get here
  * in four lines and asks nothing else: no switches (the tools start open, `pairTools`, and change in Settings), no
  * checkbox (a computer made ready opens agentes.chat at login). Get it ready pairs it with the main window's session,
@@ -71,7 +71,7 @@ export function ReadySheet({ target, onClose }: { target: PairTarget; onClose: (
     setFailed(null);
     try {
       await pairWithSession(host, store, target);
-      // Its agents work while the app runs: open at login, always (ADR 0256 §7).
+      // Its agents work while the app runs: open at login, always (ADR 0265 §7).
       await host.setAutostart(true).catch(() => {});
       if (await needsPrepare(host).catch(() => false))
         await host.showLayer({ screen: "prepare", org, server: target.server });

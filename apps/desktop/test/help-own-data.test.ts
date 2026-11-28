@@ -42,7 +42,7 @@ describe("the help page on starting over and uninstalling", () => {
       const restore = `**${serverText(code as AppLocale, "accountDeleting.restore")}**`;
       expect(text).not.toContain(restore);
       expect(linesOf("password").join("\n")).toContain(restore);
-      // Settings › This computer › …, as the app names each section (ADR 0256), with the help's own word for this
+      // Settings › This computer › …, as the app names each section (ADR 0265), with the help's own word for this
       // computer on every system.
       const fill = (label: string) => label.replaceAll("{{device}}", d.device.linux);
       const at = (section: string) =>

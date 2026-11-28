@@ -114,6 +114,11 @@ test("the list: the workspace's computer first, each computer's status, its phon
     .update(schema.machines)
     .set({ paused: true, size: { cpus: 8, memoryGb: 16, diskGb: 512 } })
     .where(eq(schema.machines.id, lab));
+  // The workspace's computer names its processor; its system stays its own.
+  await f.db
+    .update(schema.machines)
+    .set({ size: { cpus: 4, memoryGb: 8, diskGb: 92, cpuModel: "AMD EPYC 7763", system: "Ubuntu 24.04" } })
+    .where(eq(schema.machines.id, managed?.machineId ?? ""));
   await f.db.insert(schema.machineTasks).values({
     orgId: f.org.id,
     agentId: f.agent.id,
@@ -137,7 +142,14 @@ test("the list: the workspace's computer first, each computer's status, its phon
     ["Lab box", "connected", "paused"],
   ]);
   const [workspace, macbook, , labBox] = seen.devices;
-  expect(workspace).toMatchObject({ id: managed?.machineId, hostname: "", mayUse: true, mayManage: false });
+  expect(workspace).toMatchObject({
+    id: managed?.machineId,
+    hostname: "",
+    cpuModel: "AMD EPYC 7763",
+    system: null,
+    mayUse: true,
+    mayManage: false,
+  });
   expect(macbook).toMatchObject({
     status: { kind: "busy", running: 1, max: 3 },
     ownerUserId: f.owner.id,
@@ -145,14 +157,35 @@ test("the list: the workspace's computer first, each computer's status, its phon
     mayUse: false,
     mayManage: false,
   });
-  expect(labBox).toMatchObject({ cpus: 8, memoryGb: 16, status: { kind: "paused", until: null } });
+  // An older runner names neither.
+  expect(labBox).toMatchObject({
+    cpus: 8,
+    cpuModel: null,
+    cores: null,
+    system: null,
+    memoryGb: 16,
+    status: { kind: "paused", until: null },
+  });
   // A runner that says its limit (`TASK_LIMIT_PROTOCOL`): the busy pill counts against it, and the page shows it.
   expect(macbook?.maxTasks).toBeNull();
   await f.db
     .update(schema.machines)
-    .set({ size: { cpus: 12, memoryGb: 32, diskGb: 1000, maxTasks: 6 } })
+    .set({
+      size: {
+        cpus: 12,
+        memoryGb: 32,
+        diskGb: 1000,
+        maxTasks: 6,
+        cpuModel: "Apple M4 Pro",
+        cores: 12,
+        system: "macOS 26.1",
+      },
+    })
     .where(eq(schema.machines.id, mac));
   expect((await listDevices(f.db, f.org.id, rui.id)).devices[1]).toMatchObject({
+    cpuModel: "Apple M4 Pro",
+    cores: 12,
+    system: "macOS 26.1",
     maxTasks: 6,
     status: { kind: "busy", running: 1, max: 6 },
   });

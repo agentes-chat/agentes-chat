@@ -40,7 +40,7 @@ const LIVE_READ_MS = 3000;
 
 /**
  * The permissions, read again whenever the window comes back to the front (from System Settings) and, while one is
- * still off, every few seconds (live, ADR 0256 §7). `beforeQuit`: just before Screen Recording or Full Disk Access is
+ * still off, every few seconds (live, ADR 0265 §7). `beforeQuit`: just before Screen Recording or Full Disk Access is
  * asked, which may end with macOS quitting the app.
  */
 export function useMacGrants(beforeQuit?: () => Promise<void>): MacGrants {
