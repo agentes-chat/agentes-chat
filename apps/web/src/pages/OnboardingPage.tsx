@@ -489,10 +489,10 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
     },
     onError: (e) => toast.show(errorText(t, e), "error"),
   });
+  // Nothing brought: the step it was opened from stays (the work step, after Back); the agent brought moves on to it.
   const closeImport = async () => {
     const before = new Set(importing?.before ?? []);
     setImporting(null);
-    setPicked(null);
     if (!orgId) return;
     const fresh = (await agents.refetch()).data ?? [];
     const you = me.data?.user.id;

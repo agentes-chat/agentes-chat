@@ -759,7 +759,7 @@ describe("one first agent, whatever way in (ADR 0264 addendum)", () => {
     expect(heading()).toBe("Bruno");
   });
 
-  test("an import that brought no agent leaves the first agent as it was", async () => {
+  test("an import that brought no agent leaves the first agent as it was, on the work step it was opened from", async () => {
     const state = settingUp({ area: "support" });
     await open(state);
     await click(button("Voltar"), 8);
@@ -771,7 +771,8 @@ describe("one first agent, whatever way in (ADR 0264 addendum)", () => {
     await click(within(screen().getByRole("dialog")).getAllByRole("button", { name: "Fechar" })[0] as HTMLElement, 4);
     await settle(16);
     expect(calls(state, "firstAgents.adopt")).toEqual([]);
-    expect(heading()).toBe("Iara, do atendimento");
+    expect(heading()).toBe(AREAS);
+    expect(state.agents.some((a) => a.id === agentIdOf("support"))).toBe(true);
   });
 
   test("a pasted answer from another app comes in during the onboarding: Importar, then its agent is the first agent", async () => {
