@@ -441,6 +441,85 @@ describe("firing it", () => {
     expect((generic.meta.notice as { text: string }).text).toContain("your role (Developer)");
   });
 
+  test("a new agent taking its place while it is looked at: nothing fires as the one before", async () => {
+    f = await setup();
+    await keepFirstDelivery(f.db, { orgId: f.org.id, userId: f.owner.id, agentId: f.agent.id, ...ARMED });
+    const [caio] = await f.db
+      .insert(schema.agents)
+      .values({ orgId: f.org.id, name: "Caio", handle: "caio", model: "claude-sonnet-5-5" })
+      .returning();
+    // The AI's check is where a look waits longest: the person's new agent takes the delivery's place then.
+    const fx = f;
+    const gateway = {
+      hasModelCredential: async (agent: Parameters<typeof fx.gateway.hasModelCredential>[0]) => {
+        await keepFirstDelivery(fx.db, {
+          orgId: fx.org.id,
+          userId: fx.owner.id,
+          agentId: caio?.id as string,
+          area: "finance",
+          task: "",
+        });
+        return fx.gateway.hasModelCredential(agent);
+      },
+    };
+    expect(await fireFirstDeliveries({ db: f.db, pubsub: f.pubsub, gateway }, f.org.id)).toBe(0);
+    expect(await notices(f, f.owner.id, f.agent.id)).toEqual([]);
+    expect(await deliveryRow(f, f.owner.id)).toMatchObject({ agentId: caio?.id, armedAt: null, firedAt: null });
+  });
+
+  test("one that fails to fire is said and waits for the next look; the others of its workspace still fire", async () => {
+    f = await setup();
+    const caio = await addUser(f.db, "caio");
+    await f.db.transaction((tx) => joinOrganization(tx, f.org.id, caio.id, "member"));
+    await keepFirstDelivery(f.db, { orgId: f.org.id, userId: f.owner.id, agentId: f.agent.id, ...ARMED });
+    await keepFirstDelivery(f.db, { orgId: f.org.id, userId: caio.id, agentId: f.agent.id, ...ARMED });
+    // The first one's notice can't be delivered: its transaction fails.
+    let failing = true;
+    const db = new Proxy(f.db, {
+      get(target, key) {
+        if (key === "transaction" && failing) {
+          failing = false;
+          return () => Promise.reject(new Error("the notice could not be delivered"));
+        }
+        const value = Reflect.get(target, key, target);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    const warned: string[] = [];
+    const log = { warn: (message: string) => void warned.push(message) };
+    expect(await fireFirstDeliveries({ db, pubsub: f.pubsub, gateway: f.gateway, log }, f.org.id)).toBe(1);
+    expect(warned).toEqual(["first delivery failed to fire"]);
+    const fired = async () => (await f.db.select().from(schema.firstDeliveries)).filter((r) => r.firedAt).length;
+    expect(await fired()).toBe(1);
+    expect(await fireFirstDeliveries(fireDeps(f), f.org.id)).toBe(1);
+    expect(await fired()).toBe(2);
+  });
+
+  test("a pick from the person's own AI: its run answers for them, relayed (ADR 0250)", async () => {
+    f = await setup();
+    await keepFirstDelivery(f.db, {
+      orgId: f.org.id,
+      userId: f.owner.id,
+      agentId: f.agent.id,
+      area: "ask",
+      task: "A lista de quem está atrasado",
+      armed: true,
+    });
+    expect(await fireFirstDeliveries(fireDeps(f), f.org.id)).toBe(1);
+    const [notice] = await notices(f, f.owner.id, f.agent.id);
+    if (!notice) throw new Error("no notice");
+    expect((notice.meta.notice as { refs: Record<string, string> }).refs).toEqual({
+      personId: f.owner.id,
+      relayed: "1",
+    });
+    const [run] = await f.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.triggerMessageId, notice.id));
+    expect(await runAuthorityById(f.db, f.org.id, run?.id as string)).toEqual({
+      kind: "person",
+      personId: f.owner.id,
+      relayed: true,
+    });
+  });
+
   test("the sweep: drops one that waited past 30 days, queues one look per workspace and window", async () => {
     f = await setup();
     const now = new Date();

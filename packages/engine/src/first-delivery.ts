@@ -32,6 +32,10 @@ const { agents, firstDeliveries, organizations, routines, users } = schema;
 
 /** The onboarding's areas are a word ("support", "life"); `ask` is a pick from the person's own AI's proposal. */
 export const FIRST_DELIVERY_AREA_MAX = 40;
+/** The area of a first agent picked from what the person's own AI proposed (`pickFirstAgent`). */
+export const ASK_AREA = "ask";
+/** The area of a first agent the person brought from another app on the onboarding (`adoptFirstAgent`). */
+export const IMPORT_AREA = "import";
 /** What it does first, as the onboarding wrote it. */
 export const FIRST_DELIVERY_TASK_MAX = 500;
 /** A delivery that never could fire (no plan, no AI) stops waiting after this. */
@@ -54,6 +58,8 @@ export interface FirstDeliveryDeps extends Partial<Pick<AiStatusDeps, "machines"
   db: Database;
   pubsub?: PubSub;
   gateway: AiStatusDeps["gateway"];
+  /** Where a delivery that failed to fire is said, so the others of its workspace still fire. */
+  log?: { warn(message: string, data?: Record<string, unknown>): void };
 }
 
 type Row = typeof firstDeliveries.$inferSelect;
@@ -249,7 +255,12 @@ export async function fireFirstDeliveries(deps: FirstDeliveryDeps, orgId: string
       await db.delete(firstDeliveries).where(and(eq(firstDeliveries.id, row.id), isNull(firstDeliveries.firedAt)));
       continue;
     }
-    if (await fireOne(deps, row)) fired++;
+    // One that fails (its DM, its notice) is said and waits for the next look: the others here still fire.
+    try {
+      if (await fireOne(deps, row)) fired++;
+    } catch (error) {
+      deps.log?.warn("first delivery failed to fire", { orgId, deliveryId: row.id, error: String(error) });
+    }
   }
   return fired;
 }
@@ -294,13 +305,27 @@ async function fireOne(deps: FirstDeliveryDeps, row: Row): Promise<boolean> {
           }
         : null,
     }),
-    refs: { personId: userId, ...(routine ? { routineId: routine.id } : {}) },
+    refs: {
+      personId: userId,
+      ...(routine ? { routineId: routine.id } : {}),
+      // Its task and routine came from what the person's own AI proposed, not typed by them in our apps (ADR 0250):
+      // the run answers for them, but what it read there teaches and grants nothing.
+      ...(row.area === ASK_AREA ? { relayed: "1" } : {}),
+    },
   };
   const delivered = await db.transaction(async (tx) => {
+    // Still this agent's, still armed: a new agent that took its place a moment ago (disarmed) never fires as this one.
     const [claimed] = await tx
       .update(firstDeliveries)
       .set({ firedAt: new Date() })
-      .where(and(eq(firstDeliveries.id, row.id), isNull(firstDeliveries.firedAt)))
+      .where(
+        and(
+          eq(firstDeliveries.id, row.id),
+          isNull(firstDeliveries.firedAt),
+          eq(firstDeliveries.agentId, agentId),
+          isNotNull(firstDeliveries.armedAt),
+        ),
+      )
       .returning({ id: firstDeliveries.id });
     if (!claimed) return null;
     const dm = await openPersonAgentDm(tx, orgId, userId, agentId);
