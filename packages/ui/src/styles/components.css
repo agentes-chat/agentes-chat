@@ -10995,6 +10995,10 @@ html:not([data-pointer]) .ac-filter__option:focus-visible {
   display: flex;
   justify-content: center;
 }
+/* A computer stands on the team's ground line: its canvas keeps empty rows under the drawing (`--art-bottom`). */
+.ac-place__subject > .ac-computer {
+  margin-bottom: calc(-1 * var(--art-bottom, 0px));
+}
 @media (prefers-reduced-motion: no-preference) {
   .ac-place__subject {
     animation: ac-place-in 0.32s var(--out) both;
