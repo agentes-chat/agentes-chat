@@ -61,6 +61,7 @@ describe("You in a personal workspace", () => {
     };
     expect(list("PERSONAL_WORK")).toEqual([
       "routines",
+      "calendar",
       "drive",
       "issues",
       "code",
@@ -78,6 +79,7 @@ describe("You in a personal workspace", () => {
       "issues",
       "proposals",
       "routines",
+      "calendar",
       "connectors",
       "skills",
       "code",

@@ -37,7 +37,7 @@ import { teamArrivals } from "../right-hand/team-arrivals";
 import { FirstUse } from "../shared/FirstUse";
 import { useDirectory, useMeId, useOrgId, usePullRefresh } from "../shared/hooks";
 import { pickOne } from "../shared/PickerSheet";
-import { Tile } from "../shared/parts";
+import { ChannelTile } from "../shared/parts";
 import { useActiveWork, useHiddenAgents, useWorkingNow } from "../shared/queries";
 import { SheetHostProvider } from "../shared/SheetHost";
 import { useTabHeader } from "../shared/tabHeader";
@@ -456,7 +456,6 @@ function Home() {
                       <CollapsibleSection
                         key={section.key}
                         title={sectionTitle(section)}
-                        count={section.rows.length}
                         {...(section.group
                           ? {
                               // Closed, a section keeps what calls on me in sight, and one count for its channels.
@@ -480,7 +479,6 @@ function Home() {
               {view === "sectors" ? null : (
                 <CollapsibleSection
                   title={t("mobile.chats.recent")}
-                  count={recent.length}
                   collapsed={collapsed.includes("recent")}
                   onToggle={() => toggle("recent")}
                 >
@@ -526,7 +524,6 @@ function Home() {
       {others.length > 0 ? (
         <CollapsibleSection
           title={t(modeKey(org, "shell.otherChannels"))}
-          count={others.length}
           collapsed={collapsed.includes("otherChannels")}
           onToggle={() => toggle("otherChannels")}
         >
@@ -535,7 +532,7 @@ function Home() {
             <ListRow
               key={o.id}
               divider={i > 0}
-              leading={<Tile icon="lock" size={LIST_AVATAR} />}
+              leading={<ChannelTile icon="lock" size={LIST_AVATAR} />}
               title={`#${o.name}`}
               {...(o.topic ? { sub: o.topic, subLines: 1 } : {})}
               chevron

@@ -20,6 +20,7 @@ import {
   SideScroll,
   SkeletonList,
   Text,
+  useFontScale,
   useTheme,
 } from "@/ui";
 import { CoverParallax, useCoverScroll } from "@/ui/cover";
@@ -42,6 +43,8 @@ const SKY = 300;
 const MARK = 100;
 /** One column of the facts that slide sideways. */
 const FACT = 108;
+/** The height of a fact's icon or number at the default text size; it grows with the text. */
+const FACT_VALUE = 26;
 
 /**
  * A service of the catalog on a page of its own, pushed from its row in Conectores (or a category's, a search's, its
@@ -319,6 +322,8 @@ function Fact({
   divider?: boolean;
 }) {
   const { colors: c } = useTheme();
+  // The number grows with the text size: its box with it, so it never runs over the caption above or below.
+  const valueHeight = FACT_VALUE * useFontScale();
   return (
     <View
       style={[styles.fact, divider && [styles.factLine, { borderLeftColor: c.separator }]]}
@@ -328,7 +333,7 @@ function Fact({
       <Text variant="caption" tone="faint" numberOfLines={1}>
         {label}
       </Text>
-      <View style={styles.factValue}>
+      <View style={[styles.factValue, { height: valueHeight }]}>
         {value ? (
           <Text variant="title2" tone="muted">
             {value}
@@ -369,7 +374,7 @@ const styles = StyleSheet.create({
   },
   fact: { width: FACT, alignItems: "center", gap: 3, paddingHorizontal: 4 },
   factLine: { borderLeftWidth: StyleSheet.hairlineWidth },
-  factValue: { height: 26, alignItems: "center", justifyContent: "center" },
+  factValue: { alignItems: "center", justifyContent: "center" },
   // The grouped lists at the screen's sides, under the strip.
   groups: { paddingHorizontal: 16, paddingTop: 10 },
 });

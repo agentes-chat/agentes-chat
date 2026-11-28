@@ -117,6 +117,8 @@
     "directChat": "Obrolan langsung"
   },
   "approval": {
+    "cancelAheadTitle": "Batalkan tindakan terjadwal ini?",
+    "cancelAheadText": "Tindakan ini tidak berjalan pada waktunya. Untuk melakukannya nanti, setujui lagi saat agen memintanya.",
     "asksIn": "meminta persetujuanmu · #{{channel}}",
     "asksYou": "meminta persetujuanmu",
     "expiresIn_other": "berakhir dalam {{count}} mnt",
@@ -323,12 +325,16 @@
     "recording": "Merekam",
     "discard": "Hapus",
     "send": "Kirim",
-    "seeAll": "Lihat selengkapnya"
+    "seeAll": "Lihat selengkapnya",
+    "nowPlaying": "Pesan suara",
+    "nowPlayingFile": "Audio"
   },
   "chat": {
+    "followUpCancelTitle": "Batalkan tindak lanjut {{name}} {{when}}?",
     "someone": "Seseorang",
     "handedTo": "Diserahkan ke {{name}}",
     "handedTo_female": "Diserahkan ke {{name}}",
+    "inBackground": "Di latar belakang",
     "pairAsked": "{{from}} bertanya",
     "messageTo": "Kirim pesan ke {{name}}",
     "messageIn": "Kirim pesan di {{channel}}",
@@ -1287,7 +1293,9 @@
       "priority": "Prioritas",
       "assignee": "Siapa yang mengerjakan",
       "cancel": "Batalkan tugas",
-      "canceled": "#{{number}} dibatalkan"
+      "canceled": "#{{number}} dibatalkan",
+      "cancelTitle": "Batalkan tugas #{{number}}?",
+      "cancelText": "Tugas ini keluar dari tugas yang terbuka. Kamu bisa membukanya lagi nanti."
     },
     "nobody": "Tidak ada",
     "you": "Kamu",
@@ -1420,7 +1428,40 @@
       "lastDay": "Hari terakhir"
     }
   },
+  "calendar": {
+    "proposalBy": "Usulan {{name}}",
+    "confirm": "Konfirmasi",
+    "due": "tenggat",
+    "allDay": "sepanjang hari",
+    "until": "sampai {{time}}",
+    "nothingThatDay": "Tidak ada jadwal.",
+    "after": "Setelahnya",
+    "showWeek": "Tampilkan minggu saja",
+    "showMonth": "Tampilkan bulan",
+    "day": "Hari",
+    "time": "Waktu",
+    "repeats": "Berulang",
+    "going": "Kamu ikut?",
+    "participantsCount": "Peserta · {{count}}",
+    "timeRange": "{{from}} sampai {{to}}",
+    "dayRange": "{{from}} sampai {{to}}",
+    "noAnswer": "belum menjawab",
+    "agentPrepares": "Menyiapkan ringkasan sebelumnya",
+    "task": "Tugas",
+    "conversation": "Percakapan",
+    "deleteEvent": "Hapus acara",
+    "deleteAsk": "Hapus acara ini?",
+    "starts": "Mulai",
+    "ends": "Selesai",
+    "noRepeat": "Tidak berulang",
+    "addPeople": "Tambah orang atau agen"
+  },
   "coding": {
+    "removeTitle": "Keluarkan {{name}} dari sesi?",
+    "removeText": "Dia tidak lagi melihat sesi dan percakapannya. Untuk memanggilnya lagi, ketik @ dan namanya di percakapan.",
+    "removeConfirm": "Keluarkan dari sesi",
+    "leaveTitle": "Keluar dari sesi?",
+    "leaveText": "Sesi ini hilang dari daftarmu. Untuk kembali, seseorang di sesi harus memanggilmu.",
     "pill": "{{who}}. Lihat kodenya",
     "seeChanges": "Lihat perubahannya",
     "project": "Proyek",
@@ -1445,8 +1486,22 @@
   "taskManager": {
     "loadFailed": "Tidak bisa memuat tugas.",
     "gone": "Tugas ini sudah tidak ada di sini.",
-    "quiet": "Tidak ada yang berjalan",
-    "doneToday_other": "{{count}} selesai hari ini",
+    "title": "Sedang berjalan",
+    "sections": {
+      "you": "Menunggu kamu",
+      "working": "Bekerja",
+      "later": "Nanti"
+    },
+    "computerBusy": "{{name}} sedang dipakai.",
+    "wantsOk": "Menunggu persetujuanmu",
+    "asked": "Mengajukan pertanyaan untukmu",
+    "routine": "Rutinitas",
+    "asks": "Yang diminta {{name}}",
+    "approveNote": "{{name}} lanjut begitu kamu menyetujui.",
+    "answer": "Jawab di percakapan",
+    "progress": "Kemajuan",
+    "allSteps_other": "Lihat semua {{count}} langkah",
+    "stopAll_other": "Hentikan semua {{count}} tugas",
     "request": "Permintaan",
     "stopTitle": "Hentikan “{{title}}”?",
     "stopBody": "{{name}} berhenti sekarang dan memberi tahu percakapan apa yang sudah dikerjakan sejauh ini."
@@ -1859,6 +1914,8 @@
       "name": "Nama",
       "renamed": "Nama diganti menjadi {{name}}",
       "stop": "Hentikan {{name}}",
+      "stopTitle": "Hentikan {{name}} di {{device}}?",
+      "stopText": "Yang sedang berjalan di sana berhenti sekarang. Kamu bisa meminta lagi nanti.",
       "stopped": "{{device}} sudah dilepas oleh {{name}}",
       "forget": "Lupakan ponsel ini",
       "forgetTitle": "Lupakan {{name}}?",
@@ -2012,7 +2069,8 @@
       "allowOnce": "Izinkan sekali",
       "always": "Selalu izinkan {{name}}",
       "no": "Tidak",
-      "stop": "Hentikan"
+      "stop": "Hentikan",
+      "stopTitle": "Hentikan penggunaan {{device}}?"
     },
     "wait": {
       "waiting": "Menunggu {{device}}",
@@ -2211,6 +2269,8 @@
     "failed": "Tidak bisa menyimpan. Coba lagi."
   },
   "ai": {
+    "dontRunTitle": "Jangan jalankan permintaan ini?",
+    "dontRunText": "Permintaan dibatalkan dan tidak berjalan saat batasnya kembali.",
     "yourPlan": "Paket AI-mu",
     "plansSub": "Claude, ChatGPT, Gemini, GLM, dan lainnya",
     "plansFoot": "Agen berpikir dengan paketmu, tanpa perlu kunci API. Paket masuk di komputer agen.",

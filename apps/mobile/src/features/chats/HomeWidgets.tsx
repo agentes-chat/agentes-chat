@@ -59,7 +59,7 @@ export const HomeWidgets = memo(function HomeWidgets({
   const add = () => router.push(newWidgetHref(home.chosenId ?? HOME));
   // A section of Conversas like the others: its header hides the widgets (remembered on this phone) and shows them.
   return (
-    <CollapsibleSection title={title} count={widgets.length} collapsed={collapsed} onToggle={onToggle}>
+    <CollapsibleSection title={title} collapsed={collapsed} onToggle={onToggle}>
       {widgets.length > 0 || !canAdd ? (
         <SideScroll snapToOffsets={stripStops(widgets)} decelerationRate="fast" contentContainerStyle={styles.strip}>
           {widgets.map((w) => (

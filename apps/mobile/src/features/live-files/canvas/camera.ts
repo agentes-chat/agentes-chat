@@ -77,8 +77,11 @@ export const panBy = (cam: Cam, dx: number, dy: number): Cam => {
 };
 
 /** The camera that shows `box` whole in the middle of the plane, `pad` around it, never closer than `maxZoom`. */
-export const fitCam = (box: WBox, frame: Frame, pad = FIT_PAD, maxZoom = 1): Cam => {
+export const fitCam = (box: WBox, frame: Frame, padding?: number, maxZoom = 1): Cam => {
   "worklet";
+  // A default naming a constant is set in the body: on the UI thread a default is read before the worklet's captured
+  // values, where the constant doesn't exist.
+  const pad = padding ?? FIT_PAD;
   const roomW = Math.max(1, frame.width - 2 * pad);
   const roomH = Math.max(1, frame.height - 2 * pad);
   const s = clampZoom(Math.min(maxZoom, roomW / Math.max(box.w, 1), roomH / Math.max(box.h, 1)));
@@ -209,11 +212,12 @@ export const overlaps = (a: WBox, b: WBox) => {
 export const HANDLE_REACH = 28;
 
 /** Whether a finger at `p` (points) is on the corner handle of `box` (world). */
-export const onHandle = (p: Pt, box: WBox | null, cam: Cam, reach = HANDLE_REACH) => {
+export const onHandle = (p: Pt, box: WBox | null, cam: Cam, reach?: number) => {
   "worklet";
   if (!box) return false;
   const r = boxOnScreen(box, cam);
-  return Math.hypot(p.x - (r.x + r.w), p.y - (r.y + r.h)) <= reach;
+  // The default in the body (see `fitCam`).
+  return Math.hypot(p.x - (r.x + r.w), p.y - (r.y + r.h)) <= (reach ?? HANDLE_REACH);
 };
 
 /** Whether a finger at `p` (points) is inside any of the boxes (world), each grown to a finger's reach on screen. */

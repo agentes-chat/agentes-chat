@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 16,
-    borderBottomLeftRadius: 4,
+    borderTopLeftRadius: 4,
   },
   loading: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14 },
   sky: { position: "absolute", top: 0, left: 0, right: 0, height: 8, opacity: 0.7 },
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
   options: { gap: 6, padding: 14, paddingTop: 10 },
   sending: { opacity: 0.6 },
   // A MediaRow in its plate: the letter in the face's place, what the option adds under its line at the row's width.
-  option: { borderWidth: 1, borderRadius: 12, borderBottomLeftRadius: 4 },
+  option: { borderWidth: 1, borderRadius: 12, borderTopLeftRadius: 4 },
   optionIn: { minHeight: 52, paddingHorizontal: 12, paddingVertical: 12 },
   letter: {
     alignItems: "center",
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     height: MEDIA_ROW.row.face,
     borderWidth: 1,
     borderRadius: 8,
-    borderBottomLeftRadius: 3,
+    borderTopLeftRadius: 3,
   },
   summary: { gap: 4 },
   // A long written answer wraps under the letter's top; one line sits on its middle.

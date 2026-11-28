@@ -40,7 +40,7 @@ export interface WaitingCardProps {
 
 /**
  * One thing waiting on you, as Atividade and an agent's profile show it, read as the chat's request
- * card: the card with its cut corner (square bottom left, as the chat's blocks), the asking agent's sky faint across
+ * card: the card with its cut corner (square top left, as the chat's bubbles and blocks), the asking agent's sky faint across
  * the top (gray when no agent asks), its face with the name (15, regular: the request is the card's one bold) and
  * the kind under it (its icon quiet: no "waiting for you" mark, the card itself is the ask) and, at the right, where
  * and when; then the request in words (17 semibold), why in muted, what it goes through on one quiet line, the
@@ -154,13 +154,13 @@ export function WaitingSource({ mark, text }: { mark?: ReactNode; text: string }
   );
 }
 
-/** The cut corner: square-ish bottom left, the rest round (the chat's blocks, the web's cards). */
+/** The cut corner: square-ish top left, the rest round (the conversation's one shape: its bubbles and cards). */
 const RADIUS = 20;
 const CUT = 6;
 
 const styles = StyleSheet.create({
-  card: { borderRadius: RADIUS, borderBottomLeftRadius: CUT },
-  clip: { borderRadius: RADIUS, borderBottomLeftRadius: CUT, overflow: "hidden", paddingBottom: 14 },
+  card: { borderRadius: RADIUS, borderTopLeftRadius: CUT },
+  clip: { borderRadius: RADIUS, borderTopLeftRadius: CUT, overflow: "hidden", paddingBottom: 14 },
   sky: { position: "absolute", top: 0, left: 0, right: 0, height: 56, opacity: 0.5 },
   body: { paddingHorizontal: 16, paddingTop: 14, gap: 8 },
   hd: { flexDirection: "row", alignItems: "center", gap: 12 },

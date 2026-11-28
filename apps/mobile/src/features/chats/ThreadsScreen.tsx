@@ -120,7 +120,6 @@ function ThreadsList({ pushed = false }: { pushed?: boolean }) {
             <CollapsibleSection
               key={s.key}
               title={t(`mobile.threads.section.${s.key}`)}
-              count={s.rows.length}
               collapsed={off}
               onToggle={() => toggle(s.key)}
             >

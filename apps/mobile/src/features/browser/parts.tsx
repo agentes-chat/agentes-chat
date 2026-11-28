@@ -19,17 +19,10 @@ import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { openRefusalKey } from "@agenteschat/client/lib/sites";
 import { type AgentColorName, gradientOf, mixHex } from "@agenteschat/ui/agent/engine";
 import * as Clipboard from "expo-clipboard";
+import { Image } from "expo-image";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Image,
-  type LayoutChangeEvent,
-  type StyleProp,
-  StyleSheet,
-  TextInput,
-  View,
-  type ViewStyle,
-} from "react-native";
+import { type LayoutChangeEvent, type StyleProp, StyleSheet, TextInput, View, type ViewStyle } from "react-native";
 import { GestureDetector, GestureStateManager, type TouchData, useManualGesture } from "react-native-gesture-handler";
 import { useDerivedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
@@ -127,14 +120,19 @@ export function FrameView({
   });
   const onLayout = (e: LayoutChangeEvent) =>
     setView({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height });
+  const picture = browserFrameDataUrl(frame);
   return (
     <GestureDetector gesture={gesture}>
       <View style={styles.frame} onLayout={onLayout} accessible accessibilityLabel={t("mobile.browser.live.page")}>
+        {/* Each frame is shown once and replaced by the next: no cache, no fade, and no recycling key, so the last
+            frame stays up until the next one is decoded (a new picture per frame blanked between them on Android). */}
         <Image
-          source={{ uri: browserFrameDataUrl(frame) ?? undefined }}
+          source={picture ? { uri: picture } : null}
+          cachePolicy="none"
+          contentFit="contain"
+          transition={0}
+          accessible={false}
           style={StyleSheet.absoluteFill}
-          resizeMode="contain"
-          fadeDuration={0}
         />
         {edge === undefined ? null : <PictureEdge radius={edge} />}
         {cursor ? <AgentPointer {...cursor} view={pointerView} /> : null}

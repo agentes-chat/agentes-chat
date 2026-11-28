@@ -129,6 +129,8 @@
     "directChat": "Discussion directe"
   },
   "approval": {
+    "cancelAheadTitle": "Annuler cette action programmée ?",
+    "cancelAheadText": "Elle ne s’exécute pas à l’heure prévue. Pour la faire plus tard, approuvez-la à nouveau quand l’agent le demande.",
     "asksIn": "demande votre approbation · #{{channel}}",
     "asksYou": "demande votre approbation",
     "expiresIn_one": "expire dans {{count}} min",
@@ -343,12 +345,16 @@
     "recording": "Enregistrement",
     "discard": "Supprimer",
     "send": "Envoyer",
-    "seeAll": "Tout voir"
+    "seeAll": "Tout voir",
+    "nowPlaying": "Message vocal",
+    "nowPlayingFile": "Audio"
   },
   "chat": {
+    "followUpCancelTitle": "Annuler le suivi de {{name}} {{when}} ?",
     "someone": "Quelqu'un",
     "handedTo": "Confié à {{name}}",
     "handedTo_female": "Confié à {{name}}",
+    "inBackground": "En arrière-plan",
     "pairAsked": "{{from}} a demandé",
     "messageTo": "Message à {{name}}",
     "messageIn": "Message dans {{channel}}",
@@ -1454,7 +1460,9 @@
       "priority": "Priorité",
       "assignee": "Qui s'en charge",
       "cancel": "Annuler la tâche",
-      "canceled": "#{{number}} annulée"
+      "canceled": "#{{number}} annulée",
+      "cancelTitle": "Annuler la tâche #{{number}} ?",
+      "cancelText": "Elle quitte les tâches ouvertes. Vous pourrez la rouvrir plus tard."
     },
     "nobody": "Personne",
     "you": "Vous",
@@ -1598,7 +1606,40 @@
       "lastDay": "Dernier jour"
     }
   },
+  "calendar": {
+    "proposalBy": "Proposition de {{name}}",
+    "confirm": "Confirmer",
+    "due": "échéance",
+    "allDay": "toute la journée",
+    "until": "jusqu’à {{time}}",
+    "nothingThatDay": "Rien de prévu.",
+    "after": "Ensuite",
+    "showWeek": "Afficher seulement la semaine",
+    "showMonth": "Afficher le mois",
+    "day": "Jour",
+    "time": "Horaire",
+    "repeats": "Se répète",
+    "going": "Vous venez ?",
+    "participantsCount": "Participants · {{count}}",
+    "timeRange": "De {{from}} à {{to}}",
+    "dayRange": "Du {{from}} au {{to}}",
+    "noAnswer": "pas encore répondu",
+    "agentPrepares": "Prépare un résumé avant",
+    "task": "Tâche",
+    "conversation": "Conversation",
+    "deleteEvent": "Supprimer l’événement",
+    "deleteAsk": "Supprimer cet événement ?",
+    "starts": "Début",
+    "ends": "Fin",
+    "noRepeat": "Ne se répète pas",
+    "addPeople": "Ajouter une personne ou un agent"
+  },
   "coding": {
+    "removeTitle": "Retirer {{name}} de la session ?",
+    "removeText": "Cette personne ne voit plus la session ni sa conversation. Pour la rappeler, écrivez @ suivi de son nom dans la conversation.",
+    "removeConfirm": "Retirer de la session",
+    "leaveTitle": "Quitter la session ?",
+    "leaveText": "Elle disparaît de votre liste. Pour revenir, quelqu’un de la session doit vous y inviter.",
     "pill": "{{who}}. Voir le code",
     "seeChanges": "Voir les modifications",
     "project": "Projet",
@@ -1623,9 +1664,26 @@
   "taskManager": {
     "loadFailed": "Impossible de charger les tâches.",
     "gone": "Cette tâche n'est plus là.",
-    "quiet": "Rien en cours",
-    "doneToday_one": "{{count}} terminée aujourd'hui",
-    "doneToday_other": "{{count}} terminées aujourd'hui",
+    "title": "En cours",
+    "sections": {
+      "you": "Vous attend",
+      "working": "En cours de travail",
+      "later": "Plus tard"
+    },
+    "computerBusy": "{{name}} est occupé.",
+    "wantsOk": "Veut votre accord",
+    "asked": "Vous a posé une question",
+    "routine": "Routine",
+    "asks": "Ce que demande {{name}}",
+    "approveNote": "{{name}} continue dès que vous approuvez.",
+    "answer": "Répondre dans la conversation",
+    "progress": "Avancement",
+    "allSteps_one": "Voir l’étape",
+    "allSteps_many": "Voir les {{count}} étapes",
+    "allSteps_other": "Voir les {{count}} étapes",
+    "stopAll_one": "Arrêter la tâche",
+    "stopAll_many": "Arrêter les {{count}} tâches",
+    "stopAll_other": "Arrêter les {{count}} tâches",
     "request": "Demande",
     "stopTitle": "Arrêter « {{title}} » ?",
     "stopBody": "{{name}} s'arrête maintenant et dit dans la conversation ce qui a déjà été fait."
@@ -2064,6 +2122,8 @@
       "name": "Nom",
       "renamed": "Il s'appelle maintenant {{name}}",
       "stop": "Arrêter {{name}}",
+      "stopTitle": "Arrêter {{name}} sur {{device}} ?",
+      "stopText": "Ce qui s’y exécute s’arrête maintenant. Vous pourrez redemander plus tard.",
       "stopped": "{{device}} est revenu de {{name}}",
       "forget": "Oublier ce téléphone",
       "forgetTitle": "Oublier {{name}} ?",
@@ -2217,7 +2277,8 @@
       "allowOnce": "Autoriser une fois",
       "always": "Toujours autoriser {{name}}",
       "no": "Non",
-      "stop": "Arrêter"
+      "stop": "Arrêter",
+      "stopTitle": "Arrêter d’utiliser {{device}} ?"
     },
     "wait": {
       "waiting": "En attente de {{device}}",
@@ -2424,6 +2485,8 @@
     "failed": "Impossible d'enregistrer. Réessayez."
   },
   "ai": {
+    "dontRunTitle": "Ne pas exécuter cette demande ?",
+    "dontRunText": "Elle est annulée et ne s’exécutera pas quand la limite reviendra.",
     "yourPlan": "Votre abonnement IA",
     "plansSub": "Claude, ChatGPT, Gemini, GLM et d'autres",
     "plansFoot": "Les agents réfléchissent avec votre abonnement, sans clé API. Il se connecte sur l'ordinateur de l'agent.",

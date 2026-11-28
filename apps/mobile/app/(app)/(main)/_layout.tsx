@@ -123,9 +123,10 @@ export default function MainStack() {
       ...Object.fromEntries(NEW_AGENT_ROUTES.map((name) => [name, connectAi])),
       // Código: its grouped screens on the gray they draw on, as the steps above (no white flash in a push).
       ...Object.fromEntries(CODING_GROUPED_ROUTES.map((name) => [name, connectAi])),
-      // A message's pictures: pushed (faded in, as a photo opens), black, the viewer's own bars over the picture. A
-      // screen of the stack, so the file's conversation pushes over it and its back comes back to the picture (ADR
-      // 0208); as a modal, whatever was pushed from it opened hidden under it.
+      // Pictures and videos opened from the Drive, a link or a notice (a message's open in the lightbox): pushed,
+      // faded in as a photo opens, black, the viewer's own bars over the picture. A screen of the stack, so the file's
+      // conversation pushes over it and its back comes back to the picture (ADR 0208); as a modal, whatever was pushed
+      // from it opened hidden under it.
       images: {
         ...base,
         animation: "fade",
@@ -162,7 +163,8 @@ export default function MainStack() {
     };
     return ({ route }: { route: { name: string; params?: object } }): NativeStackNavigationOptions => {
       const options = own[route.name] ?? page;
-      return isStill(route.params) ? { ...options, animation: "none" } : options;
+      if (isStill(route.params)) return { ...options, animation: "none" };
+      return options;
     };
   }, [colors, pushed, scrollUnder, side]);
   return (

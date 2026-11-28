@@ -25,7 +25,6 @@ import { Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { isStill, landsOnRoot, STILL_PARAM, withConversationUnder } from "@/features/links/landing";
 import { needsHeaderBlur, pushOnce } from "@/lib/nav";
-import { IconButton } from "./IconButton";
 import { useTheme } from "./theme";
 
 /**
@@ -210,8 +209,8 @@ export function CoverTabStack({ title }: { title: string }) {
 /**
  * A pushed screen (conversation, mission, agent, delete account): native bar, back chevron only, the
  * edge swipe back, the platform's push animation. Opaque by default (lists and composers lay out below
- * it); `PushedHeader` switches a screen to a bar its content scrolls under. On Android the back button is a
- * round plate floating like iOS 26's glass one (the toolbar's own arrow sat bare on the bar).
+ * it); `PushedHeader` switches a screen to a bar its content scrolls under. The back button is each system's own:
+ * iOS's chevron, Android's toolbar arrow (its own room before the title, its own ripple and label).
  */
 export function usePushedOptions(): NativeStackNavigationOptions {
   const { colors, reducedMotion } = useTheme();
@@ -235,20 +234,9 @@ export function usePushedOptions(): NativeStackNavigationOptions {
       // From the right on both platforms (Android's default rises from below); a cross-fade with less motion.
       animation: reducedMotion ? "fade" : "slide_from_right",
       contentStyle: { backgroundColor: colors.bg, ...side },
-      ...plateBack(backTitle),
     }),
     [colors, backTitle, reducedMotion, side],
   );
-}
-
-/** Android's back button: a round plate (the toolbar's own arrow hidden); iOS keeps the system's. */
-function plateBack(label: string): NativeStackNavigationOptions {
-  if (Platform.OS !== "android") return {};
-  return {
-    headerBackVisible: false,
-    headerLeft: ({ canGoBack }) =>
-      canGoBack ? <IconButton icon="back" label={label} plate onPress={() => goBack()} /> : null,
-  };
 }
 
 /**

@@ -4651,7 +4651,8 @@
       "aiHub.audience.roles",
       "aiHub.pickRoles",
       "aiHub.choice.api",
-      "aiHub.audience.rolesCount"
+      "aiHub.audience.rolesCount",
+      "voice.nowPlayingFile"
     ],
     "fr": [
       "devices.os.android",
@@ -4740,6 +4741,10 @@
       "aiHub.orderGroup",
       "aiHub.choice.effort",
       "aiHub.choice.api",
+      "calendar.conversation",
+      "taskManager.routine",
+      "calendar.participantsCount",
+      "voice.nowPlayingFile",
       "chats.view.sections",
       "sections.title"
     ],
@@ -4823,7 +4828,9 @@
       "coding.commit",
       "aiHub.orderGroup",
       "aiHub.limits",
-      "aiHub.choice.api"
+      "aiHub.choice.api",
+      "voice.nowPlayingFile",
+      "taskManager.routine"
     ],
     "it": [
       "devices.status.offline",
@@ -4881,7 +4888,9 @@
       "coding.commit",
       "aiHub.orderGroup",
       "aiHub.choice.account",
-      "aiHub.choice.api"
+      "aiHub.choice.api",
+      "voice.nowPlayingFile",
+      "taskManager.routine"
     ],
     "nl": [
       "devices.status.offline",
@@ -4977,7 +4986,10 @@
       "aiHub.choice.account",
       "aiHub.choice.model",
       "aiHub.choice.api",
-      "aiHub.missionAi"
+      "aiHub.missionAi",
+      "taskManager.sections.later",
+      "taskManager.routine",
+      "voice.nowPlayingFile"
     ],
     "ja": [
       "devices.os.android",
@@ -5066,7 +5078,8 @@
       "aiHub.orderGroup",
       "aiHub.choice.model",
       "aiHub.choice.api",
-      "aiHub.missionAi"
+      "aiHub.missionAi",
+      "voice.nowPlayingFile"
     ],
     "tr": [
       "devices.os.android",
@@ -5126,7 +5139,8 @@
       "aiHub.orderGroup",
       "aiHub.choice.model",
       "aiHub.choice.api",
-      "aiHub.missionAi"
+      "aiHub.missionAi",
+      "voice.nowPlayingFile"
     ],
     "ru": [
       "devices.os.android",

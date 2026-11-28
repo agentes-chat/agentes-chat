@@ -19,7 +19,7 @@ import {
   supervisorOf,
 } from "@agenteschat/client/lib/team-views";
 import { useTranslation } from "react-i18next";
-import { RefreshControl, StyleSheet, useWindowDimensions, View } from "react-native";
+import { RefreshControl, StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
 import {
   Disclosure,
@@ -37,6 +37,7 @@ import {
   weights,
 } from "@/ui";
 import { router } from "@/ui/navigation";
+import { useContentWidth, useReadableSide } from "@/ui/pane";
 import { chatHref } from "../links/logic";
 import { AgentFace, Face } from "../shared/Face";
 import { LoadFailed } from "../shared/FirstUse";
@@ -276,7 +277,8 @@ function OrgChart({
 }) {
   const { t } = useTranslation();
   const c = useColors();
-  const { width } = useWindowDimensions();
+  // The width they lay out in: the readable column on a large screen (ADR 0212), the pane's in a split.
+  const width = useContentWidth() - 2 * useReadableSide();
   const wide = columns.length > 2;
   const column = wide ? SCROLL_COLUMN : Math.floor((width - SCREEN_X * 2 - COLUMN_GAP) / 2);
   const stem = { backgroundColor: c.line2 };
@@ -410,7 +412,8 @@ function ChannelCard({
   const { t } = useTranslation();
   const c = useColors();
   const surface = useSurface();
-  const { width } = useWindowDimensions();
+  // The width they lay out in: the readable column on a large screen (ADR 0212), the pane's in a split.
+  const width = useContentWidth() - 2 * useReadableSide();
   const more = agents.length - CHANNEL_FACES;
   return (
     // A card answers a press as every card of the app: it eases down under the finger (`PressScale`).

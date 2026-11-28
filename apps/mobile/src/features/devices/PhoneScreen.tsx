@@ -170,17 +170,28 @@ export function PhoneScreen({ phoneId }: { phoneId: string }) {
                 icon="stop"
                 label={t("mobile.devices.page.stop", { name: holder.agentName ?? holder.userName ?? "" })}
                 disabled={stop.isPending}
+                // Asked first: what runs on the phone now stops, and can't be taken back.
                 onPress={() =>
-                  stop.mutate(p.id, {
-                    onSuccess: () =>
-                      toast({
-                        title: t("mobile.devices.page.stopped", {
-                          device: p.name,
-                          name: holder.agentName ?? holder.userName ?? "",
-                        }),
-                        icon: "check",
+                  confirmAction({
+                    title: t("mobile.devices.page.stopTitle", {
+                      device: p.name,
+                      name: holder.agentName ?? holder.userName ?? "",
+                    }),
+                    text: t("mobile.devices.page.stopText"),
+                    action: t("taskManager.confirm.stop", { count: 1 }),
+                    cancel: t("common.cancel"),
+                    onConfirm: () =>
+                      stop.mutate(p.id, {
+                        onSuccess: () =>
+                          toast({
+                            title: t("mobile.devices.page.stopped", {
+                              device: p.name,
+                              name: holder.agentName ?? holder.userName ?? "",
+                            }),
+                            icon: "check",
+                          }),
+                        onError: (err) => toast({ title: errorText(t, err), icon: "x" }),
                       }),
-                    onError: (err) => toast({ title: errorText(t, err), icon: "x" }),
                   })
                 }
               />

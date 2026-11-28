@@ -1,10 +1,11 @@
-import { useArtifact } from "@agenteschat/client";
+import { type ArtifactDetail, useArtifact } from "@agenteschat/client";
 import { mediaKindOfArtifact } from "@agenteschat/client/lib/files";
 import { keepWhole } from "@agenteschat/client/lib/format";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import type { VideoPlayer as Player } from "expo-video";
+import type { VideoPlayer as Player, VideoThumbnail } from "expo-video";
 import { type MutableRefObject, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, type LayoutChangeEvent, StyleSheet, useWindowDimensions, View } from "react-native";
@@ -40,10 +41,9 @@ import { FileTalkLine } from "../live-files/talk/TalkLine";
 import { useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import { goBack } from "../shared/parts";
 import { savedAt, useFileActions, useSavedWhen } from "./actions";
-import { decodeFileList, fileInfo, pageStep } from "./logic";
-import { useRemoteFile } from "./source";
-import { ViewerVideo } from "./VideoPlayer";
-import { tellViewerPlace } from "./viewer-place";
+import { decodeFileList, fileInfo, type MediaView, pageStep } from "./logic";
+import { pictureKey, usePicture, useRemoteFile } from "./source";
+import { keptStill, ViewerVideo } from "./VideoPlayer";
 import { PageWait, ZoomPicture } from "./ZoomPicture";
 import { awaySpeed, type PictureTap, pullCloses, pullDirection, pulledPlacement, type Size } from "./zoom";
 
@@ -69,33 +69,30 @@ import { awaySpeed, type PictureTap, pullCloses, pullDirection, pulledPlacement,
 export function ImageViewer({
   files: rawFiles,
   at,
-  from,
   focusId = null,
 }: {
   files: string | string[] | undefined;
   at: string | undefined;
-  /** The stack it opened from, told where the person stops. */
-  from?: string | undefined;
   focusId?: string | null;
 }) {
   return (
     // Gestures get their own root in the modal (the app's sits under it). Toasts need none: the app's draw above any
     // screen, a modal included.
     <GestureHandlerRootView style={styles.screen}>
-      <Viewer rawFiles={rawFiles} at={at} from={from} focusId={focusId} />
+      <Viewer rawFiles={rawFiles} at={at} focusId={focusId} />
     </GestureHandlerRootView>
   );
 }
 
-const WHITE = "#fff";
-const DIM = "rgba(255,255,255,0.6)";
-const PLATE = "rgba(255,255,255,0.14)";
+export const WHITE = "#fff";
+export const DIM = "rgba(255,255,255,0.6)";
+export const PLATE = "rgba(255,255,255,0.14)";
 /** ‹ and ›'s plate: they sit on the picture itself, and a white chevron on a light plate vanishes on a light picture. */
-const SCRIM = "rgba(0,0,0,0.45)";
+export const SCRIM = "rgba(0,0,0,0.45)";
 /** The round buttons over the picture. */
-const ROUND = 44;
+export const ROUND = 44;
 /** The black between two pictures as they slide. */
-const GAP = 20;
+export const GAP = 20;
 /** A pull let go short of closing: back fast from the speed it was let go at, with the slightest bounce (it was thrown). */
 const BACK_SPRING = { stiffness: 700, damping: 50, mass: 1 };
 /** A pull that closes: the picture carries on the way it was going, at the speed it left the finger. */
@@ -106,30 +103,21 @@ const AWAY_SPRING = { stiffness: 180, damping: 26, mass: 1, overshootClamping: t
  */
 const FADE_OUT = { duration: 180, reduceMotion: ReduceMotion.Never };
 /** A video that has played past this (seconds): its line opens the conversation about that moment. */
-const PLAYED_S = 0.5;
+export const PLAYED_S = 0.5;
 
 function Viewer({
   rawFiles,
   at,
-  from,
   focusId,
 }: {
   rawFiles: string | string[] | undefined;
   at: string | undefined;
-  from: string | undefined;
   focusId: string | null;
 }) {
-  const { t } = useTranslation();
   const orgId = useOrgId();
-  const dir = useDirectory();
-  const savedWhen = useSavedWhen();
-  const insets = useSafeAreaInsets();
   const { reducedMotion } = useTheme();
   const { width, height } = useWindowDimensions();
   const screen = useMemo(() => ({ width, height }), [width, height]);
-  // Folded like a book (ADR 0212), the bottom bar's line and actions and the Comment hint keep to the half past the
-  // fold; the picture passes under it, the buttons at the screen's edges stay where they are.
-  const foldSide = useFoldRoom();
   const pager = useRef<PagerView>(null);
   const files = decodeFileList(rawFiles);
   const first = Math.min(Math.max(Number(at) || 0, 0), Math.max(files.length - 1, 0));
@@ -149,17 +137,12 @@ function Viewer({
   const drag = useDerivedValue(() => pullY.value + away.value);
   const current = files[index];
   const detail = useArtifact(orgId, current?.id ?? null, current?.version).data;
-  const actions = useFileActions(detail);
   const closed = useRef(false);
   const close = useCallback(() => {
     if (closed.current) return;
     closed.current = true;
     goBack();
   }, []);
-  const currentId = current?.id;
-  useEffect(() => {
-    if (from && currentId) tellViewerPlace(from, currentId);
-  }, [from, currentId]);
   // The page it is on, kept in its route: a message's line about this picture, tapped in its conversation pushed over
   // it, comes back here rather than opening a second viewer (`fileUnder`).
   const navigation = useNavigation();
@@ -210,21 +193,11 @@ function Viewer({
   // A video's page keeps the bars: its taps are its own controls'.
   const showChrome = useCallback(() => setChrome(true), []);
 
-  const prev = pageStep(index, -1, files.length);
-  const next = pageStep(index, 1, files.length);
   // The side buttons: the pager slides there, as a swipe would.
-  const turn = (to: number | null) => {
-    if (to === null) return;
+  const turn = (to: number) => {
     if (reducedMotion) pager.current?.setPageWithoutAnimation(to);
     else pager.current?.setPage(to);
   };
-
-  const info = detail ? fileInfo(detail) : null;
-  const author = detail ? dir.nameOf(detail.createdBy) : "";
-  const place = files.length > 1 ? t("mobile.files.place", { index: index + 1, count: files.length }) : "";
-  const sub = detail
-    ? [place, author, savedWhen(savedAt(detail))].filter(Boolean).map(keepWhole).join(" · ")
-    : keepWhole(place);
 
   return (
     <View style={styles.screen}>
@@ -253,6 +226,7 @@ function Viewer({
               <Page
                 id={f.id}
                 {...(f.version !== undefined ? { version: f.version } : {})}
+                {...(f.view ? { view: f.view } : {})}
                 screen={screen}
                 bars={bars}
                 active={i === index}
@@ -275,80 +249,19 @@ function Viewer({
         ))}
       </PagerView>
 
-      <Chrome
-        visible={chrome}
+      <ViewerBars
+        detail={detail}
+        index={index}
+        count={files.length}
+        chrome={chrome}
+        zoomed={zoomed}
         drag={drag}
-        style={[styles.top, { paddingTop: insets.top + 8 }]}
-        onHeight={(top) => setBars((b) => (b.top === top ? b : { ...b, top }))}
-      >
-        {/* A shade behind the bar, fading into the picture past it: the name and × read over any picture, and the
-            picture's edge melts into the black above it instead of meeting it in a line. */}
-        <LinearGradient pointerEvents="none" colors={SHADE_DOWN} locations={SHADE_STOPS} style={styles.shadeTop} />
-        {/* × on the left: the file's actions are the row at the bottom, never repeated in a "…" here. */}
-        <Round icon="x" label={t("mobile.common.close")} onPress={close} />
-        {/* The name and its line in the bar's middle, as a pushed screen's title and subtitle: one line each, a long
-            name shortened in its middle so its end (the kind of file) stays. */}
-        <View style={styles.title}>
-          <Text variant="body" style={[styles.bold, { color: WHITE }]} numberOfLines={1} ellipsizeMode="middle">
-            {info?.name ?? ""}
-          </Text>
-          {sub ? (
-            <Text variant="footnote" style={[styles.titleLine, { color: DIM }]} numberOfLines={1}>
-              {sub}
-            </Text>
-          ) : null}
-        </View>
-        {/* A space as wide as the ×, so the title stands in the screen's middle: the conversation's one way in is its
-            line at the bottom (ADR 0208). */}
-        <View pointerEvents="none" style={styles.round} />
-      </Chrome>
-
-      {/* Gone while zoomed, as the swipe is: the fingers move the picture then. */}
-      {files.length > 1 ? (
-        <Chrome visible={chrome && !zoomed} drag={drag} style={[styles.sides, { top: height / 2 - ROUND / 2 }]}>
-          {prev !== null ? (
-            <View style={[styles.side, { left: insets.left + 12 }]}>
-              <Round icon="left" label={t("mobile.files.previous")} plate={SCRIM} onPress={() => turn(prev)} />
-            </View>
-          ) : null}
-          {next !== null ? (
-            <View style={[styles.side, { right: insets.right + 12 }]}>
-              <Round icon="right" label={t("mobile.files.next")} plate={SCRIM} onPress={() => turn(next)} />
-            </View>
-          ) : null}
-        </Chrome>
-      ) : null}
-
-      <Chrome
-        visible={chrome}
-        drag={drag}
-        style={[styles.bottom, { paddingBottom: insets.bottom + 14 }, foldSide ? padPastFold(foldSide, 0) : {}]}
-        onHeight={(bottom) => setBars((b) => (b.bottom === bottom ? b : { ...b, bottom }))}
-      >
-        <LinearGradient pointerEvents="none" colors={SHADE_UP} locations={SHADE_STOPS} style={styles.shadeBottom} />
-        {/* The file's conversation over its actions, as under a live file: a tap pushes it over the viewer. */}
-        {talkFile ? <FileTalkLine file={talkFile} bare onOpen={openLine} /> : null}
-        <View style={styles.actions}>
-          {detail?.inDrive !== false ? (
-            <Action icon="person" label={t("share.button")} disabled={!detail} onPress={actions.shareSheet} />
-          ) : null}
-          <Action
-            icon="share"
-            label={t("mobile.files.sendCopy")}
-            busy={actions.busy === "share"}
-            disabled={!detail}
-            onPress={actions.share}
-          />
-          <Action
-            icon="photos"
-            label={t("mobile.files.savePhotos")}
-            busy={actions.busy === "photos"}
-            disabled={!detail}
-            onPress={actions.savePhotos}
-          />
-          <Action icon="drive" label={t("mobile.files.drive")} disabled={!detail} onPress={actions.drive} />
-        </View>
-      </Chrome>
+        screenHeight={height}
+        onClose={close}
+        onTurn={turn}
+        onLine={openLine}
+        onBars={setBars}
+      />
     </View>
   );
 }
@@ -364,6 +277,7 @@ function Viewer({
 function Page({
   id,
   version,
+  view,
   screen,
   bars,
   active,
@@ -383,6 +297,8 @@ function Page({
 }: {
   id: string;
   version?: number;
+  /** A picture or a video, when the place it opened from knew: drawn at once, before its details load. */
+  view?: MediaView;
   screen: Size;
   bars: { top: number; bottom: number };
   active: boolean;
@@ -406,10 +322,11 @@ function Page({
   const { reducedMotion } = useTheme();
   const artifact = useArtifact(orgId, id, version);
   const info = artifact.data ? fileInfo(artifact.data) : null;
-  // Known once its details load (a picture when they can't).
-  const video = info ? info.view === "video" : artifact.isError ? false : null;
-  // A picture's link is the one the message or the Drive already holds, so it shows at once; a video reads its own.
-  const link = useRemoteFile(orgId, video ? null : id, version);
+  // Known from where it opened, else once its details load (a picture when they can't).
+  const video = info ? info.view === "video" : view ? view === "video" : artifact.isError ? false : null;
+  // A picture as its message drew it: the copy already on the phone, with no link to wait for, else the link the
+  // message or the Drive holds. A video reads its own (`PageVideo`).
+  const picture = usePicture(orgId, video ? null : id, version);
   const [zoomed, setZoomed] = useState(false);
   useEffect(() => {
     if (active && video) onVideo();
@@ -525,9 +442,9 @@ function Page({
             />
           </View>
         </GestureDetector>
-      ) : video === false && link.data ? (
+      ) : video === false && picture.source ? (
         <ZoomPicture
-          source={link.data}
+          source={picture.source}
           cacheKey={key}
           screen={screen}
           pull={pull}
@@ -536,7 +453,8 @@ function Page({
           onTap={tapped}
           onLongPress={active ? held : undefined}
           onZoom={zoomChanged}
-          onRetry={() => void link.refetch()}
+          onRetry={picture.retry}
+          onSourceError={picture.onError}
           overlay={
             shownPins.length > 0 || draft
               ? (zoom) => <PicturePins pins={shownPins} zoom={zoom} draft={draft} />
@@ -547,10 +465,10 @@ function Page({
         <GestureDetector gesture={pull}>
           <View style={screen} collapsable={false}>
             <PageWait
-              failed={link.isError}
-              retrying={link.isFetching}
+              failed={picture.failed}
+              retrying={picture.retrying}
               onRetry={() => {
-                void link.refetch();
+                picture.retry();
                 if (artifact.isError) void artifact.refetch();
               }}
             />
@@ -566,9 +484,10 @@ function Page({
  * (`once`), so the app coming back to the front, or a new link anywhere, never starts it over. One this phone can't
  * play says so (it can still be sent, shared or opened in the Drive below). The frame is the system's player's whole
  * (its taps are its controls'); in sight, it tells the viewer the moment it is at (`videoClock`), which the line of its
- * conversation opens about once it has played (ADR 0208).
+ * conversation opens about once it has played (ADR 0208). In the lightbox, `handed` is what its tile in the message
+ * holds: the cover it showed, and its link while that has life ahead (the player starts from it at once).
  */
-function PageVideo({
+export function PageVideo({
   id,
   version,
   name,
@@ -576,19 +495,27 @@ function PageVideo({
   bars,
   startAt,
   videoClock,
+  handed,
 }: {
   id: string;
-  version?: number;
+  version?: number | undefined;
   name: string;
   active: boolean;
   bars: { top: number; bottom: number };
   /** The moment it starts from (a comment's). */
   startAt: number | undefined;
   videoClock: MutableRefObject<(() => number) | null>;
+  handed?:
+    | { source: { uri: string; headers?: Record<string, string> } | null; frame: VideoThumbnail | null }
+    | undefined;
 }) {
   const { t } = useTranslation();
   const orgId = useOrgId();
-  const link = useRemoteFile(orgId, id, version, { once: true });
+  // The tile's link failed to play: a link of its own instead, before saying it can't play.
+  const [ownLink, setOwnLink] = useState(false);
+  const fromTile = handed?.source && !ownLink ? handed.source : null;
+  // A link of its own only when the tile handed none (opened from the Drive, a link, a notice, or an old link).
+  const link = useRemoteFile(orgId, fromTile ? null : id, version, { once: true });
   // Its player: the moment it is at, read when its conversation opens.
   const player = useRef<Player | null>(null);
   const ownPlayer = useCallback((p: Player | null) => {
@@ -610,7 +537,12 @@ function PageVideo({
     };
   }, [active, videoClock]);
   const [unplayable, setUnplayable] = useState(false);
-  const source = useMemo(() => (link.data ? { uri: link.data.uri, headers: link.data.headers } : null), [link.data]);
+  const source = useMemo(
+    () => fromTile ?? (link.data ? { uri: link.data.uri, headers: link.data.headers } : null),
+    [fromTile, link.data],
+  );
+  // The cover its message showed: it opens on it, never on black, while the player gets ready.
+  const poster = handed?.frame ?? keptStill(pictureKey(id, version));
   return (
     <View style={[styles.videoFrame, { top: bars.top, bottom: bars.bottom }]}>
       {unplayable ? (
@@ -622,23 +554,174 @@ function PageVideo({
         </View>
       ) : source ? (
         <ViewerVideo
-          key={`${id}@${version ?? "latest"}`}
+          key={`${id}@${version ?? "latest"}${fromTile ? "" : ":own"}`}
           source={source}
           name={name}
           active={active}
-          onFailed={() => setUnplayable(true)}
+          onFailed={() => (fromTile ? setOwnLink(true) : setUnplayable(true))}
           startAt={startAt}
           onPlayer={ownPlayer}
+          poster={poster}
         />
       ) : (
-        <PageWait icon="play" failed={link.isError} retrying={link.isFetching} onRetry={() => void link.refetch()} />
+        <>
+          {poster && !link.isError ? (
+            <Image
+              source={poster}
+              contentFit="contain"
+              transition={0}
+              accessible={false}
+              style={StyleSheet.absoluteFill}
+            />
+          ) : null}
+          <PageWait icon="play" failed={link.isError} retrying={link.isFetching} onRetry={() => void link.refetch()} />
+        </>
       )}
     </View>
   );
 }
 
+/**
+ * The viewer's bars over its pictures, the same wherever it opens (its screen, and the lightbox a message's pictures
+ * open in): × with the name and its line on top, ‹ › on the sides (gone while zoomed in, as the swipe is), and at the
+ * bottom the file's conversation line (ADR 0208) over its actions, the file's only ones (no "…" repeating them). They
+ * fade with a tap, and while a picture is pulled (`drag`). `onBars`: how tall the top and bottom bars are (a video sits
+ * between them, its own controls clear of ours). `onDrive`: before "View in Drive" leaves for the Drive.
+ */
+export function ViewerBars({
+  detail,
+  index,
+  count,
+  chrome,
+  zoomed,
+  drag,
+  screenHeight,
+  onClose,
+  onTurn,
+  onLine,
+  onDrive,
+  onBars,
+}: {
+  detail: ArtifactDetail | undefined;
+  index: number;
+  count: number;
+  chrome: boolean;
+  zoomed: boolean;
+  drag: Readonly<SharedValue<number>>;
+  /** The height the viewer has (‹ › stand in its middle). */
+  screenHeight: number;
+  onClose: () => void;
+  onTurn: (to: number) => void;
+  onLine: () => void;
+  onDrive?: (() => void) | undefined;
+  onBars: (update: (bars: { top: number; bottom: number }) => { top: number; bottom: number }) => void;
+}) {
+  const { t } = useTranslation();
+  const dir = useDirectory();
+  const savedWhen = useSavedWhen();
+  const insets = useSafeAreaInsets();
+  // Folded like a book (ADR 0212), the bottom bar's line and actions keep to the half past the fold; the buttons at
+  // the screen's edges stay where they are.
+  const foldSide = useFoldRoom();
+  const actions = useFileActions(detail);
+  const talkFile = mediaKindOfArtifact(detail) ? detail : undefined;
+  const info = detail ? fileInfo(detail) : null;
+  const author = detail ? dir.nameOf(detail.createdBy) : "";
+  const place = count > 1 ? t("mobile.files.place", { index: index + 1, count }) : "";
+  const sub = detail
+    ? [place, author, savedWhen(savedAt(detail))].filter(Boolean).map(keepWhole).join(" · ")
+    : keepWhole(place);
+  const prev = pageStep(index, -1, count);
+  const next = pageStep(index, 1, count);
+  return (
+    <>
+      <Chrome
+        visible={chrome}
+        drag={drag}
+        style={[styles.top, { paddingTop: insets.top + 8 }]}
+        onHeight={(top) => onBars((b) => (b.top === top ? b : { ...b, top }))}
+      >
+        {/* A shade behind the bar, fading into the picture past it: the name and × read over any picture, and the
+            picture's edge melts into the black above it instead of meeting it in a line. */}
+        <LinearGradient pointerEvents="none" colors={SHADE_DOWN} locations={SHADE_STOPS} style={styles.shadeTop} />
+        {/* × on the left: the file's actions are the row at the bottom, never repeated in a "…" here. */}
+        <Round icon="x" label={t("mobile.common.close")} onPress={onClose} />
+        {/* The name and its line in the bar's middle, as a pushed screen's title and subtitle: one line each, a long
+            name shortened in its middle so its end (the kind of file) stays. */}
+        <View style={styles.title}>
+          <Text variant="body" style={[styles.bold, { color: WHITE }]} numberOfLines={1} ellipsizeMode="middle">
+            {info?.name ?? ""}
+          </Text>
+          {sub ? (
+            <Text variant="footnote" style={[styles.titleLine, { color: DIM }]} numberOfLines={1}>
+              {sub}
+            </Text>
+          ) : null}
+        </View>
+        {/* A space as wide as the ×, so the title stands in the screen's middle: the conversation's one way in is its
+            line at the bottom (ADR 0208). */}
+        <View pointerEvents="none" style={styles.round} />
+      </Chrome>
+
+      {count > 1 ? (
+        <Chrome visible={chrome && !zoomed} drag={drag} style={[styles.sides, { top: screenHeight / 2 - ROUND / 2 }]}>
+          {prev !== null ? (
+            <View style={[styles.side, { left: insets.left + 12 }]}>
+              <Round icon="left" label={t("mobile.files.previous")} plate={SCRIM} onPress={() => onTurn(prev)} />
+            </View>
+          ) : null}
+          {next !== null ? (
+            <View style={[styles.side, { right: insets.right + 12 }]}>
+              <Round icon="right" label={t("mobile.files.next")} plate={SCRIM} onPress={() => onTurn(next)} />
+            </View>
+          ) : null}
+        </Chrome>
+      ) : null}
+
+      <Chrome
+        visible={chrome}
+        drag={drag}
+        style={[styles.bottom, { paddingBottom: insets.bottom + 14 }, foldSide ? padPastFold(foldSide, 0) : {}]}
+        onHeight={(bottom) => onBars((b) => (b.bottom === bottom ? b : { ...b, bottom }))}
+      >
+        <LinearGradient pointerEvents="none" colors={SHADE_UP} locations={SHADE_STOPS} style={styles.shadeBottom} />
+        {/* The file's conversation over its actions, as under a live file: a tap pushes it over the viewer. */}
+        {talkFile ? <FileTalkLine file={talkFile} bare onOpen={onLine} /> : null}
+        <View style={styles.actions}>
+          {detail?.inDrive !== false ? (
+            <Action icon="person" label={t("share.button")} disabled={!detail} onPress={actions.shareSheet} />
+          ) : null}
+          <Action
+            icon="share"
+            label={t("mobile.files.sendCopy")}
+            busy={actions.busy === "share"}
+            disabled={!detail}
+            onPress={actions.share}
+          />
+          <Action
+            icon="photos"
+            label={t("mobile.files.savePhotos")}
+            busy={actions.busy === "photos"}
+            disabled={!detail}
+            onPress={actions.savePhotos}
+          />
+          <Action
+            icon="drive"
+            label={t("mobile.files.drive")}
+            disabled={!detail}
+            onPress={() => {
+              onDrive?.();
+              actions.drive();
+            }}
+          />
+        </View>
+      </Chrome>
+    </>
+  );
+}
+
 /** The bars: fade with a tap, and while the picture is dragged away. `onHeight`: how tall the bar is. */
-function Chrome({
+export function Chrome({
   visible,
   drag,
   style,
@@ -670,7 +753,7 @@ function Chrome({
 }
 
 /** A round button over the picture, on its light plate. */
-function Round({
+export function Round({
   icon,
   label,
   onPress,
@@ -699,7 +782,7 @@ function Round({
   );
 }
 
-function Action({
+export function Action({
   icon,
   label,
   onPress,
@@ -734,13 +817,14 @@ function Action({
 }
 
 /** The bars' shade: dark under their words, gone past them (it fades with the bars). */
-const SHADE_DOWN = ["rgba(0,0,0,0.72)", "rgba(0,0,0,0.4)", "rgba(0,0,0,0)"] as const;
-const SHADE_UP = ["rgba(0,0,0,0)", "rgba(0,0,0,0.4)", "rgba(0,0,0,0.78)"] as const;
-const SHADE_STOPS = [0, 0.55, 1] as const;
+export const SHADE_DOWN = ["rgba(0,0,0,0.72)", "rgba(0,0,0,0.4)", "rgba(0,0,0,0)"] as const;
+export const SHADE_UP = ["rgba(0,0,0,0)", "rgba(0,0,0,0.4)", "rgba(0,0,0,0.78)"] as const;
+export const SHADE_STOPS = [0, 0.55, 1] as const;
 /** How far the shade runs past a bar into the picture. */
 const SHADE_PAST = 56;
 
-const styles = StyleSheet.create({
+/** The bars' and the buttons' styles, shared with the lightbox (`Lightbox`). */
+export const viewerStyles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "transparent" },
   black: { backgroundColor: "#000" },
   pager: { flex: 1 },
@@ -777,3 +861,5 @@ const styles = StyleSheet.create({
   actionLabel: { textAlign: "center" },
   circle: { width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center" },
 });
+
+const styles = viewerStyles;

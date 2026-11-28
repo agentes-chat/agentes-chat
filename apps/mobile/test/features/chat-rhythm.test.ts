@@ -65,12 +65,13 @@ describe("one rhythm, the web's numbers (chat-rhythm-css.test.ts holds them to t
 
   test("a card under a message stands the card gap off it, in its row or in one of its own", async () => {
     const row = await read("chat/MessageRow.tsx");
-    expect(row).toContain("cardRow ? rhythm.card : rhythm.part");
-    expect(row).toContain("const cardTop = body || media ? rhythm.card - rhythm.part : 0;");
-    // My row's parts, and someone else's (in bubbles its cards join the bubble, `BUBBLE_JOIN`).
+    // In bubbles the card gap is the parts' own (`cardGap`): every part one gap apart.
+    expect(row).toContain('const cardGap = look.style === "bubbles" ? rhythm.part : rhythm.card;');
+    expect(row).toContain("cardRow ? cardGap : rhythm.part");
+    expect(row).toContain("const cardTop = body || media ? cardGap - rhythm.part : 0;");
+    // My row's parts, and someone else's.
     expect(row.match(/<RowPartContext.Provider value=\{cardTop\}>/g)).toHaveLength(1);
-    expect(row).toContain("<RowParts top={partTop} part={bubblePart} head={bubbleHead}>");
-    expect(row).toContain("const partTop = bubbled && (body || media) ? BUBBLE_JOIN - rhythm.part : cardTop;");
+    expect(row).toContain("<RowParts top={cardTop} part={bubblePart} head={bubbleHead}>");
     for (const file of [
       "chat/asks.tsx",
       "chat/issue-work.tsx",

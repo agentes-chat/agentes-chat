@@ -47,11 +47,17 @@ describe("a voice message's play button", () => {
 });
 
 describe("the long work's line in a message", () => {
-  test('a quiet line under the bubble: its words open the work, a thin rule and "Parar", neutral until pressed', () => {
+  test("the handed work's bubble: its last update in it, a tap opens the work, Stop the round button, asked first", () => {
     const line = src("features/chat/WorkLine.tsx");
     expect(line).not.toContain("BarAction");
     expect(line).toContain("const go = actions.filter((a) => !a.danger).sort((a, b) => a.rank - b.rank)[0];");
-    expect(line).toContain("color: halt.disabled ? c.faint : pressed ? c.danger : c.ink");
+    expect(line).toContain(
+      'const title = h ? t("mobile.chat.handedTo", { name: g.name, context: g.context }) : t("mobile.chat.inBackground");',
+    );
+    expect(line).toContain("const detail = h ? null : (view.question?.text ?? view.update);");
+    // Stopping ends work that can't be taken back: the system's alert asks first.
+    expect(line).toContain("Alert.alert(");
+    expect(line).toContain('t("mobile.taskManager.stopTitle", { title: work.title }),');
     // No brand blue on an action.
     expect(line).not.toContain("c.agent }]}");
     // On a task's screen it stays the screen's card.

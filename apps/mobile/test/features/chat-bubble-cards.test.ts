@@ -7,22 +7,39 @@ const src = (path: string) => readFileSync(join(import.meta.dir, "../../src", pa
 test("in bubbles, the cards under someone else's words are bubbles of that message", () => {
   const row = src("features/chat/MessageRow.tsx");
   expect(row).toContain("const bubblePart = bubbled ? { fill: otherFill, edge: bubbleEdge } : null;");
-  expect(row).toContain("<RowParts top={partTop} part={bubblePart} head={bubbleHead}>");
+  expect(row).toContain("<RowParts top={cardTop} part={bubblePart} head={bubbleHead}>");
   expect(row).toContain("<BubblePartContext.Provider value={part}>");
-  // Three points under the bubble, as a run of bubbles; cards of a message with no words start where it does.
-  expect(row).toContain("const BUBBLE_JOIN = 3;");
-  expect(row).toContain("const partTop = bubbled && (body || media) ? BUBBLE_JOIN - rhythm.part : cardTop;");
+  // One gap between every part of a message (its bubble, a card, its thread, its reactions), as between bubbles:
+  // nothing joins closer, nothing stands further; cards of a message with no words start where it does.
+  expect(row).not.toContain("BUBBLE_JOIN");
+  expect(row).toContain('const cardGap = look.style === "bubbles" ? rhythm.part : rhythm.card;');
+  expect(row).toContain("const cardTop = body || media ? cardGap - rhythm.part : 0;");
+  // The thread's link (and a file's comments, and the agents replying) starts its faces where the words over it do,
+  // in the conversation's shape.
+  const cards = src("features/chat/cards.tsx");
+  expect(cards).toMatch(/tlink: \{[^}]*paddingHorizontal: MESSAGE_CARD_X,[^}]*\}/);
+  expect(cards.match(/style=\{\[styles\.tlinkBox, surface, cardCorners\]\}/g)).toHaveLength(3);
+  // The work's state badge keeps its word whole; the facts after it give way.
+  expect(src("features/shared/StatusBadge.tsx")).toContain("badge: { flexShrink: 0,");
   // Every card on the shared surface takes the bubble's fill and no shadow there.
   const parts = src("features/shared/parts.tsx");
   expect(parts).toMatch(/part\s*\?\s*\{ backgroundColor: part\.fill, \.\.\.part\.edge \}/);
   // The ones outlined elsewhere (its tools, what it changed, a check, a poll, the work it handed) take the one frame
   // of a message's card: the bubble's fill and no outline there (`useMessageCardFrame`, below).
   expect(src("features/chat/Receipts.tsx")).toContain("const frame = [styles.card, card.style];");
-  // The work it handed is a quiet line under the bubble, its mark where the bubble's words start.
-  expect(src("features/chat/WorkLine.tsx")).toContain("quietInBubble: { paddingLeft: 14 },");
-  expect(src("features/shared/bubble-part.ts")).toContain(
-    "export const BUBBLE_PART_CORNERS = corners(RADIUS.sm, RADIUS.xl, RADIUS.xl, RADIUS.sm);",
+  // The agent's own long work is the handed work's bubble too: its state, then its last update under a hairline.
+  expect(src("features/chat/WorkLine.tsx")).toContain("const state = h ?? line.handed();");
+  expect(src("features/chat/WorkLine.tsx")).toContain(
+    "<View style={[styles.handedDetail, { borderTopColor: c.line }]}>",
   );
+  expect(src("features/shared/bubble-part.ts")).toContain("export const BUBBLE_PART_CORNERS = MESSAGE_CARD_CORNERS;");
+  // A voice message in bubbles is said in its bubble: the name over its player, the bubble its only frame.
+  const voiceRow = src("features/chat/MessageRow.tsx");
+  // Its played part in the name's color, as who said it.
+  expect(voiceRow).toContain(
+    "{voiced ? <VoiceMessage message={m} bare {...(nameColor ? { tone: nameColor } : {})} /> : null}",
+  );
+  expect(voiceRow).toContain("{voiceOf(meta) && !voiced ? <VoiceMessage message={m} /> : null}");
 });
 
 test("one frame for every card in a message: the bubble's fill with no outline in bubbles, the bubble's sides", () => {
@@ -108,7 +125,7 @@ test("one hierarchy for the words of every card in a message", () => {
   }
   // Handed work: its title over its state as a status badge (the lists' and the web's), then its facts.
   const work = src("features/chat/WorkLine.tsx");
-  expect(work).toContain("<StatusBadge text={h.state} tone={badgeTone} color={agentColor} />");
+  expect(work).toContain("<StatusBadge text={state.state} tone={badgeTone} color={agentColor} />");
   const quote = src("features/chat/RelayQuote.tsx");
   expect(quote).toContain('<Text variant="small" numberOfLines={1} style={[quote.name, { color: ink }]}>');
   // The waiting card, a thread's link, the tool block's head and the name line's words take the same roles.

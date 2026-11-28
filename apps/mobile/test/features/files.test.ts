@@ -13,12 +13,14 @@ import {
   fileInfo,
   fileRoute,
   isMediaFile,
+  mediaViewOf,
   pageStep,
   resolveDownloadUrl,
   safeFileName,
   shareSource,
   singleImageBox,
   singleImageHeight,
+  stillAt,
   utf8Bytes,
   videoBox,
   videoClock,
@@ -234,8 +236,70 @@ describe("viewer", () => {
   test("the route's file list round-trips and drops junk", () => {
     const list = [{ id: "a-1", version: 2 }, { id: "b_2" }];
     expect(decodeFileList(encodeFileList(list))).toEqual(list);
+    // A picture or a video, when the place knew: the page draws it before its details load.
+    const known = [
+      { id: "a-1", version: 2, view: "video" as const },
+      { id: "b_2", view: "image" as const },
+    ];
+    expect(encodeFileList(known)).toBe("a-1@2~v,b_2~i");
+    expect(decodeFileList(encodeFileList(known))).toEqual(known);
+    expect(decodeFileList("a@2~x,b~v")).toEqual([
+      { id: "a", version: 2 },
+      { id: "b", view: "video" },
+    ]);
     expect(decodeFileList("a@0,../x,b@x,c@3")).toEqual([{ id: "a" }, { id: "b" }, { id: "c", version: 3 }]);
     expect(decodeFileList(undefined)).toEqual([]);
+  });
+
+  test("a video's cover is a moment into it, never its first frame (often black), and opens the viewer on it", () => {
+    expect([stillAt(0), stillAt(10), stillAt(600)]).toEqual([0, 2, 2]);
+    expect(stillAt(3)).toBeCloseTo(0.6, 9);
+    expect(mediaViewOf({ id: "a", title: "clip.MOV" })).toBe("video");
+    expect(mediaViewOf({ id: "a", title: "foto.heic" })).toBe("image");
+    expect(mediaViewOf({ id: "a", title: "Plano" })).toBeUndefined();
+    const viewer = src("features/files/ImageViewer.tsx");
+    // A picture from the copy already on the phone (no link to wait for); a video on the cover its message showed.
+    expect(viewer).toContain("const picture = usePicture(orgId, video ? null : id, version);");
+    // In the lightbox, its tile's cover and link (while it has life ahead), before anything kept from before.
+    expect(viewer).toContain("const poster = handed?.frame ?? keptStill(pictureKey(id, version));");
+    expect(src("features/lightbox/Lightbox.tsx")).toContain("source: freshLink(tile?.video, Date.now()),");
+    expect(viewer).toContain("const link = useRemoteFile(orgId, fromTile ? null : id, version, { once: true });");
+    expect(viewer).toContain("onFailed={() => (fromTile ? setOwnLink(true) : setUnplayable(true))}");
+    expect(viewer).toContain(
+      'const video = info ? info.view === "video" : view ? view === "video" : artifact.isError ? false : null;',
+    );
+    const player = src("features/files/VideoPlayer.tsx");
+    expect(player).toContain("onFirstFrameRender={() => setDrawn(true)}");
+    // Drawn already in its message: no fade in the viewer.
+    expect(src("features/files/ZoomPicture.tsx")).toContain("transition={pictureFade(cacheKey)}");
+  });
+
+  test("a message's picture or video opens in the lightbox, growing out of its tile, with no route and no system zoom", () => {
+    const message = src("features/files/MessageFiles.tsx");
+    expect(message).toContain("onPress={() => openMedia(opens, siblings)}");
+    expect(message).toContain("<Animated.View ref={tileRef} style={StyleSheet.absoluteFill} collapsable={false}>");
+    const player = src("features/files/VideoPlayer.tsx");
+    expect(player).toContain("onPress={opens ? () => openMedia(opens.file, opens.siblings) : undefined}");
+    expect(player).toContain("video: { ...source, readAt: linkReadAt },");
+    // The cover over the player never stays once it plays.
+    expect(player).toContain("const COVER_MAX_MS = 1500;");
+    expect(player).toContain(
+      'reportError(new Error("A video played with no frame drawn"), { where: "video.noFrame" });',
+    );
+    // The system's zoom and the hand-off on the touch are gone with the route they opened.
+    for (const file of [
+      message,
+      player,
+      src("features/files/ImageViewer.tsx"),
+      src("../app/(app)/(main)/_layout.tsx"),
+    ]) {
+      expect(file).not.toContain("MediaLink");
+      expect(file).not.toContain("ZoomTarget");
+      expect(file).not.toContain("handVideo");
+    }
+    // Mounted over the app's screens, and in the sheet that shows the agents' conversations (it presents over them).
+    expect(src("../app/(app)/_layout.tsx")).toContain("<Lightbox />");
+    expect(src("features/chat/ConsultationScreen.tsx")).toContain("<Lightbox />");
   });
 
   test("‹ › go one picture at a time and never round past the first or the last", () => {
@@ -248,15 +312,13 @@ describe("viewer", () => {
 
   test("several pictures: 2 de 4 in the head, ‹ › on the sides (gone while zoomed) slide the pager as a swipe", () => {
     const viewer = src("features/files/ImageViewer.tsx");
-    expect(viewer).toContain(
-      'files.length > 1 ? t("mobile.files.place", { index: index + 1, count: files.length }) : ""',
-    );
+    expect(viewer).toContain('count > 1 ? t("mobile.files.place", { index: index + 1, count }) : ""');
     expect(viewer).toContain("[place, author, savedWhen(savedAt(detail))].filter(Boolean)");
     expect(viewer).toContain(
-      '<Round icon="left" label={t("mobile.files.previous")} plate={SCRIM} onPress={() => turn(prev)} />',
+      '<Round icon="left" label={t("mobile.files.previous")} plate={SCRIM} onPress={() => onTurn(prev)} />',
     );
     expect(viewer).toContain(
-      '<Round icon="right" label={t("mobile.files.next")} plate={SCRIM} onPress={() => turn(next)} />',
+      '<Round icon="right" label={t("mobile.files.next")} plate={SCRIM} onPress={() => onTurn(next)} />',
     );
     // Gone while zoomed.
     expect(viewer).toContain("visible={chrome && !zoomed}");
@@ -361,14 +423,15 @@ describe("viewer", () => {
       { id: "p2", title: "b.png", detail: { ...png, shownVersion: 3, version: 3 } },
       { id: "v1", version: 2, title: "c.mp4" },
     ];
-    expect(fileRoute(media[2] ?? { id: "" }, media, "deck")).toEqual({
+    expect(fileRoute(media[2] ?? { id: "" }, media)).toEqual({
       pathname: "/images",
-      params: { files: "p1@1,p2@3,v1@2", at: "2", from: "deck" },
+      // Each says what it is, by its details or its name: its page draws it at once.
+      params: { files: "p1@1~i,p2@3~i,v1@2~v", at: "2" },
     });
     // Alone (or not among the neighbours given), it opens by itself; a file that isn't one goes to the file screen.
     expect(fileRoute({ id: "x", title: "y.jpg" }, media)).toEqual({
       pathname: "/images",
-      params: { files: "x", at: "0" },
+      params: { files: "x~i", at: "0" },
     });
     expect(fileRoute({ id: "d", title: "Plano", kind: "document" }, media)).toEqual({
       pathname: "/document/[id]",
@@ -390,8 +453,9 @@ describe("viewer", () => {
       "features/agents/AgentProfileScreen.tsx",
     ]) {
       const source = src(file);
-      // `openFile`, or `useOpenFile` where only a name is known (its details come first when the name says nothing).
-      const opens = source.includes("openFile(") || source.includes("useOpenFile(");
+      // `openFile`, or `useOpenFile` where only a name is known (its details come first when the name says nothing),
+      // or a message's pictures and videos in the lightbox (`openMedia`, the viewer's screen when none is mounted).
+      const opens = source.includes("openFile(") || source.includes("useOpenFile(") || source.includes("openMedia(");
       expect({ file, opens }).toEqual({ file, opens: true });
       expect({ file, own: /pathname: "\/(images|file\/\[id\])"/.test(source) }).toEqual({ file, own: false });
     }
@@ -400,8 +464,10 @@ describe("viewer", () => {
     expect(src("features/files/MessageFiles.tsx")).toContain(
       "(tiles.length > 0 ? [...videos, ...images] : [...pictures, ...videos])",
     );
-    // The viewer tells a deck the file the person stopped at; a video beside its pictures leaves it as it was.
-    expect(src("features/files/ImageViewer.tsx")).toContain("tellViewerPlace(from, currentId)");
+    // The lightbox tells a deck the file the person paged to; a video beside its pictures leaves it as it was.
+    expect(src("features/files/ImageStack.tsx")).toContain(
+      "if (tapped) openMedia(tapped, siblings ?? deck, bringOnTop);",
+    );
     expect(src("features/files/ImageStack.tsx")).toContain("if (at < 0) return;");
   });
 
@@ -572,7 +638,9 @@ describe("viewer", () => {
     );
     // Only the button takes a touch: the rest of the page keeps the pull.
     expect(zoom).toContain('pointerEvents="box-none"');
-    expect(zoom).toContain("{pixels ? null : <PageWait failed={failed} onRetry={retry} />}");
+    // The spinner only once a picture keeps it waiting (one on the phone draws before it would flash).
+    expect(zoom).toContain("{pixels || !(failed || slow) ? null : <PageWait failed={failed} onRetry={retry} />}");
+    expect(zoom).toContain("const WAIT_SHOWN_MS = 350;");
   });
 
   test("a video and a PDF read their file once: the app coming back or a new link never starts them over", () => {
@@ -582,8 +650,10 @@ describe("viewer", () => {
     expect(source).toContain("refetchOnReconnect: false,");
     expect(source).toContain('queryKey: once ? [...shared, "once", view] : shared,');
     const viewer = src("features/files/ImageViewer.tsx");
-    expect(viewer).toContain("useRemoteFile(orgId, id, version, { once: true })");
-    expect(viewer).toMatch(/key=\{`\$\{id\}@\$\{version \?\? "latest"\}`\}/);
+    // Its own link once, unless its tile handed one (`handoff.ts`).
+    expect(viewer).toContain("useRemoteFile(orgId, fromTile ? null : id, version, { once: true })");
+    // One player per version, and a new one only when the tile's handed link gives way to its own.
+    expect(viewer).toMatch(/key=\{`\$\{id\}@\$\{version \?\? "latest"\}\$\{fromTile \? "" : ":own"\}`\}/);
     const message = src("features/files/MessageFiles.tsx");
     expect(message).toContain("useRemoteFile(orgId, file.id, file.version, { once: true })");
     expect(message).toMatch(/key=\{`\$\{file\.id\}@\$\{file\.version \?\? "latest"\}`\}/);
@@ -602,7 +672,46 @@ describe("viewer", () => {
   test("on Android a video draws with the views around it, inside rounded corners and under a pull", () => {
     const player = src("features/files/VideoPlayer.tsx");
     expect(player).toContain('const SURFACE = "textureView";');
-    expect(player.match(/surfaceType=\{SURFACE\}/g)?.length).toBe(3);
+    // Only the viewer's video is a live view: a message's and one on its way up are stills.
+    expect(player.match(/surfaceType=\{SURFACE\}/g)?.length).toBe(1);
+  });
+
+  test("a video in a message is a still: no player stays mounted per row, a few decoders at most at a time", () => {
+    const player = src("features/files/VideoPlayer.tsx");
+    // One player in the whole file stays mounted (the viewer's); the stills' players are released once read.
+    expect(player.match(/useVideoPlayer\(/g)?.length).toBe(1);
+    expect(player.match(/<VideoView\b/g)?.length).toBe(1);
+    expect(player).toContain("createVideoPlayer(source)");
+    expect(player).toContain("player.generateThumbnailsAsync([stillAt(duration)], { maxWidth: STILL_PIXELS })");
+    expect(player).toContain("player.release();");
+    expect(player).toContain("const STILLS_AT_ONCE = 2;");
+    // Read once per file version, whatever link it came from.
+    expect(player).toContain("const stills = new BoundedMap<string, Still>(");
+    expect(src("features/files/MessageFiles.tsx")).toContain("stillKey={pictureKey(file.id, file.version)}");
+    for (const part of ["export function VideoPlayer(", "export function VideoFirstFrame("]) {
+      const at = player.indexOf(part);
+      const body = player.slice(at, player.indexOf("\n}\n", at));
+      expect({ part, still: body.includes("useStill(") && body.includes("<Image") }).toEqual({ part, still: true });
+    }
+  });
+
+  test("a video's length pill grows with the text size, never letting the time spill out", () => {
+    for (const file of ["features/files/VideoPlayer.tsx", "features/files/MessageFiles.tsx"]) {
+      const s = src(file);
+      const pill = s.match(/\n {2}length: \{([^}]*)\}/)?.[1] ?? "";
+      expect({ file, fixed: /\n\s+height: 20,/.test(pill), grows: pill.includes("minHeight: 20,") }).toEqual({
+        file,
+        fixed: false,
+        grows: true,
+      });
+      expect({
+        file,
+        capped: s.includes("<RNText maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.lengthText}>"),
+      }).toEqual({
+        file,
+        capped: true,
+      });
+    }
   });
 
   test("a picture fits whole, zooms up to twice its own pixels, and a double tap zooms in at the spot", () => {

@@ -47,7 +47,18 @@ import { isRightHand, tellsNameStory } from "@agenteschat/client/lib/right-hand"
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { planLine } from "@agenteschat/ui/plan-state";
 import { useQueryClient } from "@tanstack/react-query";
-import { Children, Fragment, isValidElement, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { HeaderHeightContext } from "expo-router/react-navigation";
+import {
+  Children,
+  Fragment,
+  isValidElement,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
 import Animated, {
@@ -238,7 +249,10 @@ function Profile({ id, view }: { id: string; view?: ProfileView | undefined }) {
   const now = useNow();
   // The cover's sky lags behind the scroll and stretches on pull; the agent fades as it nears the bar.
   const { y, onScroll } = useCoverScroll();
-  const underBar = AVATAR_TOP - (insets.top + BAR_HEIGHT);
+  // Where the bar ends: the stack's own measure (Android's toolbar is taller than iOS's bar, a pane's bar is its own),
+  // read without `useHeaderHeight`, which throws where no stack's header is (iOS's peek): there the iPhone's bar.
+  const barBottom = useContext(HeaderHeightContext) || insets.top + PEEK_BAR;
+  const underBar = AVATAR_TOP - barBottom;
   // On a large screen the card keeps to the readable column under its sky, which runs edge to edge (ADR 0212).
   const side = useReadableSide();
   const sides = side > 0 ? { paddingHorizontal: SCREEN_X + side } : null;
@@ -1055,13 +1069,7 @@ function Profile({ id, view }: { id: string; view?: ProfileView | undefined }) {
         />
       ) : null}
       {/* What the clear bar becomes behind the name once the cover is under it (the system draws it on iOS 26). */}
-      <CoverBarBackdrop
-        y={y}
-        from={underBar - 30}
-        to={underBar + 70}
-        height={insets.top + BAR_HEIGHT}
-        tone={c.grouped}
-      />
+      <CoverBarBackdrop y={y} from={underBar - 30} to={underBar + 70} height={barBottom} tone={c.grouped} />
       {/* Its person changes its look; who edits it, its role and instructions; who manages it, everything ("Editar",
           as the web's Configurações). The right hand's settings open for everyone: each person has their own there. */}
       <PushedHeader
@@ -1385,16 +1393,29 @@ export function MemoryFix({
         onError: failed,
       },
     );
+  // Asked first, as the profile's swipe asks: the agent stops using it at once.
   const forget = () =>
-    action.mutate(
-      { type: "archive", id: m.id, archived: true },
-      {
-        onSuccess: () => {
-          toast({ title: t("mobile.intentAgents.fix.forgotten"), agentId });
-          onDone();
+    Alert.alert(
+      t("mobile.intentAgents.knows.forgetTitle"),
+      t("mobile.intentAgents.knows.forgetBody", agentGrammar(agentName)),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("mobile.intentAgents.knows.forget"),
+          style: "destructive",
+          onPress: () =>
+            action.mutate(
+              { type: "archive", id: m.id, archived: true },
+              {
+                onSuccess: () => {
+                  toast({ title: t("mobile.intentAgents.fix.forgotten"), agentId });
+                  onDone();
+                },
+                onError: failed,
+              },
+            ),
         },
-        onError: failed,
-      },
+      ],
     );
   return (
     <>
@@ -1580,9 +1601,10 @@ const COVER_HEIGHT = 250;
 /** The agent's face, unframed, and the room under it at the cover's foot. */
 const FACE = 96;
 const COVER_FOOT = 14;
-/** Where the agent's top sits in the cover, and the bar's height. */
+/** Where the agent's top sits in the cover. */
 const AVATAR_TOP = COVER_HEIGHT - COVER_FOOT - FACE;
-const BAR_HEIGHT = 44;
+/** The bar's height where no stack measures one (a peek, which has no bar): the iPhone's. */
+const PEEK_BAR = 44;
 /** The face beside the name in the bar. */
 /** How far the name scrolls past the bar's foot before the bar takes it as its title. */
 const NAME_UNDER_BAR = 70;

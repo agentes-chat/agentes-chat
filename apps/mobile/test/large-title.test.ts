@@ -25,7 +25,9 @@ describe("large titles settle", () => {
     // A release that won't glide settles at once; one that glides settles when it stops.
     expect(head).toContain("if (target && Math.abs(target.y - e.nativeEvent.contentOffset.y) < 1) settle(e);");
     expect(head).toContain("return { y, onScroll, ref, onScrollEndDrag, onMomentumScrollEnd: settle };");
-    for (const file of ["ui/LargeTitleScreen.tsx", "features/shared/PushedLargeTitle.tsx"]) {
+    // A pushed screen's title is the bar's own on Android too (beside the back button): only the tabs draw theirs.
+    expect(src("features/shared/PushedLargeTitle.tsx")).not.toContain("<LargeTitleHead");
+    for (const file of ["ui/LargeTitleScreen.tsx"]) {
       const screen = src(file);
       for (const piece of [
         "useLargeTitleScroll(",

@@ -189,13 +189,15 @@ describe("Conversas with the strip and one list", () => {
   test("the app's faces, the kit's press and badge, the screen's sides, and nothing that moves for show", () => {
     // At work it wears the orbit, as its row's face does.
     expect(strip).toContain(
-      "<AgentFace agentId={r.with.id} size={FACE - 2} mode={facts.face} live={live} presence orbit={ringed} />",
+      "<AgentFace agentId={r.with.id} size={FACE} mode={facts.face} live={live} presence orbit={ringed} />",
     );
     expect(strip).toContain('const ringed = r.kind === "dm" && r.with.type === "agent" && facts.face === "run";');
-    expect(strip).toContain('<Tile icon="hash" size={FACE} />');
+    expect(strip).toContain("<ChannelTile size={FACE} />");
     expect(strip).toMatch(/<PressScale\s+haptic=\{false\}/);
     expect(strip).toContain("<Count");
-    expect(strip).toContain("paddingHorizontal: SCREEN_X");
+    // From the left, the first face in line with the rows' faces (the screen's 16).
+    expect(strip).toContain("const SIDE = SCREEN_X - (ITEM - FACE) / 2;");
+    expect(strip).toContain("paddingHorizontal: SIDE");
     expect(strip).toContain("if (items.length === 0) return null;");
     // The kit's sideways strip: a fade at the edge where more pinned faces wait.
     expect(strip).toContain("<SideScroll contentContainerStyle={styles.strip}>");

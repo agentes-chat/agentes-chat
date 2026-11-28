@@ -60,8 +60,10 @@ export function PressScale({
   const animated = useAnimatedStyle(() => ({
     transform: [{ scale: 1 - (1 - to) * k.value }, { translateY: sink ? 0.5 * k.value : 0 }],
   }));
+  // The wrapper reaches as far as the press does: iOS never asks a view's children about a touch outside it (unless
+  // they overflow it), so a `hitSlop` only on the Pressable, which fills the wrapper, was never reached there.
   return (
-    <Animated.View style={[style, animated]}>
+    <Animated.View hitSlop={rest.hitSlop} style={[style, animated]}>
       <Pressable
         unstable_pressDelay={PRESS_DELAY}
         {...rest}

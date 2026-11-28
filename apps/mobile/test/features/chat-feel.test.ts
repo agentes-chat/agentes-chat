@@ -409,7 +409,7 @@ describe("a voice message's row", () => {
     expect(row).toContain("if (id !== clipId || scrubbing.value) return;");
     const pan = between(row, "const pan = usePanGesture({", "const tap =");
     expect(pan).toContain("scrubbing.value = true;");
-    expect(pan).toContain("const at = width > 0 ? waveAt(e.x, width, BAR_HANDLE) : progress.value;");
+    expect(pan).toContain("const at = width > 0 ? waveAt(e.x, width) : progress.value;");
     expect(pan).toContain("scheduleOnRN(endScrub, at);");
   });
 
@@ -417,7 +417,10 @@ describe("a voice message's row", () => {
     expect(row).toContain("const starting = useSyncExternalStore(subscribePlayback, startingId) === clipId;");
     expect(row).toContain('<ActivityIndicator size="small" color={c.bg} />');
     const toggle = between(row, "const toggle = () => {", "const seek =");
-    expect(toggle.indexOf("isGone?.()")).toBeGreaterThan(toggle.indexOf("const failed = () => {"));
+    expect(toggle.indexOf("const failed = (reason?: unknown) => {")).toBeGreaterThan(-1);
+    expect(toggle.indexOf("isGone?.()")).toBeGreaterThan(toggle.indexOf("const failed = (reason?: unknown) => {"));
+    // A sound that should have played says why in the error reports; one past its retention doesn't.
+    expect(toggle).toContain('where: "voice.playback",');
     expect(row).toContain("isGone={() => voiceAudioGone(url, authedFetch as typeof fetch)}");
     expect(toggle).toContain("onError: failed,");
     expect(toggle).toContain("}).catch(failed);");

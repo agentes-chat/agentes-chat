@@ -731,7 +731,10 @@ export function ApproveAllByAgent() {
   );
 }
 
-/** Withdraws an action approved ahead before its time (its routine's run won't do it), and says so. */
+/**
+ * Withdraws an action approved ahead before its time (its routine's run won't do it), and says so. Asked first, in the
+ * system's alert: once withdrawn it won't run at its time.
+ */
 export function useCancelAhead() {
   const { t } = useTranslation();
   const toast = useToast();
@@ -739,13 +742,21 @@ export function useCancelAhead() {
   return {
     pending: cancel.isPending,
     cancel: (id: string, onDone?: () => void) =>
-      cancel.mutate(id, {
-        onSuccess: () => {
-          toast({ title: t("approval.ahead.canceled") });
-          onDone?.();
+      Alert.alert(t("mobile.approval.cancelAheadTitle"), t("mobile.approval.cancelAheadText"), [
+        { text: t("mobile.common.back"), style: "cancel" },
+        {
+          text: t("approval.ahead.cancel"),
+          style: "destructive",
+          onPress: () =>
+            cancel.mutate(id, {
+              onSuccess: () => {
+                toast({ title: t("approval.ahead.canceled") });
+                onDone?.();
+              },
+              onError: () => toast({ title: t("mobile.app.failed"), icon: "x" }),
+            }),
         },
-        onError: () => toast({ title: t("mobile.app.failed"), icon: "x" }),
-      }),
+      ]),
   };
 }
 

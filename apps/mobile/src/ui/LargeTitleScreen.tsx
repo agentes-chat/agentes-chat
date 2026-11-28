@@ -275,10 +275,19 @@ function DrawnTitleScreen({
           onMomentumScrollBegin={scroll.onMomentumScrollBegin}
           onMomentumScrollEnd={scroll.onMomentumScrollEnd}
           scrollEventThrottle={16}
-          // The pixel orbit stands in for the wheel, hidden on iOS (Android keeps its own over the content).
+          // The pixel orbit stands in for the wheel, hidden on iOS (Android keeps its own over the content). Android's
+          // comes down under the clear bar (the list starts under it, at the top of the screen: from there it stopped
+          // under the status bar, behind the bar's buttons), in the theme's colors (its white disc stayed in dark).
           refreshControl={
             pull ? (
-              <RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} tintColor={PULL_TINT} />
+              <RefreshControl
+                refreshing={pull.refreshing}
+                onRefresh={pull.onRefresh}
+                tintColor={PULL_TINT}
+                {...(IOS
+                  ? {}
+                  : { progressViewOffset: headerHeight, colors: [colors.ink], progressBackgroundColor: colors.raised })}
+              />
             ) : undefined
           }
           contentInsetAdjustmentBehavior="never"

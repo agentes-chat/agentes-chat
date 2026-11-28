@@ -24,10 +24,10 @@ import {
   nearestPoint,
   smoothPath,
 } from "@agenteschat/ui/sky/chart";
-import { Canvas, DashPathEffect, Path, Rect, Skia, Line as SkiaLine } from "@shopify/react-native-skia";
+import { Canvas, DashPathEffect, Group, Path, Rect, Skia, Line as SkiaLine } from "@shopify/react-native-skia";
 import { type ComponentRef, memo, type ReactNode, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { type LayoutChangeEvent, Pressable, StyleSheet, View } from "react-native";
+import { type LayoutChangeEvent, PixelRatio, Pressable, StyleSheet, View } from "react-native";
 import Animated, { Easing, FadeIn, useAnimatedStyle } from "react-native-reanimated";
 import { useLivePaused } from "@/agent/live";
 import { useDrawingClock } from "@/sky/clock";
@@ -386,13 +386,45 @@ function Bars({
   const max = Math.max(0, ...spec.values) || 1;
   const [picked, setPicked] = useState<number | null>(null);
   const tip = pointTip(spec.labels, spec.values, (v) => formatWithUnit(v, spec.unit, i18n.language));
+  const barHeight = (v: number) => Math.max(4, Math.round((Math.max(0, v) / max) * room));
+  const dimmed = (i: number) => picked !== null && picked !== i;
+  // A bar's own dimming in the canvas, as the column's view dims its value: the bar and its outline faded as one.
+  const dimLayer = useMemo(() => {
+    const paint = Skia.Paint();
+    paint.setAlphaf(styles.dim.opacity);
+    return paint;
+  }, []);
   return (
     <View>
       <UnitTag unit={spec.unit} />
       <View onLayout={onLayout} style={[styles.bars, { height, gap }]}>
+        {width > 0 && bw > 1 ? (
+          // Every bar in one canvas under the columns: a native surface per chart, never one per bar (a board of bar
+          // widgets held dozens). Each bar where its column centres it, on the pixel grid as the layout puts views.
+          <Canvas pointerEvents="none" style={[styles.barsCanvas, { height: room }]}>
+            {spec.values.map((v, i) => {
+              const h = barHeight(v);
+              return (
+                // biome-ignore lint/suspicious/noArrayIndexKey: the bars of one widget, in order
+                <Group key={i} layer={dimmed(i) ? dimLayer : false}>
+                  <DitherShape
+                    x={PixelRatio.roundToNearestPixel(i * (slot + gap) + (slot - bw) / 2)}
+                    y={room - h}
+                    width={bw}
+                    height={h}
+                    shape={topRoundedPath(0.75, 0.75, bw - 1.5, h - 0.75, 4)}
+                    outline={topRoundedPath(0.75, 0.75, bw - 1.5, h - 0.75, 4, false)}
+                    fill={tones.fill}
+                    stroke={spec.alertIndex === i ? c.warn : tones.stroke}
+                  />
+                </Group>
+              );
+            })}
+          </Canvas>
+        ) : null}
         {width > 0
           ? spec.values.map((v, i) => {
-              const h = Math.max(4, Math.round((Math.max(0, v) / max) * room));
+              const h = barHeight(v);
               const alert = spec.alertIndex === i;
               return (
                 <Pressable
@@ -400,7 +432,7 @@ function Bars({
                   key={i}
                   disabled={!pickable}
                   onPress={() => setPicked((p) => (p === i ? null : i))}
-                  style={[styles.bar, picked !== null && picked !== i ? styles.dim : null]}
+                  style={[styles.bar, dimmed(i) ? styles.dim : null]}
                   accessible
                   accessibilityRole={pickable ? "button" : undefined}
                   accessibilityLabel={tip(i)}
@@ -418,18 +450,8 @@ function Bars({
                       {barValueText(v, i18n.language, slot)}
                     </Text>
                   ) : null}
-                  {bw > 1 ? (
-                    <Canvas style={{ width: bw, height: h }}>
-                      <DitherShape
-                        width={bw}
-                        height={h}
-                        shape={topRoundedPath(0.75, 0.75, bw - 1.5, h - 0.75, 4)}
-                        outline={topRoundedPath(0.75, 0.75, bw - 1.5, h - 0.75, 4, false)}
-                        fill={tones.fill}
-                        stroke={alert ? c.warn : tones.stroke}
-                      />
-                    </Canvas>
-                  ) : null}
+                  {/* The bar's room, drawn in the canvas under it: its value sits right over it. */}
+                  {bw > 1 ? <View style={{ width: bw, height: h }} /> : null}
                 </Pressable>
               );
             })
@@ -473,27 +495,28 @@ function CompactBars({ spec, color }: { spec: BarsWidgetSpec; color: AgentColorN
         }
         style={[styles.fill, styles.barsCompact]}
       >
-        {bw > 1 && room > 4
-          ? spec.values.map((v, i) => {
+        {bw > 1 && room > 4 ? (
+          // Every column in one canvas (a native surface per chart, never one per bar), each centred in its slot.
+          <Canvas pointerEvents="none" style={StyleSheet.absoluteFill}>
+            {spec.values.map((v, i) => {
               const h = Math.max(3, Math.round((Math.max(0, v) / max) * room));
-              const alert = spec.alertIndex === i;
               return (
-                // biome-ignore lint/suspicious/noArrayIndexKey: the bars of one widget, in order
-                <View key={i} style={styles.slot}>
-                  <Canvas style={{ width: bw, height: h }}>
-                    <DitherShape
-                      width={bw}
-                      height={h}
-                      shape={topRoundedPath(0.75, 0.75, bw - 1.5, h - 0.75, 4)}
-                      outline={topRoundedPath(0.75, 0.75, bw - 1.5, h - 0.75, 4, false)}
-                      fill={tones.fill}
-                      stroke={alert ? c.warn : tones.stroke}
-                    />
-                  </Canvas>
-                </View>
+                <DitherShape
+                  // biome-ignore lint/suspicious/noArrayIndexKey: the bars of one widget, in order
+                  key={i}
+                  x={PixelRatio.roundToNearestPixel(i * slot + (slot - bw) / 2)}
+                  y={room - h}
+                  width={bw}
+                  height={h}
+                  shape={topRoundedPath(0.75, 0.75, bw - 1.5, h - 0.75, 4)}
+                  outline={topRoundedPath(0.75, 0.75, bw - 1.5, h - 0.75, 4, false)}
+                  fill={tones.fill}
+                  stroke={spec.alertIndex === i ? c.warn : tones.stroke}
+                />
               );
-            })
-          : null}
+            })}
+          </Canvas>
+        ) : null}
       </View>
       <View style={styles.axisCompact}>
         {spec.labels.map((label, i) => (
@@ -1176,6 +1199,8 @@ const styles = StyleSheet.create({
   // The strip's unit at the title line's end: the title gives way first.
   unitEnd: { flexShrink: 0, maxWidth: "45%" },
   bars: { flexDirection: "row", alignItems: "flex-end", paddingTop: 18 },
+  // The bars' one canvas, along the columns' foot under their values (its height: the bars' room).
+  barsCanvas: { position: "absolute", left: 0, right: 0, bottom: 0 },
   bar: { flex: 1, minWidth: 0, alignItems: "center", justifyContent: "flex-end", height: "100%" },
   barValue: { fontWeight: "700", fontVariant: ["tabular-nums"], marginBottom: 3 },
   axis: { flexDirection: "row", borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 4 },
@@ -1203,9 +1228,8 @@ const styles = StyleSheet.create({
   compact: { height: COMPACT_HEIGHT, flexGrow: 0, gap: 8, paddingHorizontal: COMPACT_PAD },
   fill: { flex: 1, minHeight: 0 },
   compactBars: { gap: 4 },
-  // Each column centred in its slot, over its label in the same slot.
+  // The columns' room over their labels: the canvas fills it, each column centred in its label's slot.
   barsCompact: { flexDirection: "row", alignItems: "flex-end" },
-  slot: { flex: 1, minWidth: 0, alignItems: "center" },
   axisCompact: { flexDirection: "row" },
   bodyCompact: { flex: 1, minHeight: 0, minWidth: 0, overflow: "hidden" },
   rowCompact: { paddingVertical: 7 },

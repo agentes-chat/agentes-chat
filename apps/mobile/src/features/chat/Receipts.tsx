@@ -327,15 +327,15 @@ const styles = StyleSheet.create({
   fit: { flexShrink: 1, minWidth: 0 },
   bold: { fontWeight: "600" },
   struck: { textDecorationLine: "line-through" },
-  // The tool block's card (ToolCalls.tsx): a hairline and the cut corner, bottom left. As wide as its words.
+  // The tool block's card (ToolCalls.tsx): a hairline and the cut corner, top left. As wide as its words.
   card: {
     alignSelf: "flex-start",
     maxWidth: "100%",
     borderWidth: StyleSheet.hairlineWidth,
-    borderTopLeftRadius: 14,
+    borderTopLeftRadius: 6,
     borderTopRightRadius: 14,
     borderBottomRightRadius: 14,
-    borderBottomLeftRadius: 6,
+    borderBottomLeftRadius: 14,
   },
   // The icon on the sentence's line (as the conversation's event lines): a list row's 12 above and below, one line 44.
   one: {

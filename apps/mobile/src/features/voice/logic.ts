@@ -1,6 +1,5 @@
 import type { Message } from "@agenteschat/client";
 import { VOICE_COUNTDOWN_MS, VOICE_MAX_MS, VOICE_SPEEDS, voiceParts } from "@agenteschat/client/lib/voice";
-import { VOICE_HANDLE } from "@agenteschat/ui/voice/bars";
 import type { VoiceSend } from "./outbox";
 
 /**
@@ -61,24 +60,36 @@ export function playedColumns(width: number): { count: number; start: number } {
 }
 
 /**
- * Where a played wave's handle (`handle` wide) starts at `progress`: flush with its left end at 0:00, with its right
- * end at the end.
+ * Where a played wave's handle (`handle` wide, the square's by default) starts at `progress`: flush with its left end
+ * at 0:00, with its right end at the end. A worklet takes no default naming a constant: on the UI thread a default is
+ * read before the worklet's captured values, where the constant doesn't exist (a voice message crashed its
+ * conversation), so the default is set in the body.
  */
-export function handleAt(progress: number, width: number, handle = WAVE_HANDLE): number {
+export function handleAt(progress: number, width: number, handle?: number): number {
   "worklet";
-  return progress * (width - handle);
+  return progress * (width - (handle ?? WAVE_HANDLE));
+}
+
+/**
+ * The whole columns a played wave leaves out around its handle (`x`, its left edge), `room` clear on each side of it:
+ * where they start and how wide, 0 wide when none. The handle never sits on the wave, and no column is cut in two.
+ */
+export function handleRoom(x: number, start: number, room: number): { left: number; width: number } {
+  "worklet";
+  const from = Math.floor((x - room - WAVE_CELL - start) / WAVE_PITCH) + 1;
+  const to = Math.ceil((x + WAVE_HANDLE + room - start) / WAVE_PITCH) - 1;
+  if (to < from) return { left: 0, width: 0 };
+  const left = start + from * WAVE_PITCH;
+  return { left, width: start + to * WAVE_PITCH + WAVE_CELL - left };
 }
 
 /** Where `x` falls on a played wave `width` wide: the handle's middle there, up to 0.999 at the end. */
-export function waveAt(x: number, width: number, handle = WAVE_HANDLE): number {
+export function waveAt(x: number, width: number, handle?: number): number {
   "worklet";
-  return Math.max(0, Math.min(0.999, (x - handle / 2) / (width - handle)));
+  // The default in the body (see `handleAt`).
+  const h = handle ?? WAVE_HANDLE;
+  return Math.max(0, Math.min(0.999, (x - h / 2) / (width - h)));
 }
-
-/** A voice message's wave: 30 tall, as the web draws it (`@agenteschat/ui/voice/bars` has its bars and handle). */
-export const BAR_WAVE_H = 30;
-/** Its round handle's width. */
-export const BAR_HANDLE = 2 * VOICE_HANDLE;
 
 /** A finger's position during a hold: what it asks for now. */
 export function slideIntent(dx: number, dy: number): "cancel" | "lock" | null {

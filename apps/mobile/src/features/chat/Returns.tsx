@@ -25,6 +25,7 @@ import {
   useTheme,
   useToast,
 } from "@/ui";
+import { confirmAction } from "../settings/parts";
 import { AgentFace, Face } from "../shared/Face";
 import { LoadFailed } from "../shared/FirstUse";
 import { useDirectory, useNow, useOrgId } from "../shared/hooks";
@@ -242,16 +243,27 @@ export function ReturnsSheet({
                           context: g.context,
                           when: returnWhen(t, i18n.language, r.at, now),
                         }),
-                        onPress: () => {
-                          mark(r.messageId, true);
-                          cancel.mutate(
-                            { channelId, messageId: r.messageId },
-                            {
-                              onError: (error) => toast({ title: errorText(t, error), icon: "x" }),
-                              onSettled: () => mark(r.messageId, false),
+                        // Asked first: the return it drops isn't scheduled again on its own.
+                        onPress: () =>
+                          confirmAction({
+                            title: t("mobile.chat.followUpCancelTitle", {
+                              name: g.name,
+                              context: g.context,
+                              when: returnWhen(t, i18n.language, r.at, now),
+                            }),
+                            action: t("followUps.cancel"),
+                            cancel: t("mobile.common.back"),
+                            onConfirm: () => {
+                              mark(r.messageId, true);
+                              cancel.mutate(
+                                { channelId, messageId: r.messageId },
+                                {
+                                  onError: (error) => toast({ title: errorText(t, error), icon: "x" }),
+                                  onSettled: () => mark(r.messageId, false),
+                                },
+                              );
                             },
-                          );
-                        },
+                          }),
                       },
                     }
                   : {})}

@@ -49,8 +49,23 @@ describe("the live picture's edge on the phone", () => {
     // The picture's own view draws it: over the picture, under the agent's pointer and the touch hint.
     const LINE = "{edge === undefined ? null : <PictureEdge radius={edge} />}";
     expect(parts).toContain(LINE);
-    expect(before(parts, "source={{ uri: browserFrameDataUrl(frame)", LINE)).toBe(true);
+    expect(before(parts, "source={picture ? { uri: picture } : null}", LINE)).toBe(true);
     expect(before(parts, LINE, "<AgentPointer {...cursor}")).toBe(true);
+  });
+
+  test("the live page's frames never blank between them: expo-image, no cache, no fade, no recycling key", async () => {
+    const parts = await read("features/browser/parts.tsx");
+    // React Native's image reset its view to empty at every new frame on Android until that frame was decoded, and
+    // kept every frame's text in its cache.
+    expect(parts).toContain('import { Image } from "expo-image";');
+    expect(parts).not.toMatch(/import \{[^}]*\bImage\b[^}]*\} from "react-native";/);
+    expect(parts).toContain("const picture = browserFrameDataUrl(frame);");
+    const image = parts.slice(parts.indexOf("<Image"), parts.indexOf("/>", parts.indexOf("<Image")));
+    expect(image).toContain('cachePolicy="none"');
+    expect(image).toContain('contentFit="contain"');
+    expect(image).toContain("transition={0}");
+    expect(image).not.toContain("recyclingKey");
+    expect(image).not.toContain("fadeDuration");
   });
 
   test("the card's whole screen: the picture fills the box at the screen's ratio, the line over it", async () => {

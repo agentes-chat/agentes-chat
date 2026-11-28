@@ -393,7 +393,8 @@ describe("a picture's, a video's and a PDF's conversation (ADR 0208)", () => {
   test("the viewer and the PDF's screen push the conversation; a held touch marks a point; a link opens it", () => {
     const viewer = src("features/files/ImageViewer.tsx");
     // One way in, the line; no Comment at the top. A played video's line opens it about that moment.
-    expect(viewer).toContain("{talkFile ? <FileTalkLine file={talkFile} bare onOpen={openLine} /> : null}");
+    expect(viewer).toContain("{talkFile ? <FileTalkLine file={talkFile} bare onOpen={onLine} /> : null}");
+    expect(viewer).toContain("onLine={openLine}");
     expect(viewer).not.toContain('icon="comment"');
     expect(viewer).toContain("if (talkFile && time > PLAYED_S) openTalk({ selection: commentSelection(pins, { time }");
     // A touch held on the picture marks the point and opens the conversation about it; the draft's pin stays on it.
@@ -401,7 +402,7 @@ describe("a picture's, a video's and a PDF's conversation (ADR 0208)", () => {
     expect(viewer).toContain("openTalk({ selection: commentSelection(pins, where, talkFile.shownVersion) });");
     expect(viewer).toContain("<PicturePins pins={shownPins} zoom={zoom} draft={draft} />");
     expect(viewer).toContain('const about = useTalkAbout(talkFile?.conversation?.channelId ?? "");');
-    expect(viewer).toMatch(/<ZoomPicture\s+source=\{link\.data\}\s+cacheKey=\{key\}\s+screen=\{screen\}/);
+    expect(viewer).toMatch(/<ZoomPicture\s+source=\{picture\.source\}\s+cacheKey=\{key\}\s+screen=\{screen\}/);
     // The held touch races the pull and the taps: a finger that moves first is the pull.
     const zoom = src("features/files/ZoomPicture.tsx");
     expect(zoom).toContain("const gesture = useCompetingGestures(hold, taps);");

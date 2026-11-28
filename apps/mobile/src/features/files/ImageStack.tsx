@@ -1,6 +1,6 @@
 import type { ArtifactDetail } from "@agenteschat/client";
 import { Image } from "expo-image";
-import { useEffect, useId, useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { type AccessibilityActionEvent, StyleSheet, View } from "react-native";
 import { GestureDetector, useExclusiveGestures, usePanGesture, useTapGesture } from "react-native-gesture-handler";
@@ -15,13 +15,13 @@ import Animated, {
 import { scheduleOnRN } from "react-native-worklets";
 import { haptics, Icon, motion, Text, useReducedMotion, useTheme } from "@/ui";
 import { useMessageCardCorners } from "../chat/look";
+import { lightboxKey, openMedia } from "../lightbox/open";
+import { useLightboxTile } from "../lightbox/store";
 import { useColors, useOrgId } from "../shared/hooks";
 import { DECK_DRAG, DECK_RISE, deckCard, deckIndex, deckTarget, wrapPlace } from "./deck";
 import type { FileRef } from "./logic";
 import type { MessageFile } from "./MessageFiles";
-import { openFile } from "./open";
 import { pictureDrawn, pictureFade, useRemoteFile } from "./source";
-import { listenViewerPlace } from "./viewer-place";
 
 export interface StackImage {
   file: MessageFile;
@@ -36,8 +36,8 @@ const MAX_DOTS = 5;
 const SETTLE = { ...motion.snap };
 
 /**
- * Two or more pictures in a message: a deck to swipe through, its dots under it. A tap opens the viewer at the
- * picture on top, and closing it brings the deck back on the one the person stopped at.
+ * Two or more pictures in a message: a deck to swipe through, its dots under it. A tap opens the picture on top in the
+ * lightbox, and paging there brings the deck to the one the person stopped at, so the picture lands back on top.
  */
 export function ImageStack({
   images,
@@ -55,7 +55,6 @@ export function ImageStack({
   const { t } = useTranslation();
   const c = useColors();
   const reduced = useReducedMotion();
-  const key = useId();
   const count = images.length;
   const size = width - SIDE * 2;
   const per = size * DECK_DRAG;
@@ -70,17 +69,17 @@ export function ImageStack({
     },
     [count],
   );
-  // The viewer says which file the person stopped at: one of the deck's comes on top, a video beside them changes nothing.
+  // The lightbox says which file the person paged to: one of the deck's comes on top, a video beside them changes
+  // nothing.
   const ids = images.map((i) => i.file.id).join(",");
-  useEffect(
-    () =>
-      listenViewerPlace(key, (id) => {
-        const at = ids.split(",").indexOf(id);
-        if (at < 0) return;
-        place.value = at;
-        setActive(at);
-      }),
-    [key, place, ids],
+  const bringOnTop = useCallback(
+    (shown: FileRef) => {
+      const at = ids.split(",").indexOf(shown.id);
+      if (at < 0) return;
+      place.value = at;
+      setActive(at);
+    },
+    [ids, place],
   );
 
   // Opening the pictures is plain navigation: no haptic (a swipe through the stack has its own).
@@ -90,7 +89,7 @@ export function ImageStack({
       ({ file, detail }): FileRef => ({ id: file.id, version: file.version, title: file.title, detail }),
     );
     const tapped = deck[at];
-    if (tapped) openFile(tapped, siblings ?? deck, { from: key });
+    if (tapped) openMedia(tapped, siblings ?? deck, bringOnTop);
   };
 
   const settle = (target: number, velocity: number) => {
@@ -184,7 +183,7 @@ export function ImageStack({
 }
 
 function StackCard({
-  item: { file },
+  item: { file, detail },
   index,
   count,
   size,
@@ -207,6 +206,17 @@ function StackCard({
   const key = `${file.id}@${version ?? "latest"}`;
   const link = useRemoteFile(orgId, near ? file.id : null, version);
   const [failed, setFailed] = useState(false);
+  // The picture's own shape once drawn: it covers the card, cropped to its square.
+  const [aspect, setAspect] = useState<number | null>(null);
+  const source = link.data && !failed ? { uri: link.data.uri, headers: link.data.headers, cacheKey: key } : null;
+  // The card the lightbox opens from (`Lightbox`): the picture grows out of it and lands back on top of the deck.
+  // Under the key the deck opens it with (`open`): the same file, version and details.
+  const tileRef = useLightboxTile(lightboxKey({ id: file.id, version, title: file.title, detail }), {
+    image: source,
+    aspect,
+    radius: 20,
+    contain: false,
+  });
   const placed = useAnimatedStyle(() => {
     const s = deckCard(index, place.value, count, size);
     return {
@@ -224,15 +234,19 @@ function StackCard({
         placed,
       ]}
     >
-      <View style={[styles.clip, cardCorners]}>
-        {link.data && !failed ? (
+      {/* The card's picture: what the lightbox measures, and empties while its picture is out (the card stays). */}
+      <Animated.View ref={tileRef} style={[styles.clip, cardCorners]} collapsable={false}>
+        {source ? (
           <Image
-            source={{ uri: link.data.uri, headers: link.data.headers, cacheKey: key }}
+            source={source}
             recyclingKey={key}
             cachePolicy="memory-disk"
             contentFit="cover"
             transition={pictureFade(key)}
-            onLoad={() => pictureDrawn(key)}
+            onLoad={(e) => {
+              pictureDrawn(key);
+              if (e.source.width > 0 && e.source.height > 0) setAspect(e.source.width / e.source.height);
+            }}
             style={StyleSheet.absoluteFill}
             onError={() => setFailed(true)}
             accessible={false}
@@ -243,7 +257,7 @@ function StackCard({
             <Icon name="image" size={22} color={c.faint} />
           </View>
         ) : null}
-      </View>
+      </Animated.View>
     </Animated.View>
   );
 }

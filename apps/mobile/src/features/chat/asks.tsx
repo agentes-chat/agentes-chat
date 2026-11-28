@@ -1049,11 +1049,11 @@ export function WaitingHereBar({
 const BAR_SLOP = { top: 8, bottom: 8 };
 
 const styles = StyleSheet.create({
-  // The app's card (`useSurface`) with its cut corner at the bottom left, as the waiting cards.
-  card: { borderRadius: 20, borderBottomLeftRadius: 6 },
+  // The app's card (`useSurface`) with its cut corner at the top left, as the waiting cards.
+  card: { borderRadius: 20, borderTopLeftRadius: 6 },
   clip: {
     borderRadius: 20,
-    borderBottomLeftRadius: 6,
+    borderTopLeftRadius: 6,
     overflow: "hidden",
     paddingHorizontal: MESSAGE_CARD_X,
     paddingVertical: 14,

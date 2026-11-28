@@ -117,6 +117,8 @@
     "directChat": "ダイレクトチャット"
   },
   "approval": {
+    "cancelAheadTitle": "この予約されたアクションをキャンセルしますか？",
+    "cancelAheadText": "予定の時刻に実行されません。後で行うには、エージェントが求めたときにもう一度承認してください。",
     "asksIn": "があなたの承認を求めています · #{{channel}}",
     "asksYou": "があなたの承認を求めています",
     "expiresIn_other": "あと{{count}}分で期限切れ",
@@ -323,12 +325,16 @@
     "recording": "録音中",
     "discard": "削除",
     "send": "送信",
-    "seeAll": "すべて表示"
+    "seeAll": "すべて表示",
+    "nowPlaying": "ボイスメッセージ",
+    "nowPlayingFile": "オーディオ"
   },
   "chat": {
+    "followUpCancelTitle": "{{name}}の{{when}}のフォローアップをキャンセルしますか？",
     "someone": "誰か",
     "handedTo": "{{name}}に引き継ぎ",
     "handedTo_female": "{{name}}に引き継ぎ",
+    "inBackground": "バックグラウンドで作業中",
     "pairAsked": "{{from}}が質問",
     "messageTo": "{{name}}にメッセージ",
     "messageIn": "{{channel}}にメッセージ",
@@ -1287,7 +1293,9 @@
       "priority": "優先度",
       "assignee": "担当者",
       "cancel": "タスクをキャンセル",
-      "canceled": "#{{number}}をキャンセルしました"
+      "canceled": "#{{number}}をキャンセルしました",
+      "cancelTitle": "タスク #{{number}} をキャンセルしますか？",
+      "cancelText": "未完了のタスクから外れます。あとで再開できます。"
     },
     "nobody": "なし",
     "you": "あなた",
@@ -1420,7 +1428,40 @@
       "lastDay": "末日"
     }
   },
+  "calendar": {
+    "proposalBy": "{{name}}の提案",
+    "confirm": "確定",
+    "due": "期限",
+    "allDay": "終日",
+    "until": "{{time}}まで",
+    "nothingThatDay": "予定はありません。",
+    "after": "このあと",
+    "showWeek": "週だけ表示",
+    "showMonth": "月を表示",
+    "day": "日付",
+    "time": "時間",
+    "repeats": "繰り返し",
+    "going": "参加しますか？",
+    "participantsCount": "参加者 · {{count}}",
+    "timeRange": "{{from}}〜{{to}}",
+    "dayRange": "{{from}}〜{{to}}",
+    "noAnswer": "未回答",
+    "agentPrepares": "事前に要約を準備します",
+    "task": "タスク",
+    "conversation": "会話",
+    "deleteEvent": "予定を削除",
+    "deleteAsk": "この予定を削除しますか？",
+    "starts": "開始",
+    "ends": "終了",
+    "noRepeat": "繰り返しなし",
+    "addPeople": "人またはエージェントを追加"
+  },
   "coding": {
+    "removeTitle": "{{name}}をセッションから外しますか？",
+    "removeText": "セッションとその会話が見えなくなります。もう一度呼ぶには、会話で @ と名前を入力してください。",
+    "removeConfirm": "セッションから外す",
+    "leaveTitle": "セッションから退出しますか？",
+    "leaveText": "リストから消えます。戻るには、セッションの誰かに呼んでもらう必要があります。",
     "pill": "{{who}}。コードを見る",
     "seeChanges": "変更を見る",
     "project": "プロジェクト",
@@ -1445,8 +1486,22 @@
   "taskManager": {
     "loadFailed": "タスクを読み込めませんでした。",
     "gone": "このタスクはもうありません。",
-    "quiet": "進行中のものはありません",
-    "doneToday_other": "今日{{count}}件完了",
+    "title": "進行中",
+    "sections": {
+      "you": "あなた待ち",
+      "working": "作業中",
+      "later": "あとで"
+    },
+    "computerBusy": "{{name}}は使用中です。",
+    "wantsOk": "あなたの承認待ち",
+    "asked": "あなたに質問しました",
+    "routine": "ルーティン",
+    "asks": "{{name}}の依頼内容",
+    "approveNote": "承認するとすぐに{{name}}が続けます。",
+    "answer": "会話で返信",
+    "progress": "進み具合",
+    "allSteps_other": "{{count}} 件のステップをすべて見る",
+    "stopAll_other": "{{count}} 件のタスクをすべて停止",
     "request": "依頼",
     "stopTitle": "「{{title}}」を止めますか？",
     "stopBody": "{{name}}はすぐに止まり、ここまでにやったことを会話で伝えます。"
@@ -1859,6 +1914,8 @@
       "name": "名前",
       "renamed": "名前を{{name}}に変更しました",
       "stop": "{{name}}を停止",
+      "stopTitle": "{{device}}で{{name}}を停止しますか？",
+      "stopText": "実行中の処理はすぐに停止します。あとでもう一度依頼できます。",
       "stopped": "{{device}}が{{name}}から解放されました",
       "forget": "このスマートフォンをリストから外す",
       "forgetTitle": "{{name}}をリストから外しますか？",
@@ -2012,7 +2069,8 @@
       "allowOnce": "今回のみ許可",
       "always": "{{name}}を常に許可",
       "no": "許可しない",
-      "stop": "停止"
+      "stop": "停止",
+      "stopTitle": "{{device}}の使用を停止しますか？"
     },
     "wait": {
       "waiting": "{{device}}を待っています",
@@ -2211,6 +2269,8 @@
     "failed": "保存できませんでした。もう一度お試しください。"
   },
   "ai": {
+    "dontRunTitle": "このリクエストを実行しませんか？",
+    "dontRunText": "キャンセルされ、上限が戻っても実行されません。",
     "yourPlan": "あなたのAIプラン",
     "plansSub": "Claude、ChatGPT、Gemini、GLMなど",
     "plansFoot": "エージェントはあなたのプランで考えます。APIキーは不要です。エージェントのコンピューターでログインします。",

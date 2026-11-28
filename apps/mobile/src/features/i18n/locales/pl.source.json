@@ -278,6 +278,12 @@
   "home.directChat": {
     "value": "Direct chat"
   },
+  "approval.cancelAheadTitle": {
+    "value": "Cancel this scheduled action?"
+  },
+  "approval.cancelAheadText": {
+    "value": "It won't run at its time. To do it later, approve it again when the agent asks."
+  },
   "approval.asksIn": {
     "value": "asks for your approval · #{{channel}}"
   },
@@ -785,12 +791,25 @@
   "voice.seeAll": {
     "value": "See all"
   },
+  "voice.nowPlaying": {
+    "value": "Voice message"
+  },
+  "voice.nowPlayingFile": {
+    "value": "Audio"
+  },
+  "chat.followUpCancelTitle": {
+    "value": "Cancel {{name}}'s follow-up {{when}}?",
+    "female": "Cancel {{name}}'s follow-up {{when}}?"
+  },
   "chat.someone": {
     "value": "Someone"
   },
   "chat.handedTo": {
     "value": "Handed to {{name}}",
     "female": "Handed to {{name}}"
+  },
+  "chat.inBackground": {
+    "value": "In the background"
   },
   "chat.pairAsked": {
     "value": "{{from}} asked"
@@ -3409,6 +3428,12 @@
   "issues.actions.canceled": {
     "value": "#{{number}} canceled"
   },
+  "issues.actions.cancelTitle": {
+    "value": "Cancel task #{{number}}?"
+  },
+  "issues.actions.cancelText": {
+    "value": "It leaves the open tasks. You can reopen it later."
+  },
   "issues.nobody": {
     "value": "Nobody"
   },
@@ -3741,6 +3766,100 @@
   "routines.when.lastDay": {
     "value": "Last day"
   },
+  "calendar.proposalBy": {
+    "value": "{{name}}'s proposal",
+    "female": "{{name}}'s proposal"
+  },
+  "calendar.confirm": {
+    "value": "Confirm"
+  },
+  "calendar.due": {
+    "value": "due"
+  },
+  "calendar.allDay": {
+    "value": "all day"
+  },
+  "calendar.until": {
+    "value": "until {{time}}"
+  },
+  "calendar.nothingThatDay": {
+    "value": "Nothing planned."
+  },
+  "calendar.after": {
+    "value": "Later"
+  },
+  "calendar.showWeek": {
+    "value": "Show only the week"
+  },
+  "calendar.showMonth": {
+    "value": "Show the month"
+  },
+  "calendar.day": {
+    "value": "Day"
+  },
+  "calendar.time": {
+    "value": "Time"
+  },
+  "calendar.repeats": {
+    "value": "Repeats"
+  },
+  "calendar.going": {
+    "value": "Are you going?"
+  },
+  "calendar.participantsCount": {
+    "value": "Participants · {{count}}"
+  },
+  "calendar.timeRange": {
+    "value": "{{from}} to {{to}}"
+  },
+  "calendar.dayRange": {
+    "value": "{{from}} to {{to}}"
+  },
+  "calendar.noAnswer": {
+    "value": "no answer yet"
+  },
+  "calendar.agentPrepares": {
+    "value": "Prepares a summary before"
+  },
+  "calendar.task": {
+    "value": "Task"
+  },
+  "calendar.conversation": {
+    "value": "Conversation"
+  },
+  "calendar.deleteEvent": {
+    "value": "Delete event"
+  },
+  "calendar.deleteAsk": {
+    "value": "Delete this event?"
+  },
+  "calendar.starts": {
+    "value": "Starts"
+  },
+  "calendar.ends": {
+    "value": "Ends"
+  },
+  "calendar.noRepeat": {
+    "value": "Doesn't repeat"
+  },
+  "calendar.addPeople": {
+    "value": "Add a person or agent"
+  },
+  "coding.removeTitle": {
+    "value": "Take {{name}} out of the session?"
+  },
+  "coding.removeText": {
+    "value": "They stop seeing the session and its conversation. To bring them back, type @ and their name in it."
+  },
+  "coding.removeConfirm": {
+    "value": "Take out"
+  },
+  "coding.leaveTitle": {
+    "value": "Leave the session?"
+  },
+  "coding.leaveText": {
+    "value": "It leaves your list. To come back, someone in the session has to call you in."
+  },
   "coding.pill": {
     "value": "{{who}}. See the code"
   },
@@ -3789,13 +3908,54 @@
   "taskManager.gone": {
     "value": "This task is no longer here."
   },
-  "taskManager.quiet": {
-    "value": "Nothing in progress"
+  "taskManager.title": {
+    "value": "In progress"
   },
-  "taskManager.doneToday": {
+  "taskManager.sections.you": {
+    "value": "Waiting on you"
+  },
+  "taskManager.sections.working": {
+    "value": "Working"
+  },
+  "taskManager.sections.later": {
+    "value": "Later"
+  },
+  "taskManager.computerBusy": {
+    "value": "{{name}} is busy."
+  },
+  "taskManager.wantsOk": {
+    "value": "Wants your OK"
+  },
+  "taskManager.asked": {
+    "value": "Asked you a question"
+  },
+  "taskManager.routine": {
+    "value": "Routine"
+  },
+  "taskManager.asks": {
+    "value": "What {{name}} asks",
+    "female": "What {{name}} asks"
+  },
+  "taskManager.approveNote": {
+    "value": "{{name}} goes on as soon as you approve.",
+    "female": "{{name}} goes on as soon as you approve."
+  },
+  "taskManager.answer": {
+    "value": "Answer in the conversation"
+  },
+  "taskManager.progress": {
+    "value": "Progress"
+  },
+  "taskManager.allSteps": {
     "value": {
-      "one": "{{count}} done today",
-      "other": "{{count}} done today"
+      "one": "See the step",
+      "other": "See all {{count}} steps"
+    }
+  },
+  "taskManager.stopAll": {
+    "value": {
+      "one": "Stop the task",
+      "other": "Stop all {{count}} tasks"
     }
   },
   "taskManager.request": {
@@ -4815,6 +4975,12 @@
   "devices.page.stop": {
     "value": "Stop {{name}}"
   },
+  "devices.page.stopTitle": {
+    "value": "Stop {{name}} on {{device}}?"
+  },
+  "devices.page.stopText": {
+    "value": "What runs on it stops now. You can ask again later."
+  },
   "devices.page.stopped": {
     "value": "{{device}} is back from {{name}}"
   },
@@ -5216,6 +5382,9 @@
   },
   "devices.notice.stop": {
     "value": "Stop"
+  },
+  "devices.notice.stopTitle": {
+    "value": "Stop the use of {{device}}?"
   },
   "devices.wait.waiting": {
     "value": "Waiting for {{device}}"
@@ -5703,6 +5872,12 @@
   },
   "onb.failed": {
     "value": "Couldn't save. Try again."
+  },
+  "ai.dontRunTitle": {
+    "value": "Don't run this request?"
+  },
+  "ai.dontRunText": {
+    "value": "It's cancelled and won't run when the limit is back."
   },
   "ai.yourPlan": {
     "value": "Your AI plan"

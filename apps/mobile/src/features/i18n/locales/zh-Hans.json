@@ -117,6 +117,8 @@
     "directChat": "私聊"
   },
   "approval": {
+    "cancelAheadTitle": "取消此计划的操作？",
+    "cancelAheadText": "它不会在预定时间运行。若要稍后执行，请在智能体请求时再次批准。",
     "asksIn": "请求你审批 · #{{channel}}",
     "asksYou": "请求你审批",
     "expiresIn_other": "{{count}} 分钟后过期",
@@ -323,12 +325,16 @@
     "recording": "正在录音",
     "discard": "删除",
     "send": "发送",
-    "seeAll": "查看全部"
+    "seeAll": "查看全部",
+    "nowPlaying": "语音消息",
+    "nowPlayingFile": "音频"
   },
   "chat": {
+    "followUpCancelTitle": "取消 {{name}} {{when}} 的跟进？",
     "someone": "某人",
     "handedTo": "已交给 {{name}}",
     "handedTo_female": "已交给 {{name}}",
+    "inBackground": "后台进行中",
     "pairAsked": "{{from}} 提问",
     "messageTo": "发消息给 {{name}}",
     "messageIn": "在 {{channel}} 发消息",
@@ -1287,7 +1293,9 @@
       "priority": "优先级",
       "assignee": "负责人",
       "cancel": "取消任务",
-      "canceled": "#{{number}} 已取消"
+      "canceled": "#{{number}} 已取消",
+      "cancelTitle": "取消任务 #{{number}}？",
+      "cancelText": "它会从未完成的任务中移出。之后可以重新打开。"
     },
     "nobody": "无人",
     "you": "你",
@@ -1420,7 +1428,40 @@
       "lastDay": "最后一天"
     }
   },
+  "calendar": {
+    "proposalBy": "{{name}} 的提议",
+    "confirm": "确认",
+    "due": "截止",
+    "allDay": "全天",
+    "until": "到 {{time}}",
+    "nothingThatDay": "没有安排。",
+    "after": "之后",
+    "showWeek": "只显示本周",
+    "showMonth": "显示整月",
+    "day": "日期",
+    "time": "时间",
+    "repeats": "重复",
+    "going": "你参加吗？",
+    "participantsCount": "参与者 · {{count}}",
+    "timeRange": "{{from}} 至 {{to}}",
+    "dayRange": "{{from}} 至 {{to}}",
+    "noAnswer": "尚未回复",
+    "agentPrepares": "会提前准备摘要",
+    "task": "任务",
+    "conversation": "对话",
+    "deleteEvent": "删除活动",
+    "deleteAsk": "删除此活动？",
+    "starts": "开始",
+    "ends": "结束",
+    "noRepeat": "不重复",
+    "addPeople": "添加人员或智能体"
+  },
   "coding": {
+    "removeTitle": "将 {{name}} 移出会话？",
+    "removeText": "对方将不再看到该会话及其对话。要再次邀请，请在对话中输入 @ 和其名字。",
+    "removeConfirm": "移出会话",
+    "leaveTitle": "离开会话？",
+    "leaveText": "它会从你的列表中消失。要回来，需要会话中的某人邀请你。",
     "pill": "{{who}}。查看代码",
     "seeChanges": "查看改动",
     "project": "项目",
@@ -1445,8 +1486,22 @@
   "taskManager": {
     "loadFailed": "无法加载任务。",
     "gone": "这个任务已经不在这里了。",
-    "quiet": "没有进行中的事项",
-    "doneToday_other": "今天完成 {{count}} 个",
+    "title": "进行中",
+    "sections": {
+      "you": "等你处理",
+      "working": "工作中",
+      "later": "稍后"
+    },
+    "computerBusy": "{{name}} 正忙。",
+    "wantsOk": "等待你的批准",
+    "asked": "向你提了一个问题",
+    "routine": "例行任务",
+    "asks": "{{name}} 的请求",
+    "approveNote": "你一批准，{{name}} 就继续。",
+    "answer": "在对话中回复",
+    "progress": "进度",
+    "allSteps_other": "查看全部 {{count}} 个步骤",
+    "stopAll_other": "停止全部 {{count}} 个任务",
     "request": "请求",
     "stopTitle": "停止“{{title}}”？",
     "stopBody": "{{name}} 会立即停止，并在对话中说明目前完成了什么。"
@@ -1859,6 +1914,8 @@
       "name": "名称",
       "renamed": "已重命名为 {{name}}",
       "stop": "停止 {{name}}",
+      "stopTitle": "在 {{device}} 上停止 {{name}}？",
+      "stopText": "上面正在运行的内容会立即停止。之后可以再次请求。",
       "stopped": "{{device}} 已从 {{name}} 那里收回",
       "forget": "忘记这台手机",
       "forgetTitle": "忘记“{{name}}”？",
@@ -2012,7 +2069,8 @@
       "allowOnce": "允许一次",
       "always": "始终允许 {{name}}",
       "no": "不允许",
-      "stop": "停止"
+      "stop": "停止",
+      "stopTitle": "停止使用 {{device}}？"
     },
     "wait": {
       "waiting": "正在等待 {{device}}",
@@ -2211,6 +2269,8 @@
     "failed": "无法保存，请重试。"
   },
   "ai": {
+    "dontRunTitle": "不运行此请求？",
+    "dontRunText": "它会被取消，额度恢复后也不会运行。",
     "yourPlan": "你的 AI 套餐",
     "plansSub": "Claude、ChatGPT、Gemini、GLM 等",
     "plansFoot": "智能体使用你的套餐思考，无需 API 密钥。套餐会在智能体的电脑上登录。",

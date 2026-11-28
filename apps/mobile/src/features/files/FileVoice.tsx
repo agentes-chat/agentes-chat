@@ -1,5 +1,6 @@
 import type { FileWave } from "@agenteschat/client";
 import { type ReactNode, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useOrgId } from "../shared/hooks";
 import { VoiceClip } from "../voice/VoiceMessage";
 import { useRemoteFile } from "./source";
@@ -13,13 +14,17 @@ export function FileVoice({
   version,
   wave,
   fallback,
+  name,
 }: {
   id: string;
   /** Absent: its latest. */
   version?: number;
   wave?: FileWave;
   fallback: ReactNode;
+  /** The file's name: what the Lock Screen and the notification show while it plays. */
+  name: string;
 }) {
+  const { t } = useTranslation();
   const orgId = useOrgId();
   const link = useRemoteFile(orgId, id, version);
   const [failed, setFailed] = useState(false);
@@ -35,6 +40,7 @@ export function FileVoice({
       peaks={wave?.peaks ?? NO_PEAKS}
       durationMs={wave?.durationMs ?? 0}
       onFailed={() => setFailed(true)}
+      nowPlaying={{ title: name, artist: t("mobile.voice.nowPlayingFile") }}
     />
   );
 }

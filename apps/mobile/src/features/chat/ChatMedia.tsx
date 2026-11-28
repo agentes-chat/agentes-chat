@@ -176,13 +176,13 @@ const styles = StyleSheet.create({
   wrap: { alignSelf: "stretch" },
   end: { alignItems: "flex-end" },
   endSelf: { alignSelf: "flex-end" },
-  // The app's cut corner ("tato com canto"): a hairline, small bottom-left corner.
+  // The app's cut corner ("tato com canto"): a hairline, small top-left corner.
   gif: {
     borderWidth: StyleSheet.hairlineWidth,
-    borderTopLeftRadius: 14,
+    borderTopLeftRadius: 6,
     borderTopRightRadius: 14,
     borderBottomRightRadius: 14,
-    borderBottomLeftRadius: 6,
+    borderBottomLeftRadius: 14,
     overflow: "hidden",
   },
   offTitle: {

@@ -80,6 +80,6 @@ describe("a PDF's first page on its cards", () => {
     // The large title's scroll says when it comes to rest, on both platforms.
     const title = src("features/shared/PushedLargeTitle.tsx");
     expect(title).toContain("onMomentumScrollEnd={onScrollEnd}");
-    expect(title).toContain("onScrollEnd?.();");
+    expect(title).toContain("onScrollEndDrag={onScrollEnd}");
   });
 });

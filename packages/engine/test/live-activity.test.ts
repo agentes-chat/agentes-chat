@@ -159,12 +159,12 @@ describe("its words (ADR 0210 §5)", () => {
     expect(Object.keys(one?.agents[0] ?? {})).toEqual(["id", "name", "face", "step", "since", "state", "where"]);
   });
 
-  test("several at work: how many, at the island's end too; in English, an approval names its action", () => {
+  test("several at work: how many on top, the first one's timer at the island's end; in English, an approval names its action", () => {
     const two = { items: [dev, { ...dev, agentId: id(3), agentName: "Lia" }] };
     expect(liveActivityProps(two, { locale: "pt-BR", widgetsDir: WIDGETS })).toMatchObject({
       tone: "working",
       headline: "2 trabalhando",
-      trailing: "2 trabalhando",
+      trailing: null,
       more: 0,
     });
     const en = liveActivityProps(waiting, { locale: "en", widgetsDir: WIDGETS });

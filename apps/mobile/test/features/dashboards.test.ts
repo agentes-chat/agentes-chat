@@ -243,6 +243,19 @@ describe("dashboards on the phone (ADR 0135)", () => {
     expect(view).toContain('figure: { flexDirection: "row", alignItems: "baseline", gap: 4 },');
   });
 
+  test("a bar chart is one canvas, never one native surface per bar", () => {
+    const view = readFileSync(join(import.meta.dir, "../../src/features/dashboards/WidgetView.tsx"), "utf8");
+    for (const part of ["function Bars(", "function CompactBars("]) {
+      const at = view.indexOf(part);
+      const body = view.slice(at, view.indexOf("\n}\n", at));
+      expect({ part, canvases: body.match(/<Canvas\b/g)?.length }).toEqual({ part, canvases: 1 });
+      // Each bar placed in the one canvas where its column centres it, on the pixel grid.
+      expect({ part, each: body.includes("x={PixelRatio.roundToNearestPixel(") }).toEqual({ part, each: true });
+    }
+    // A picked bar's neighbours fade with a layer of their own, as their values do with their column.
+    expect(view).toContain("<Group key={i} layer={dimmed(i) ? dimLayer : false}>");
+  });
+
   test("bars keep every label while there's room, else every n-th; values only with room", () => {
     expect(barWords(5, 300)).toEqual({ every: 1, values: true });
     expect(barWords(24, 150).every).toBeGreaterThan(1);

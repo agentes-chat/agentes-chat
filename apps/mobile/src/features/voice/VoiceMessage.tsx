@@ -9,12 +9,16 @@ import { GestureDetector, useExclusiveGestures, usePanGesture, useTapGesture } f
 import { useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { appHeaders, authedFetch, lastCookie } from "@/lib/auth";
+import { reportError } from "@/lib/error-reports";
 import { serverUrl } from "@/lib/server";
 import { Icon, PressScale, Text, TOUCH } from "@/ui";
+import { useRowDirectory } from "../chat/row-data";
+import { withOpacity } from "../chat/turn";
 import { useColors, useOrgId } from "../shared/hooks";
-import { BAR_HANDLE, BAR_WAVE_H, nextSpeed, spokenWords, waveAt } from "./logic";
+import { nextSpeed, spokenWords, waveAt } from "./logic";
 import {
   lengthOf,
+  type NowPlaying,
   placeOf,
   playingId,
   seekPlayback,
@@ -26,8 +30,14 @@ import {
   subscribePlayback,
 } from "./playback";
 import { setVoiceSpeed, subscribeVoiceSpeed, voiceSpeed } from "./speed";
-import { BarWave, barWave } from "./VoiceBars";
+import { PixelWave, wavePaths } from "./VoiceBars";
 
+/** Six rows of the sky's cells: the wave the take was recorded with, the app's own. */
+const WAVE = 24;
+/** A column's top and bottom cells in a half tone of the column's, so it reads round, as the agents' sky. */
+const ENDS = 0.55;
+/** Clear around the handle: the columns there step aside instead of running under it. */
+const HANDLE_ROOM = 2;
 /** The speed chip, as the web's: one width for 1×, 1,5× and 2×, so nothing beside it moves as the speed goes round. */
 const SPEED_H = 22;
 const SPEED_W = 36;
@@ -45,10 +55,24 @@ const expired = new Set<string>();
  * A voice message: the audio is the message, with one line of its words under the wave, in the same card, and nowhere
  * else; a tap opens the rest there. A recording the server no longer keeps stays as a dimmed wave with its words.
  */
-export const VoiceMessage = memo(function VoiceMessage({ message }: { message: Message }) {
+export const VoiceMessage = memo(function VoiceMessage({
+  message,
+  bare = false,
+  tone,
+}: {
+  message: Message;
+  /** Inside the message's bubble (a conversation of bubbles): the bubble is its frame, no card of its own. */
+  bare?: boolean;
+  /** What it has played, in who said it: their name's color over the bubble. Ink when not given. */
+  tone?: string;
+}) {
+  const { t } = useTranslation();
   const orgId = useOrgId();
+  const dir = useRowDirectory();
   const voice = voiceOf(message.meta);
   const words = useMemo(() => spokenWords(message), [message]);
+  // On the Lock Screen and in the notification: who said it, as a voice note.
+  const nowPlaying = { title: dir.nameOf(message.author), artist: t("mobile.voice.nowPlaying") };
   if (!voice) return null;
   const url = voiceAudioUrl(orgId, voice.clipId, serverUrl());
   return (
@@ -63,6 +87,9 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
       sending={Boolean(message.local)}
       expiredAtStart={voiceExpired(voice)}
       isGone={() => voiceAudioGone(url, authedFetch as typeof fetch)}
+      bare={bare}
+      nowPlaying={nowPlaying}
+      {...(tone ? { tone } : {})}
     />
   );
 });
@@ -82,6 +109,9 @@ export function VoiceClip({
   expiredAtStart = false,
   isGone,
   onFailed,
+  bare = false,
+  nowPlaying,
+  tone,
 }: {
   /** The playback's id: one sound plays at a time, and each keeps its place. */
   clipId: string;
@@ -98,6 +128,12 @@ export function VoiceClip({
   isGone?: () => Promise<boolean>;
   /** Given: a sound that can't play hands its place back instead of offering to try again. */
   onFailed?: () => void;
+  /** Inside a bubble: no card of its own. */
+  bare?: boolean;
+  /** What the system shows while it plays (the Lock Screen, the notification): who said it, or the file's name. */
+  nowPlaying?: NowPlaying;
+  /** What it has played, and its handle: who said it (`VoiceMessage`'s `tone`), ink when not given. */
+  tone?: string;
 }) {
   const { t, i18n } = useTranslation();
   const c = useColors();
@@ -109,7 +145,8 @@ export function VoiceClip({
   const progress = useSharedValue(placeOf(clipId));
   // A finger on the wave: what the player says meanwhile doesn't move it (the two fought over the handle).
   const scrubbing = useSharedValue(false);
-  const wave = useSharedValue(Skia.Path.Make());
+  const inner = useSharedValue(Skia.Path.Make());
+  const edge = useSharedValue(Skia.Path.Make());
   const [width, setWidth] = useState(0);
   // The clock, from the clip's place read whole once a second: its length while it has no place.
   const second = useSyncExternalStore(subscribePlace, () => {
@@ -144,8 +181,10 @@ export function VoiceClip({
   }, [playing, rate, clipId]);
   useEffect(() => {
     if (width <= 0) return;
-    wave.value = barWave(peaks, width, BAR_WAVE_H);
-  }, [width, peaks, wave]);
+    const wave = wavePaths(peaks, width, WAVE, false, true);
+    inner.value = wave.inner;
+    edge.value = wave.edge;
+  }, [width, peaks, inner, edge]);
 
   const lose = () => {
     expired.add(clipId);
@@ -161,12 +200,28 @@ export function VoiceClip({
     setBroken(false);
     // It plays at once; only a player that failed asks the server why (a player says nothing of it): a recording the
     // server no longer keeps dims, anything else offers to try again (or hands its place back, `onFailed`).
-    const failed = () => {
+    const failed = (reason?: unknown) => {
+      // What the player said (or what threw), kept for a sound that should have played: a phone where clips don't play
+      // says why in the error reports. A recording past its retention is no failure.
+      const report = () =>
+        reportError(
+          new Error(`Voice playback failed: ${reason instanceof Error ? reason.message : String(reason ?? "")}`),
+          {
+            where: "voice.playback",
+          },
+        );
       if (onFailed) {
+        report();
         onFailed();
         return;
       }
-      void (isGone?.() ?? Promise.resolve(false)).then((yes) => (yes ? lose() : setBroken(true)));
+      void (isGone?.() ?? Promise.resolve(false)).then((yes) => {
+        if (yes) lose();
+        else {
+          report();
+          setBroken(true);
+        }
+      });
     };
     void startPlayback({
       id: clipId,
@@ -175,6 +230,7 @@ export function VoiceClip({
       from: placeOf(clipId),
       speed: voiceSpeed(),
       onError: failed,
+      ...(nowPlaying ? { nowPlaying } : {}),
     }).catch(failed);
   };
   const seek = (at: number) => seekPlayback(clipId, at);
@@ -201,11 +257,11 @@ export function VoiceClip({
     onActivate: (e) => {
       "worklet";
       scrubbing.value = true;
-      if (width > 0) progress.value = waveAt(e.x, width, BAR_HANDLE);
+      if (width > 0) progress.value = waveAt(e.x, width);
     },
     onUpdate: (e) => {
       "worklet";
-      if (width > 0) progress.value = waveAt(e.x, width, BAR_HANDLE);
+      if (width > 0) progress.value = waveAt(e.x, width);
     },
     onDeactivate: (e) => {
       "worklet";
@@ -214,7 +270,7 @@ export function VoiceClip({
         return;
       }
       // Where the finger let go, not the last frame drawn before it.
-      const at = width > 0 ? waveAt(e.x, width, BAR_HANDLE) : progress.value;
+      const at = width > 0 ? waveAt(e.x, width) : progress.value;
       progress.value = at;
       scheduleOnRN(endScrub, at);
     },
@@ -224,7 +280,7 @@ export function VoiceClip({
     onDeactivate: (e) => {
       "worklet";
       if (e.canceled || width <= 0) return;
-      const at = waveAt(e.x, width, BAR_HANDLE);
+      const at = waveAt(e.x, width);
       progress.value = at;
       scheduleOnRN(seek, at);
     },
@@ -237,9 +293,12 @@ export function VoiceClip({
     [i18n.language],
   );
   const more = words && !open && (words.length > ONE_LINE || words.includes("\n"));
+  // The played part in who said it, the rest quiet; a column's ends in a half tone of each.
+  const played = tone ?? c.ink;
+  const off = gone ? c.line2 : c.faint;
   return (
     <View style={styles.box}>
-      <View style={[styles.card, { backgroundColor: c.raised, borderColor: c.line }]}>
+      <View style={bare ? styles.bare : [styles.card, { backgroundColor: c.raised, borderColor: c.line }]}>
         <View style={styles.player}>
           {gone ? null : (
             <PressScale
@@ -267,13 +326,16 @@ export function VoiceClip({
           )}
           <GestureDetector gesture={scrub}>
             <View style={[styles.wave, gone && styles.dim]} accessible={false}>
-              <BarWave
-                path={wave}
+              <PixelWave
+                inner={inner}
+                edge={edge}
                 progress={progress}
-                on={c.ink}
-                off={gone ? c.line2 : c.faint}
+                tones={[played, withOpacity(played, ENDS)]}
+                off={off}
+                offEdge={withOpacity(off, ENDS)}
+                room={HANDLE_ROOM}
                 onWidth={setWidth}
-                height={BAR_WAVE_H}
+                height={WAVE}
                 handle={!gone}
               />
             </View>
@@ -348,23 +410,26 @@ export function VoiceClip({
 
 const styles = StyleSheet.create({
   box: { gap: 6, maxWidth: 320 },
-  // The web's voice card: 16 round, the corner cut at the bottom left.
+  // The chat's card (files, tools, media): 14 round, the conversation's corner cut at the top left; the web's voice
+  // card's room inside.
   card: {
     gap: 6,
     paddingVertical: 8,
     paddingLeft: 10,
     paddingRight: 14,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    borderBottomRightRadius: 16,
-    borderBottomLeftRadius: 4,
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: 14,
+    borderBottomRightRadius: 14,
+    borderBottomLeftRadius: 14,
     borderWidth: StyleSheet.hairlineWidth,
   },
+  // In a bubble: the bubble's own room and fill around it.
+  bare: { gap: 6, marginTop: 4 },
   player: { flexDirection: "row", alignItems: "center", gap: ROW_GAP, minHeight: PLAY },
   play: { width: PLAY, height: PLAY, borderRadius: PLAY / 2 },
   playNudge: { marginLeft: 2 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  wave: { flex: 1, minWidth: 0, height: BAR_WAVE_H, flexDirection: "row" },
+  wave: { flex: 1, minWidth: 0, height: WAVE, flexDirection: "row" },
   dim: { opacity: 0.5, marginLeft: 6 },
   time: { minWidth: 30, textAlign: "right", fontVariant: ["tabular-nums"] },
   speed: { width: SPEED_W, height: SPEED_H, borderRadius: 6 },

@@ -12,8 +12,8 @@ describe("the audio session goes back to the app's sounds after a voice", () => 
   test("the app's sounds: mixed with the music and silent in silent mode; a voice takes it, then gives it back", () => {
     const mode = src("lib/audio-mode.ts");
     expect(mode).toMatch(/allowsRecording: false,\s*playsInSilentMode: false,\s*interruptionMode: "mixWithOthers",/);
-    expect(mode).toContain(
-      'return setAudioModeAsync({ allowsRecording: recording, playsInSilentMode: true, interruptionMode: "doNotMix" })',
+    expect(mode).toMatch(
+      /return setAudioModeAsync\(\{\s*allowsRecording: recording,\s*playsInSilentMode: true,\s*interruptionMode: "doNotMix",/,
     );
     // A stopped voice gives it back a moment later, unless the next one (a row, the take) takes it first.
     expect(mode).toContain("export const VOICE_RELEASE_MS = 600;");
@@ -24,7 +24,7 @@ describe("the audio session goes back to the app's sounds after a voice", () => 
   test("playback and the take use it: none leaves the session in silent-mode playback any more", () => {
     const playback = src("features/voice/playback.ts");
     expect(playback).toContain("await voiceAudio(false);");
-    expect(playback).toMatch(/now = null;\s*starting = null;[\s\S]{0,200}releaseVoiceAudio\(\);/);
+    expect(playback).toMatch(/now = null;\s*held = null;\s*starting = null;[\s\S]{0,200}releaseVoiceAudio\(\);/);
     const t = take();
     expect(t).not.toContain("setAudioModeAsync");
     expect(t).toMatch(/setPhase\("idle"\);\s*return appAudio\(\);/);

@@ -120,8 +120,28 @@ describe("the first run", () => {
     expect(flow).toContain("<ZoneSheet");
     const account = src("features/me/AccountPage.tsx");
     const sheet = account.slice(account.indexOf("export function ZoneSheet("), account.indexOf("function ZonePicker("));
-    expect(sheet).toContain("<Sheet");
-    expect(sheet).toContain("{shown ? <ZoneSheetRows value={value} query={query} onPick={onPick} /> : null}");
+    // The system's sheet with the app's look (`useSheetProps`, `SheetContent`), its list the sheet's scroll view.
+    expect(sheet).toContain("<TrueSheet");
+    expect(sheet).toContain("const props = useSheetProps({");
+    expect(sheet).toContain("scrollableRef={list}");
+    expect(sheet).toContain(
+      "{shown ? <ZoneSheetRows listRef={list} value={value} query={query} onPick={onPick} /> : null}",
+    );
     expect(sheet).toContain("<SearchField");
+  });
+
+  test("the time zone sheet's list is virtualized: several hundred zones never mount as it opens", () => {
+    const account = src("features/me/AccountPage.tsx");
+    const sheet = account.slice(account.indexOf("export function ZoneSheet("), account.indexOf("function ZonePicker("));
+    // A fixed height, as the list has none of its own to take, and the rows drawn as it scrolls.
+    expect(account).toContain("const ZONE_DETENTS: SheetDetent[] = [1];");
+    expect(sheet).toContain("detents: ZONE_DETENTS,");
+    expect(sheet).toContain("<FlatList");
+    expect(sheet).toContain("initialNumToRender={20}");
+    expect(sheet).not.toContain(".map(row)");
+    // Memoized rows with one stable pick.
+    expect(account).toContain("const ZoneRow = memo(function ZoneRow(");
+    expect(sheet).toContain("const pick = useCallback((zone: string) => pickRef.current(zone), []);");
+    expect(sheet).toContain("onPick={pick}");
   });
 });

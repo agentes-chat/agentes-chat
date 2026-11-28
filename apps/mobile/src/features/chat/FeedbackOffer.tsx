@@ -129,10 +129,10 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
     ...ROW_CARD_INSET,
     borderWidth: StyleSheet.hairlineWidth,
-    borderTopLeftRadius: 14,
+    borderTopLeftRadius: 6,
     borderTopRightRadius: 14,
     borderBottomRightRadius: 14,
-    borderBottomLeftRadius: 6,
+    borderBottomLeftRadius: 14,
   },
   // The "small" line (20) on a 32 row's middle, as the other cards' first line.
   tx: { paddingTop: (32 - 20) / 2 },

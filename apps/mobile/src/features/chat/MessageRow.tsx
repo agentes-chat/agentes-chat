@@ -125,7 +125,14 @@ import { AwayPill, BrainWait } from "../outages/WaitCard";
 import { SettingsProposals } from "../right-hand/SettingsCard";
 import { ReplyChips, TeamCard } from "../right-hand/TeamCard";
 import { TeamWeek } from "../right-hand/TeamWeekCard";
-import { type BubbleHead, BubbleHeadContext, type BubblePart, BubblePartContext } from "../shared/bubble-part";
+import {
+  type BubbleHead,
+  BubbleHeadContext,
+  type BubblePart,
+  BubblePartContext,
+  MY_BUBBLE_CORNERS,
+  THEIR_BUBBLE_CORNERS,
+} from "../shared/bubble-part";
 import { AgentFace, Face, withAgentFaces } from "../shared/Face";
 import { useColors, useOrgId, useWhen } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
@@ -233,7 +240,7 @@ interface RowProps {
   grouped: boolean;
   /** Next in its turn, but under something else: it takes a turn's gap. */
   newTurn?: boolean | undefined;
-  /** My own row's place in a run of my rows (`runPosition`): the corners it shares square off, the time ends it. */
+  /** My own row's place in a run of my rows (`runPosition`): the time ends it (every bubble keeps one shape). */
   run?: RunPosition;
   /** The message it groups under, and whether that one shows its thread's link: what hangs under it ends the run. */
   above?: Message;
@@ -419,7 +426,7 @@ function RowBody({
   // finger was and the pill grows in under the words; holding still opens the menu with every reaction. The line
   // "Toque duplo = 👍" sits under one agent's message until it has been seen once.
   const reduced = useReducedMotion();
-  // Read once for the row: its pills (`Reactions`), the double tap and the run's corners all take these.
+  // Read once for the row: its pills (`Reactions`) and the double tap take these.
   const cachedReactions = useReactions(orgId, m.id, false);
   const reactions = cachedReactions.data ?? m.reactions;
   const toggle = useToggleReaction(orgId, m.id);
@@ -521,8 +528,13 @@ function RowBody({
   // Settings it proposes, or a workspace action it asks for: their card (`SettingsProposals`).
   const actionKind = actionCardOf(meta)?.kind;
   const settingsCard = actionKind === "settings_proposal" || actionKind === "workspace_action";
-  const rowGap = !grouped || newTurn ? rhythm.turn : cardRow ? rhythm.card : rhythm.part;
-  const cardTop = body || media ? rhythm.card - rhythm.part : 0;
+  const look = useRowLook();
+  // In bubbles every part of a message (a bubble, a card, its thread, its reactions) stands the one gap off the part
+  // above it, as consecutive bubbles do, and so does a card in a row of its own: nothing joins closer, nothing stands
+  // further. The other looks give a card more room under loose words (`CHAT_RHYTHM.card`).
+  const cardGap = look.style === "bubbles" ? rhythm.part : rhythm.card;
+  const rowGap = !grouped || newTurn ? rhythm.turn : cardRow ? cardGap : rhythm.part;
+  const cardTop = body || media ? cardGap - rhythm.part : 0;
   // Where it browsed, or what it did on its desktop, after the run (as on the web): the steps' card.
   // Step summaries, no picture: activity, so the person's setting hides them like the tool block.
   const trails =
@@ -547,7 +559,6 @@ function RowBody({
   // My own message. In the styles that keep it apart, a bubble on the right with no face or name; in the others, a row
   // like anyone's.
   const mine = m.author.type === "person" && Boolean(meId) && m.author.id === meId;
-  const look = useRowLook();
   // The name over the words and its time follow the person's Tamanho do texto, as the words do.
   const nameSize = look.text ? chatNameOf(look.text) : undefined;
   const timeSize = look.text ? chatTimeOf(look.text) : undefined;
@@ -682,14 +693,12 @@ function RowBody({
         style={[
           bubbled ? lookRows.bubble : styles.bubble,
           styles.bubbleEnd,
-          BUBBLE_RUN[run],
+          MY_BUBBLE_CORNERS,
           { backgroundColor: (bubbled && look.fill) || c.bubble },
           bubbleEdge,
         ]}
       >
-        <ThreadBubbleVeil
-          corners={{ borderRadius: (bubbled ? lookRows.bubble : styles.bubble).borderRadius, ...BUBBLE_RUN[run] }}
-        />
+        <ThreadBubbleVeil corners={MY_BUBBLE_CORNERS} />
         {quote ? <QuotePlate reply={quote} onJump={onQuote} {...(solidInk ? { ink: solidInk } : {})} /> : null}
         <ClippedMessage id={m.id} behind={[(bubbled && look.fill) || c.bubble]} ink={solidInk}>
           <MessageText
@@ -954,8 +963,10 @@ function RowBody({
       {saying(body)}
     </ClippedMessage>
   ) : null;
-  // The bubble holds its words, the tags of its name line and, at its end, the time; a row with none keeps its line.
-  const inBubble = bubbled && Boolean(body) && !brainWait && !deviceWait && !choiceReply;
+  // The bubble holds its words, the tags of its name line and, at its end, the time; a row with none keeps its line. A
+  // voice message is said in a bubble too: its player (and its words) inside it, under the name, as a message's words.
+  const voiced = bubbled && Boolean(voiceOf(meta)) && !brainWait && !deviceWait && !choiceReply;
+  const inBubble = (bubbled && Boolean(body) && !brainWait && !deviceWait && !choiceReply) || voiced;
   const tagged = Boolean(app || reminder || via || surfaceTag || routine || talker || helping || m.pinned);
   const opener = opened?.said ? <MessageText body={opened.said} selectable={false} accent={accent} /> : null;
   // Outside a bubble the line it opened with is a part of its own, as the web's second text.
@@ -991,10 +1002,9 @@ function RowBody({
     [approvalId, question, secret].filter(Boolean).length === 1;
   const bubbleHead = askAlone ? { who: who(true), time: when.time(m.createdAt) } : null;
   const nameOrWords = Boolean(inBubble || (nameLine && !askAlone) || pinLine || reportOpened || opener || words);
-  // In bubbles, the cards under these words are bubbles of the same message: its fill, 3 points under it, joined
-  // (`BubblePartContext`, `BUBBLE_JOIN`).
+  // In bubbles, the cards under these words are bubbles of the same message: its fill (`BubblePartContext`), the one
+  // gap under it (`cardTop`).
   const bubblePart = bubbled ? { fill: otherFill, edge: bubbleEdge } : null;
-  const partTop = bubbled && (body || media) ? BUBBLE_JOIN - rhythm.part : cardTop;
   return (
     <>
       {pairRow && m.author.id ? (
@@ -1060,7 +1070,7 @@ function RowBody({
         ) : null}
         {/* Its face and its body give way together (`useGiveWay`), so the bubble never runs under the face. */}
         <Animated.View style={[styles.body, { gap: rhythm.part }, inBubble && giveWay.style, compact && slide]}>
-          <RowParts top={partTop} part={bubblePart} head={bubbleHead}>
+          <RowParts top={cardTop} part={bubblePart} head={bubbleHead}>
             {nameOrWords ? (
               <View onLayout={inBubble ? giveWay.onArea : undefined}>
                 {inBubble ? (
@@ -1075,18 +1085,19 @@ function RowBody({
                       style={[
                         lookRows.bubble,
                         wide && styles.wideBubble,
-                        OTHER_RUN[run],
+                        THEIR_BUBBLE_CORNERS,
                         { backgroundColor: otherBubble },
                         bubbleEdge,
                         bubbleCap.capStyle,
                       ]}
                     >
-                      <ThreadBubbleVeil corners={{ borderRadius: lookRows.bubble.borderRadius, ...OTHER_RUN[run] }} />
+                      <ThreadBubbleVeil corners={THEIR_BUBBLE_CORNERS} />
                       {!grouped && (look.names || tagged) ? who(true) : null}
                       {quoteInWords}
                       {quote ? <QuotePlate reply={quote} onJump={onQuote} /> : null}
                       {opener}
                       {words}
+                      {voiced ? <VoiceMessage message={m} bare {...(nameColor ? { tone: nameColor } : {})} /> : null}
                     </View>
                   </>
                 ) : compact && !grouped ? (
@@ -1113,7 +1124,7 @@ function RowBody({
               </View>
             ) : null}
             {media ? <ChatMedia media={media} liveId={m.id} /> : null}
-            {voiceOf(meta) ? <VoiceMessage message={m} /> : null}
+            {voiceOf(meta) && !voiced ? <VoiceMessage message={m} /> : null}
             {isAgent && meta?.speedFallback === true ? <SpeedFallbackLine message={m} /> : null}
             {isAgent && standIn ? <ModelStandInLine message={m} text={standIn} /> : null}
             {spilled ? <SpilledLine text={spilled} /> : null}
@@ -1645,24 +1656,13 @@ const POP_IN: EntryExitAnimationFunction = () => {
 };
 const POP_OUT = FadeOut.duration(160);
 
-/** The turn's last corner, cut as a card's is, on the side my bubble stands. */
-const BUBBLE_CUT = RADIUS.sm;
-
 /** A row under the quote it answers: they read as one. */
 const QUOTE_GAP = 2;
 /** A pin's caption stays on its message, as a name on its words. */
 const PIN_GAP = 2;
 
-/** The bubble's corners by its place in a run of my rows: the sides it shares with its neighbours square off. */
 /** A mention's amber over a lifted bubble, as much as its tint (`21`, hex) shows over the gray. */
 const AMBER_TINT = 0x21 / 0xff;
-
-const BUBBLE_RUN: Record<RunPosition, { borderTopRightRadius?: number; borderBottomRightRadius?: number }> = {
-  solo: { borderBottomRightRadius: BUBBLE_CUT },
-  start: { borderBottomRightRadius: RADIUS.sm },
-  mid: { borderTopRightRadius: RADIUS.sm, borderBottomRightRadius: RADIUS.sm },
-  end: { borderTopRightRadius: RADIUS.sm, borderBottomRightRadius: BUBBLE_CUT },
-};
 
 /**
  * A row's parts' context: how far a card stands off what is above it (`RowPartContext`), and in bubbles that it is a
@@ -1688,17 +1688,6 @@ function RowParts({
     </RowPartContext.Provider>
   );
 }
-
-/** How far under a bubble its cards sit in `bubbles`: one group of the same message, as a run of bubbles. */
-const BUBBLE_JOIN = 3;
-
-/** Anyone else's bubble in `bubbles`: the same, on the left. */
-const OTHER_RUN: Record<RunPosition, { borderTopLeftRadius?: number; borderBottomLeftRadius?: number }> = {
-  solo: {},
-  start: { borderBottomLeftRadius: RADIUS.sm },
-  mid: { borderTopLeftRadius: RADIUS.sm, borderBottomLeftRadius: RADIUS.sm },
-  end: { borderTopLeftRadius: RADIUS.sm },
-};
 
 /** Words and time on my solid bubble. */
 const ON_SOLID = "#ffffff";

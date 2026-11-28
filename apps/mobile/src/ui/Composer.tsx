@@ -945,9 +945,10 @@ const styles = StyleSheet.create({
   // Over the empty field's one line, centered on it.
   placeholder: { position: "absolute", left: 0, right: 0, bottom: 0, height: SEND, justifyContent: "center" },
   // To the screen edges (past the composer's own inset), so on a narrow phone the last buttons scroll in instead of
-  // being cut at the padding.
-  formatBleed: { marginHorizontal: -10 },
-  formatRow: { paddingHorizontal: 10, paddingBottom: 8 },
+  // being cut at the padding. Two points over the top too: the bar's outline is drawn outside it, and the scroll view
+  // clips what overflows its content, so the ring was cut along the bar's top edge; the bar itself stays put.
+  formatBleed: { marginHorizontal: -10, marginTop: -2 },
+  formatRow: { paddingHorizontal: 10, paddingTop: 2, paddingBottom: 8 },
   format: { flexDirection: "row", height: 44, padding: 4, gap: 2, borderRadius: 22 },
   formatButton: { width: SEND, height: SEND, borderRadius: SEND / 2 },
   row: { flexDirection: "row", alignItems: "flex-end", gap: 8 },

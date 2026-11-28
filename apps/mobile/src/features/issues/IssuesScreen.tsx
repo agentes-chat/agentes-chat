@@ -12,14 +12,7 @@ import { liveProjectFilter, NO_PROJECT } from "@agenteschat/client/lib/issue-pro
 import { assigneeNames } from "@agenteschat/client/lib/issues";
 import { Fragment, memo, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  RefreshControl,
-  ScrollView,
-  type ScrollViewInstance,
-  StyleSheet,
-  useWindowDimensions,
-  View,
-} from "react-native";
+import { RefreshControl, ScrollView, type ScrollViewInstance, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, FadeOut, LayoutAnimationConfig, LinearTransition } from "react-native-reanimated";
 import { useOrg } from "@/providers/org";
 import {
@@ -42,6 +35,7 @@ import {
 } from "@/ui";
 import { mediaRowAxis } from "@/ui/media-row";
 import { router } from "@/ui/navigation";
+import { useContentWidth, useReadableSide } from "@/ui/pane";
 import { useRowDirectory } from "../chat/row-data";
 import { mayCreate } from "../new/logic";
 import { Face } from "../shared/Face";
@@ -322,7 +316,9 @@ function Board({
   project: string;
 }) {
   const { t } = useTranslation();
-  const { width } = useWindowDimensions();
+  // The width the pager lays out in: the readable column on a large screen (ADR 0212), the pane's in a split; the
+  // window's on a phone.
+  const width = useContentWidth() - 2 * useReadableSide();
   const unreadList = useUnreadTasks(useOrgId()).data;
   // Each task's unread replies and mentions of me (ADR 0145), read once for the board: a card that reads the whole list
   // itself is drawn again, every card, whenever any task's count changes.

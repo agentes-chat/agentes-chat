@@ -72,7 +72,7 @@ export {
   useHeaderActionOptions,
 } from "./headerActions";
 export { Icon, type IconName, type IconProps, type IconWeight } from "./Icon";
-export { ICON_BUTTON_SIZE, IconButton, type IconButtonProps, usePlateEdge } from "./IconButton";
+export { ICON_BUTTON_SIZE, IconButton, type IconButtonProps, PLATE_EDGE_ROOM, usePlateEdge } from "./IconButton";
 export { IconTile } from "./IconTile";
 export { InfoHint, type InfoHintOptions } from "./InfoHint";
 export { ICON_NAMES } from "./icons.data";

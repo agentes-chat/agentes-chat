@@ -29,16 +29,21 @@ export function appAudio(): Promise<void> {
 }
 
 /**
- * A voice plays (`recording` false) or records: heard in silent mode, alone. Recording, the take's haptics still reach
- * the hand: iOS mutes them while the session records unless told otherwise, and the audio library never does.
+ * A voice plays (`recording` false) or records: heard in silent mode, alone. Playing, it goes on with the app in the
+ * background, as a messaging app's voice notes do (the system shows it with its controls, `playback.ts`; alone, as
+ * the system's controls need); a take stays in the app. Recording, the take's haptics still reach the hand: iOS mutes
+ * them while the session records unless told otherwise, and the audio library never does.
  */
 export function voiceAudio(recording: boolean): Promise<void> {
   cancelRelease();
-  return setAudioModeAsync({ allowsRecording: recording, playsInSilentMode: true, interruptionMode: "doNotMix" }).then(
-    () => {
-      if (recording) allowFeedbackWhileRecording();
-    },
-  );
+  return setAudioModeAsync({
+    allowsRecording: recording,
+    playsInSilentMode: true,
+    interruptionMode: "doNotMix",
+    shouldPlayInBackground: !recording,
+  }).then(() => {
+    if (recording) allowFeedbackWhileRecording();
+  });
 }
 
 /** A voice stopped: the app's sounds get the session back in a moment, unless another voice takes it first. */

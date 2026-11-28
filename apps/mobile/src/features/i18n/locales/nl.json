@@ -123,6 +123,8 @@
     "directChat": "Direct gesprek"
   },
   "approval": {
+    "cancelAheadTitle": "Deze geplande actie annuleren?",
+    "cancelAheadText": "Ze loopt niet op het geplande tijdstip. Wil je ze later uitvoeren, keur ze dan opnieuw goed als de agent erom vraagt.",
     "asksIn": "vraagt je goedkeuring · #{{channel}}",
     "asksYou": "vraagt je goedkeuring",
     "expiresIn_one": "verloopt over {{count}} min",
@@ -333,12 +335,16 @@
     "recording": "Opnemen",
     "discard": "Verwijderen",
     "send": "Versturen",
-    "seeAll": "Alles bekijken"
+    "seeAll": "Alles bekijken",
+    "nowPlaying": "Spraakbericht",
+    "nowPlayingFile": "Audio"
   },
   "chat": {
+    "followUpCancelTitle": "De opvolging van {{name}} {{when}} annuleren?",
     "someone": "Iemand",
     "handedTo": "Doorgegeven aan {{name}}",
     "handedTo_female": "Doorgegeven aan {{name}}",
+    "inBackground": "Op de achtergrond",
     "pairAsked": "{{from}} vroeg",
     "messageTo": "Bericht aan {{name}}",
     "messageIn": "Bericht in {{channel}}",
@@ -1372,7 +1378,9 @@
       "priority": "Prioriteit",
       "assignee": "Wie doet het",
       "cancel": "Taak annuleren",
-      "canceled": "#{{number}} geannuleerd"
+      "canceled": "#{{number}} geannuleerd",
+      "cancelTitle": "Taak #{{number}} annuleren?",
+      "cancelText": "Ze verdwijnt uit de open taken. Je kunt haar later heropenen."
     },
     "nobody": "Niemand",
     "you": "Jij",
@@ -1511,7 +1519,40 @@
       "lastDay": "Laatste dag"
     }
   },
+  "calendar": {
+    "proposalBy": "Voorstel van {{name}}",
+    "confirm": "Bevestigen",
+    "due": "deadline",
+    "allDay": "hele dag",
+    "until": "tot {{time}}",
+    "nothingThatDay": "Niets gepland.",
+    "after": "Daarna",
+    "showWeek": "Alleen de week tonen",
+    "showMonth": "De maand tonen",
+    "day": "Dag",
+    "time": "Tijd",
+    "repeats": "Herhaalt",
+    "going": "Ga je?",
+    "participantsCount": "Deelnemers · {{count}}",
+    "timeRange": "{{from}} tot {{to}}",
+    "dayRange": "{{from}} t/m {{to}}",
+    "noAnswer": "nog geen antwoord",
+    "agentPrepares": "Maakt vooraf een samenvatting",
+    "task": "Taak",
+    "conversation": "Gesprek",
+    "deleteEvent": "Afspraak verwijderen",
+    "deleteAsk": "Deze afspraak verwijderen?",
+    "starts": "Begint",
+    "ends": "Eindigt",
+    "noRepeat": "Herhaalt niet",
+    "addPeople": "Persoon of agent toevoegen"
+  },
   "coding": {
+    "removeTitle": "{{name}} uit de sessie halen?",
+    "removeText": "Die persoon ziet de sessie en het gesprek niet meer. Om diegene terug te halen, typ je @ en de naam in het gesprek.",
+    "removeConfirm": "Uit de sessie halen",
+    "leaveTitle": "Sessie verlaten?",
+    "leaveText": "Ze verdwijnt uit je lijst. Om terug te komen, moet iemand uit de sessie je uitnodigen.",
     "pill": "{{who}}. Bekijk de code",
     "seeChanges": "Bekijk de wijzigingen",
     "project": "Project",
@@ -1536,9 +1577,24 @@
   "taskManager": {
     "loadFailed": "Kon de taken niet laden.",
     "gone": "Deze taak is er niet meer.",
-    "quiet": "Er loopt niets",
-    "doneToday_one": "{{count}} vandaag afgerond",
-    "doneToday_other": "{{count}} vandaag afgerond",
+    "title": "Bezig",
+    "sections": {
+      "you": "Wacht op jou",
+      "working": "Aan het werk",
+      "later": "Later"
+    },
+    "computerBusy": "{{name}} is bezet.",
+    "wantsOk": "Wil je akkoord",
+    "asked": "Heeft je een vraag gesteld",
+    "routine": "Routine",
+    "asks": "Wat {{name}} vraagt",
+    "approveNote": "{{name}} gaat verder zodra je goedkeurt.",
+    "answer": "Antwoorden in het gesprek",
+    "progress": "Voortgang",
+    "allSteps_one": "De stap bekijken",
+    "allSteps_other": "Alle {{count}} stappen bekijken",
+    "stopAll_one": "De taak stoppen",
+    "stopAll_other": "Alle {{count}} taken stoppen",
     "request": "Verzoek",
     "stopTitle": "“{{title}}” stoppen?",
     "stopBody": "{{name}} stopt nu en vertelt in het gesprek wat er tot nu toe is gedaan."
@@ -1964,6 +2020,8 @@
       "name": "Naam",
       "renamed": "Hernoemd naar {{name}}",
       "stop": "{{name}} stoppen",
+      "stopTitle": "{{name}} op {{device}} stoppen?",
+      "stopText": "Wat erop draait, stopt nu. Je kunt het later opnieuw vragen.",
       "stopped": "{{device}} is terug van {{name}}",
       "forget": "Deze telefoon vergeten",
       "forgetTitle": "{{name}} vergeten?",
@@ -2117,7 +2175,8 @@
       "allowOnce": "Eén keer toestaan",
       "always": "{{name}} altijd toestaan",
       "no": "Nee",
-      "stop": "Stoppen"
+      "stop": "Stoppen",
+      "stopTitle": "Stoppen met het gebruik van {{device}}?"
     },
     "wait": {
       "waiting": "Wachten op {{device}}",
@@ -2321,6 +2380,8 @@
     "failed": "Opslaan lukte niet. Probeer het opnieuw."
   },
   "ai": {
+    "dontRunTitle": "Dit verzoek niet uitvoeren?",
+    "dontRunText": "Het wordt geannuleerd en loopt niet wanneer de limiet terug is.",
     "yourPlan": "Je AI-abonnement",
     "plansSub": "Claude, ChatGPT, Gemini, GLM en anderen",
     "plansFoot": "Agents denken met je abonnement, geen API-sleutel nodig. Het logt in op de computer van de agent.",

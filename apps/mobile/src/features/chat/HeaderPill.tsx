@@ -18,7 +18,9 @@ import { needsHeaderBlur } from "@/lib/nav";
 import { Dither } from "@/sky/Dither";
 import { softTones } from "@/sky/math";
 import { Glass, haptics, motion, PressScale, Text, useReducedMotion, useTheme } from "@/ui";
+import { PLATE_EDGE_ROOM } from "@/ui/IconButton";
 import { usePane } from "@/ui/pane";
+import { useFontScale } from "@/ui/text-scale";
 import { panePillRoom, pillRoom } from "./pill-room";
 
 /** iOS 26's bar, whose buttons are the system's glass ones; elsewhere our own 44-point buttons side by side. */
@@ -32,6 +34,13 @@ const TRAILING_GAP = 2;
 const HEIGHT = 44;
 const BORDER = StyleSheet.hairlineWidth;
 const MIN_WIDTH = 120;
+/**
+ * The most the pill's words grow with the text size (the system's and the app's together): they are the bar's, and its
+ * height is fixed, so a name and its line at this size still fit in it (20 and 16 points grown by 1.2 is 43).
+ */
+const PILL_MAX = 1.2;
+/** The quiet line's height at the default text size. */
+const LINE = 16;
 /*
  * No finger drives any of these, so they are timed, not sprung (springs carry a finger's velocity; there is none):
  * the width morphs on screen (ease-in-out), a line enters and leaves (ease-out), the sky turns on and off (ease-in-out).
@@ -174,7 +183,11 @@ export const HeaderPill = memo(function HeaderPill({
     set(Math.ceil(e.nativeEvent.layout.width));
 
   return (
-    <View style={[styles.slot, { width: room }, pane && styles.centred]} pointerEvents="box-none">
+    // Android hosts the bar's views in boxes that clip each to its own size: the pill's ring and shadow keep room inside.
+    <View
+      style={[styles.slot, { width: room }, pane && styles.centred, Platform.OS === "android" && PLATE_EDGE_ROOM]}
+      pointerEvents="box-none"
+    >
       {/* What the words measure, whole, with no room limit. */}
       <View
         style={styles.measure}
@@ -182,11 +195,17 @@ export const HeaderPill = memo(function HeaderPill({
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       >
-        <Text variant="callout" numberOfLines={1} style={styles.title} onLayout={measured(setNameWidth)}>
+        <Text
+          variant="callout"
+          numberOfLines={1}
+          maxFontSizeMultiplier={PILL_MAX}
+          style={styles.title}
+          onLayout={measured(setNameWidth)}
+        >
           {title}
         </Text>
         {subtitle ? (
-          <Text variant="caption" numberOfLines={1} onLayout={measured(setLineWidth)}>
+          <Text variant="caption" numberOfLines={1} maxFontSizeMultiplier={PILL_MAX} onLayout={measured(setLineWidth)}>
             {subtitle}
           </Text>
         ) : null}
@@ -236,7 +255,7 @@ export const HeaderPill = memo(function HeaderPill({
             importantForAccessibility="no-hide-descendants"
             pointerEvents="none"
           >
-            <Text variant="callout" numberOfLines={1} style={styles.title}>
+            <Text variant="callout" numberOfLines={1} maxFontSizeMultiplier={PILL_MAX} style={styles.title}>
               {title}
             </Text>
             {subtitle ? (
@@ -276,8 +295,10 @@ function StatusLine({
   reduced: boolean;
   still: boolean;
 }) {
+  // As tall as the line grows (to the pill's cap), so its letters' feet aren't cut.
+  const height = Math.ceil(LINE * Math.min(useFontScale(), PILL_MAX));
   return (
-    <View style={styles.lineBox}>
+    <View style={[styles.lineBox, { height }]}>
       <LayoutAnimationConfig skipEntering>
         <Animated.View key={text} {...(reduced ? {} : { entering: rollIn, exiting: rollOut })} style={styles.line}>
           <SlidingText text={text} natural={natural} box={box} still={reduced || still} />
@@ -323,7 +344,7 @@ function SlidingText({ text, natural, box, still }: { text: string; natural: num
   const moved = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
   return (
     <Animated.View style={[free && { width: natural + 2 }, moved]}>
-      <Text variant="caption" tone="muted" numberOfLines={1}>
+      <Text variant="caption" tone="muted" numberOfLines={1} maxFontSizeMultiplier={PILL_MAX}>
         {text}
       </Text>
     </Animated.View>
@@ -353,7 +374,7 @@ const styles = StyleSheet.create({
   lead: { alignItems: "center", justifyContent: "center", width: LEAD },
   text: { flex: 1, minWidth: 0 },
   title: { fontWeight: "600", lineHeight: 20 },
-  lineBox: { height: 16, overflow: "hidden" },
+  lineBox: { height: LINE, overflow: "hidden" },
   line: { position: "absolute", top: 0, left: 0, right: 0 },
   trailing: { flexDirection: "row", alignItems: "center", marginLeft: TRAILING_GAP },
 });

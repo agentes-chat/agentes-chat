@@ -58,7 +58,7 @@ import { LoadFailed } from "../shared/FirstUse";
 import { useColors, useDirectory, useMeId, useNow, useOrgId } from "../shared/hooks";
 import { SheetTitle } from "../shared/PromptForm";
 import { useSheet } from "../shared/SheetHost";
-import { useStopper } from "../task-manager/hooks";
+import { askToStop, useStopper } from "../task-manager/hooks";
 import { StopButton } from "../task-manager/parts";
 import { machineOfAgents, queuePlace } from "./logic";
 
@@ -140,7 +140,13 @@ export function QueueSheet({ machineId, computer }: { machineId: string; compute
   const sheet = useSheet();
   const act: RowActions = {
     stopping,
-    stop: (runId) => stop([runId], undefined, true),
+    // Asked first, in the task's own alert (what it is and whose): the work it ends can't be taken back.
+    stop: (runId) => {
+      const view = q.data ? queueView(q.data, meId ?? "") : null;
+      const row = view ? [...view.working, ...view.waiting].find((w) => w.runId === runId) : undefined;
+      if (!row) return;
+      askToStop(t, { runId }, queuePurposeText(t, row.purpose, words.names), words.agentName(row.agentId), stop);
+    },
     open: (runId) => {
       sheet.close();
       router.push(`/task-manager/${runId}` as const);

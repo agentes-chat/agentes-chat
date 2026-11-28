@@ -27,6 +27,7 @@ import {
   useRouteSheetHeader,
   useRouteSheetScrollable,
 } from "@/ui";
+import { Lightbox } from "../lightbox/Lightbox";
 import { chatHref } from "../links/logic";
 import { LoadFailed } from "../shared/FirstUse";
 import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
@@ -68,6 +69,8 @@ export function ConsultationScreen({
         <FocusLive>
           <SheetSurface>
             <Consultation consultationId={consultationId} channelId={channelId} group={group} />
+            {/* Its messages' pictures and videos open here: the sheet presents over the app's own lightbox. */}
+            <Lightbox />
           </SheetSurface>
         </FocusLive>
       </SheetHostProvider>
@@ -89,7 +92,10 @@ function Consultation({
   const meId = useMeId();
   const dir = useDirectory();
   const c = useColors();
-  const look = useConversationLook(false);
+  // An exchange between two agents reads as a conversation of two (the direct conversations' look, bubbles unless
+  // the person chose otherwise), each one's name and face over its words: neither side is the reader's own.
+  const twoLook = useConversationLook(true);
+  const look = useMemo(() => ({ ...twoLook, names: true, faces: true }), [twoLook]);
   const insets = useSafeAreaInsets();
   const several = Boolean(group && group.length > 1);
   const listed = useConsultations(orgId, channelId, several && Boolean(channelId));

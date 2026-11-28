@@ -5,7 +5,7 @@ import { isolatedPage } from "@agenteschat/client/lib/isolated-page";
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Text as RNText, ScrollView, StyleSheet, View } from "react-native";
+import { Platform, Text as RNText, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { Button, EmptyState, type HeaderAction, type HeaderMenuItem, SCREEN_X, systemText, useToast } from "@/ui";
@@ -190,6 +190,7 @@ export function DocumentViewer({
           <View style={styles.audio}>
             <FileVoice
               id={detail.id}
+              name={info.name}
               version={detail.shownVersion}
               wave={detail.content.kind === "file" ? detail.content.wave : undefined}
               fallback={noPreview}
@@ -278,9 +279,19 @@ const PAGE_HEAD = `<meta name="viewport" content="width=device-width, initial-sc
  * phone's width, scrolling by itself. On white, as a page is when it sets no background of its own.
  */
 function HtmlPage({ detail }: { detail: ArtifactDetail }) {
+  const insets = useSafeAreaInsets();
   const inline = detail.content.kind === "html" ? detail.content.html : undefined;
   const text = useFileText(detail, inline === undefined);
-  return <IsolatedHtml html={inline ?? text.data} failed={text.isError} onRetry={() => void text.refetch()} />;
+  const html = inline ?? text.data;
+  return (
+    <View style={styles.fill}>
+      <IsolatedHtml html={html} failed={text.isError} onRetry={() => void text.refetch()} />
+      {/* The page's end above Android's navigation bar, on its white (iOS insets the page's own scroll instead). */}
+      {Platform.OS === "android" && html !== undefined ? (
+        <View style={[styles.white, { height: insets.bottom }]} />
+      ) : null}
+    </View>
+  );
 }
 
 /**
@@ -327,6 +338,8 @@ function IsolatedHtml({ html, failed, onRetry }: { html: string | undefined; fai
       renderLoading={() => <PageBones cover />}
       onContentProcessDidTerminate={() => setLife((n) => n + 1)}
       onRenderProcessGone={() => setLife((n) => n + 1)}
+      // iOS: the page scrolls under the home indicator and ends above it (a web view's own default is "never").
+      contentInsetAdjustmentBehavior="automatic"
       style={[styles.fill, styles.white]}
     />
   );

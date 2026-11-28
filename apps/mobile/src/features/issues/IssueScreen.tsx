@@ -1068,11 +1068,20 @@ function useIssueMenu(i: Issue): HeaderMenuItem[] {
     });
   if (w?.state === "running" && w.runId) {
     const runId = w.runId;
+    const agentName = dir.nameOf({ type: "agent", id: w.agentId });
     items.push({
       label: t("issues.work.stop"),
       icon: "pause",
       sf: "stop.circle",
-      onPress: () => stop.mutate(runId, { onError: failed }),
+      // Asked first, as a task's stop: the work it ends can't be taken back.
+      onPress: () =>
+        confirmAction({
+          title: t("mobile.taskManager.stopTitle", { title: i.title }),
+          text: t("mobile.taskManager.stopBody", agentGrammar(agentName)),
+          action: t("taskManager.confirm.stop", { count: 1 }),
+          cancel: t("common.cancel"),
+          onConfirm: () => stop.mutate(runId, { onError: failed }),
+        }),
     });
   }
   if (isOpen(i))
@@ -1081,14 +1090,22 @@ function useIssueMenu(i: Issue): HeaderMenuItem[] {
       icon: "x",
       sf: "xmark.circle",
       destructive: true,
+      // Asked first: a stray tap would close the task for everyone.
       onPress: () =>
-        action.mutate(
-          { type: "update", id: i.id, patch: { status: "canceled" } },
-          {
-            onSuccess: () => toast({ title: t("mobile.issues.actions.canceled", { number: i.number }) }),
-            onError: failed,
-          },
-        ),
+        confirmAction({
+          title: t("mobile.issues.actions.cancelTitle", { number: i.number }),
+          text: t("mobile.issues.actions.cancelText"),
+          action: t("mobile.issues.actions.cancel"),
+          cancel: t("mobile.common.back"),
+          onConfirm: () =>
+            action.mutate(
+              { type: "update", id: i.id, patch: { status: "canceled" } },
+              {
+                onSuccess: () => toast({ title: t("mobile.issues.actions.canceled", { number: i.number }) }),
+                onError: failed,
+              },
+            ),
+        }),
     });
   if (canDeleteIssue(org, i, meId))
     items.push({

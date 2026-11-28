@@ -77,3 +77,10 @@ export function usePlateEdge() {
   if (Platform.OS === "ios") return null;
   return { borderWidth: StyleSheet.hairlineWidth, borderColor: colors.line2, boxShadow: shadows.e1 };
 }
+
+/**
+ * Room around a plate for its edge, which `usePlateEdge` draws outside it: e1's one-point ring and its two-point blur,
+ * one point down. Android hosts a native bar's React views in a view that clips each to its own box, so a plate in a
+ * bar wrapped in this keeps its ring and shadow whole instead of cut flat at its top, bottom and sides.
+ */
+export const PLATE_EDGE_ROOM = { paddingHorizontal: 2, paddingVertical: 3 } as const;

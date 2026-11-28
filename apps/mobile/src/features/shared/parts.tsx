@@ -58,8 +58,29 @@ export function MentionCount({ count }: { count: number }) {
 }
 
 /**
- * The rounded square with an icon (channels, threads, missions, sheet titles): the system Settings' tile (`IconTile`,
- * the subject's color, the symbol in white). With `children` (a face, a mark of the caller's own), a neutral tile.
+ * A channel standing where a face would (Conversas' rows and pinned strip, Search, the conversation switcher, a
+ * channel's menu): the agents' quiet surface (`agentSoft`, the workspace's accent when it has one) with the "#" (a lock
+ * for a channel I'm not in) in the agent color, cornered like a face (30%). Beside an agent's sky tile and a person's
+ * photo it weighs the same, where the Settings tile's full blue was the loudest thing on the list.
+ */
+export function ChannelTile({ icon = "hash", size = 36 }: { icon?: IconName; size?: number }) {
+  const c = useColors();
+  return (
+    <View
+      style={[
+        styles.channelTile,
+        { width: size, height: size, borderRadius: Math.round(size * 0.3), backgroundColor: c.agentSoft },
+      ]}
+    >
+      <Icon name={icon} size={Math.round(size * 0.5)} color={c.agent} />
+    </View>
+  );
+}
+
+/**
+ * The rounded square with an icon (threads, missions, sheet titles): the system Settings' tile (`IconTile`, the
+ * subject's color, the symbol in white). With `children` (a face, a mark of the caller's own), a neutral tile. A channel
+ * in place of a face is `ChannelTile`.
  */
 export function Tile({ icon, size = 36, children }: { icon?: IconName; size?: number; children?: ReactNode }) {
   const c = useColors();
@@ -646,6 +667,7 @@ export function BottomBar({ bottom, children }: { bottom: number; children: Reac
 const styles = StyleSheet.create({
   bar: { paddingHorizontal: 16, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth },
   tile: { alignItems: "center", justifyContent: "center" },
+  channelTile: { alignItems: "center", justifyContent: "center", borderCurve: "continuous" },
   action: {
     flexDirection: "row",
     alignItems: "center",

@@ -2,11 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { VOICE_MAX_MS } from "@agenteschat/client/lib/voice";
-import { playedBars, VOICE_BAR, VOICE_BAR_GAP, VOICE_HANDLE } from "@agenteschat/ui/voice/bars";
 import { hidesBody } from "../../src/features/chat/logic";
 import {
-  BAR_HANDLE,
   handleAt,
+  handleRoom,
   hasWords,
   levelOf,
   localVoiceMessage,
@@ -132,23 +131,31 @@ describe("voice gestures and wave", () => {
     expect(bars).toContain("handleAt(progress.value, width) + HANDLE / 2");
     expect(bars).toContain("const handleX = useDerivedValue(() => at.value - HANDLE / 2);");
   });
-  test("a voice message's wave is the web's: its bars, its round handle and where a finger falls on it", () => {
-    for (const width of [180, 183, 233.5, 300]) {
-      const { count, start } = playedBars(width);
-      const end = start + count * (VOICE_BAR + VOICE_BAR_GAP) - VOICE_BAR_GAP;
-      // Never under the handle: 2 or more between it and the first bar at 0:00, and the last bar and it at the end.
-      expect(start - BAR_HANDLE).toBeGreaterThanOrEqual(2);
-      expect(handleAt(1, width, BAR_HANDLE) - end).toBeGreaterThanOrEqual(2);
-      expect(waveAt(handleAt(0.5, width, BAR_HANDLE) + BAR_HANDLE / 2, width, BAR_HANDLE)).toBeCloseTo(0.5, 9);
-    }
-    expect(BAR_HANDLE).toBe(2 * VOICE_HANDLE);
+  test("a voice message's wave is the app's own: the sky's cells it was recorded with, never the web's bars", () => {
     const player = readFileSync(join(import.meta.dir, "../../src/features/voice/VoiceMessage.tsx"), "utf8");
-    expect(player).toContain("wave.value = barWave(peaks, width, BAR_WAVE_H);");
-    expect(player).toContain("<BarWave");
-    expect(player).not.toContain("<PixelWave");
+    expect(player).toContain("const wave = wavePaths(peaks, width, WAVE, false, true);");
+    expect(player).toContain("<PixelWave");
+    expect(player).not.toContain("BarWave");
+    expect(player).toContain("const WAVE = 24;");
+    // Played in who said it (ink when nobody's color), each column's ends in a half tone, room around the handle.
+    expect(player).toContain("const played = tone ?? c.ink;");
+    expect(player).toContain("tones={[played, withOpacity(played, ENDS)]}");
+    expect(player).toContain("offEdge={withOpacity(off, ENDS)}");
+    expect(player).toContain("room={HANDLE_ROOM}");
     const bars = readFileSync(join(import.meta.dir, "../../src/features/voice/VoiceBars.tsx"), "utf8");
-    expect(bars).toContain("resamplePeaks(peaks, count).forEach(");
-    expect(bars).toContain("<Circle cx={at} cy={height / 2} r={BAR_HANDLE / 2} color={on} />");
+    expect(bars).toContain("<Group clip={clear} invertClip>");
+    expect(bars).toContain("const ends = !shortSolid || cells > 2;");
+  });
+
+  test("the handle's room leaves out whole columns within 2 of it, never half of one", () => {
+    // Columns 4 wide every 6 from 10 (10, 16, 22, 28, 34…); the handle 8 wide.
+    expect(handleRoom(20, 10, 2)).toEqual({ left: 16, width: 16 });
+    // A column that ends where the room starts stays (16 to 20, room from 20); one that starts where it ends too (34).
+    expect(handleRoom(22, 10, 2)).toEqual({ left: 22, width: 10 });
+    expect(handleRoom(24, 10, 2)).toEqual({ left: 22, width: 10 });
+    expect(handleRoom(10, 10, 2)).toEqual({ left: 10, width: 10 });
+    // No room asked and the handle in a gap: nothing left out but what it covers.
+    expect(handleRoom(14, 10, 0)).toEqual({ left: 16, width: 4 });
   });
   test("the speed chip keeps one width as the speed goes round, as the web's", () => {
     const player = readFileSync(join(import.meta.dir, "../../src/features/voice/VoiceMessage.tsx"), "utf8");

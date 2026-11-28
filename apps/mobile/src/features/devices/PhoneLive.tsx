@@ -13,12 +13,12 @@ import {
   screenGesture,
 } from "@agenteschat/client/lib/devices";
 import { firstName } from "@agenteschat/client/lib/format";
+import { Image } from "expo-image";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   type GestureResponderEvent,
-  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -185,13 +185,17 @@ export function PhoneLive({ phone: p, host }: { phone: PhoneDevice; host: string
       }}
     >
       {frame ? (
+        // Each frame shown once and replaced by the next: no cache, no fade, no recycling key, so the last frame stays
+        // up until the next one is decoded (a new picture per frame blanked between them on Android).
         <Image
           source={{ uri: frame }}
           style={StyleSheet.absoluteFill}
-          resizeMode="contain"
-          fadeDuration={0}
+          cachePolicy="none"
+          contentFit="contain"
+          transition={0}
+          accessible={false}
           onLoad={(e) => {
-            const { width, height } = e.nativeEvent.source;
+            const { width, height } = e.source;
             if (width > 0 && height > 0 && (width !== shape.width || height !== shape.height))
               setShape({ width, height });
           }}

@@ -1,26 +1,13 @@
-import { playedBars, resamplePeaks, VOICE_BAR, VOICE_BAR_GAP } from "@agenteschat/ui/voice/bars";
-import {
-  Canvas,
-  Circle,
-  Group,
-  LinearGradient,
-  Path,
-  Rect,
-  rect,
-  rrect,
-  Skia,
-  type SkPath,
-  vec,
-} from "@shopify/react-native-skia";
-import { useState } from "react";
+import { Canvas, Group, LinearGradient, Path, Rect, rect, Skia, type SkPath, vec } from "@shopify/react-native-skia";
+import { useMemo, useState } from "react";
 import { type LayoutChangeEvent, StyleSheet, type ViewStyle } from "react-native";
 import { type SharedValue, useDerivedValue } from "react-native-reanimated";
 import {
-  BAR_HANDLE,
   WAVE_CELL as CELL,
   columnsIn,
   WAVE_HANDLE as HANDLE,
   handleAt,
+  handleRoom,
   WAVE_PITCH as PITCH,
   playedColumns,
 } from "./logic";
@@ -39,7 +26,14 @@ export interface WavePaths {
  * live recording looks (the rest of the width stays empty); otherwise spread over the width, clear of the handle's
  * room at both ends (`playedColumns`).
  */
-export function wavePaths(peaks: readonly number[], width: number, height: number, tail = false): WavePaths {
+export function wavePaths(
+  peaks: readonly number[],
+  width: number,
+  height: number,
+  tail = false,
+  /** A column of one or two cells is all fill (its ends tone only a taller column's top and bottom). */
+  shortSolid = false,
+): WavePaths {
   const inner = Skia.PathBuilder.Make();
   const edge = Skia.PathBuilder.Make();
   const rows = Math.max(1, Math.floor(height / CELL));
@@ -52,9 +46,10 @@ export function wavePaths(peaks: readonly number[], width: number, height: numbe
     const cells = Math.max(1, Math.min(rows, Math.round(level * rows)));
     const top = Math.round((rows - cells) / 2);
     const x = startAt + i * PITCH;
+    const ends = !shortSolid || cells > 2;
     for (let c = 0; c < cells; c++) {
       const r = rect(x, (top + c) * CELL, CELL, CELL);
-      if (c === 0 || c === cells - 1) edge.addRect(r);
+      if (ends && (c === 0 || c === cells - 1)) edge.addRect(r);
       else inner.addRect(r);
     }
   });
@@ -79,9 +74,11 @@ export function PixelWave({
   progress,
   tones,
   off,
+  offEdge,
   onWidth,
   height,
   handle = false,
+  room = 0,
   fade,
   style,
 }: {
@@ -90,10 +87,14 @@ export function PixelWave({
   progress: SharedValue<number>;
   tones: readonly [string, string];
   off: string;
+  /** The column ends not played yet: `off` when not given. */
+  offEdge?: string;
   onWidth?: (width: number) => void;
   height: number;
   /** A square at `progress`, to grab and drag, on a spread wave (`wavePaths` without `tail`). */
   handle?: boolean;
+  /** With `handle`: the whole columns within this much of it are left out, so it never sits on the wave. */
+  room?: number;
   /** The field's color: the left end of a growing recording fades into it. */
   fade?: string;
   style?: ViewStyle;
@@ -108,13 +109,22 @@ export function PixelWave({
   const at = useDerivedValue(() => (handle ? handleAt(progress.value, width) + HANDLE / 2 : width * progress.value));
   const clip = useDerivedValue(() => rect(0, 0, at.value, height));
   const handleX = useDerivedValue(() => at.value - HANDLE / 2);
+  // Where the columns start (`playedColumns`, as `wavePaths` lays them), for the room around the handle.
+  const start = useMemo(() => (handle && room > 0 ? playedColumns(width).start : null), [handle, room, width]);
+  const clear = useDerivedValue(() => {
+    if (start === null) return rect(0, 0, 0, 0);
+    const r = handleRoom(handleAt(progress.value, width), start, room);
+    return rect(r.left, 0, r.width, height);
+  });
   return (
     <Canvas onLayout={layout} style={[styles.canvas, { height }, style]}>
-      <Path path={inner} color={off} />
-      <Path path={edge} color={off} />
-      <Group clip={clip}>
-        <Path path={inner} color={tones[0]} />
-        <Path path={edge} color={tones[1]} />
+      <Group clip={clear} invertClip>
+        <Path path={inner} color={off} />
+        <Path path={edge} color={offEdge ?? off} />
+        <Group clip={clip}>
+          <Path path={inner} color={tones[0]} />
+          <Path path={edge} color={tones[1]} />
+        </Group>
       </Group>
       {fade ? (
         <Rect x={0} y={0} width={width * FADE} height={height}>
@@ -122,58 +132,6 @@ export function PixelWave({
         </Rect>
       ) : null}
       {handle ? <Rect x={handleX} y={height / 2 - HANDLE / 2} width={HANDLE} height={HANDLE} color={tones[0]} /> : null}
-    </Canvas>
-  );
-}
-
-/** A voice message's wave as the web's rounded bars (`playedBars`), each as tall as its peak, 3 at the least. */
-export function barWave(peaks: readonly number[], width: number, height: number): SkPath {
-  const path = Skia.PathBuilder.Make();
-  const { count, start } = playedBars(width);
-  resamplePeaks(peaks, count).forEach((level, i) => {
-    const bar = Math.max(3, Math.min(height, level * height));
-    const x = start + i * (VOICE_BAR + VOICE_BAR_GAP);
-    path.addRRect(rrect(rect(x, (height - bar) / 2, VOICE_BAR, bar), VOICE_BAR / 2, VOICE_BAR / 2));
-  });
-  return path.build();
-}
-
-/**
- * A voice message's wave as the web draws it: the bars in `off`, those `progress` has passed in `on`, and the round
- * handle at `progress` to grab and drag. Drawn by Skia on the UI thread, as `PixelWave`.
- */
-export function BarWave({
-  path,
-  progress,
-  on,
-  off,
-  onWidth,
-  height,
-  handle = true,
-}: {
-  path: SharedValue<SkPath>;
-  progress: SharedValue<number>;
-  on: string;
-  off: string;
-  onWidth?: (width: number) => void;
-  height: number;
-  handle?: boolean;
-}) {
-  const [width, setWidth] = useState(0);
-  const layout = (e: LayoutChangeEvent) => {
-    const next = e.nativeEvent.layout.width;
-    setWidth(next);
-    onWidth?.(next);
-  };
-  const at = useDerivedValue(() => handleAt(progress.value, width, BAR_HANDLE) + BAR_HANDLE / 2);
-  const clip = useDerivedValue(() => rect(0, 0, at.value, height));
-  return (
-    <Canvas onLayout={layout} style={[styles.canvas, { height }]}>
-      <Path path={path} color={off} />
-      <Group clip={clip}>
-        <Path path={path} color={on} />
-      </Group>
-      {handle ? <Circle cx={at} cy={height / 2} r={BAR_HANDLE / 2} color={on} /> : null}
     </Canvas>
   );
 }

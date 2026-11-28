@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   ApiError,
@@ -755,5 +755,34 @@ describe("a service's page reads as one hierarchy", () => {
     expect(page).toContain('<GroupedFooter>{t("mobile.connectors.page.addressNote")}</GroupedFooter>');
     // The related shelf under the same header, with its whole category one tap away.
     expect(page).toMatch(/<ShelfRow\s+grouped/);
+  });
+});
+
+describe("connectors' words at a large text size, and their fields' hints", () => {
+  const read = (file: string) => readFileSync(join(import.meta.dir, "../../src/features/connectors", file), "utf8");
+
+  test("a featured card's words stay under its mark: the card's height is fixed, so they grow only so far", () => {
+    const cards = read("FeaturedCards.tsx");
+    expect(cards).toContain('<Text variant="title2" numberOfLines={1} maxFontSizeMultiplier={CHROME_MAX_SCALE}>');
+    expect(cards).toContain(
+      '<Text variant="small" tone="muted" numberOfLines={2} maxFontSizeMultiplier={CHROME_MAX_SCALE}>',
+    );
+  });
+
+  test("a fact's number grows in a box that grows with it, never over the captions", () => {
+    const page = read("ServicePage.tsx");
+    expect(page).toContain("const valueHeight = FACT_VALUE * useFontScale();");
+    expect(page).toContain("<View style={[styles.factValue, { height: valueHeight }]}>");
+    expect(page).not.toMatch(/factValue: \{ height: \d/);
+  });
+
+  test("every field of ours with a hint colors it with a token, never the platform's theme (Android's hint color)", () => {
+    const dir = join(import.meta.dir, "../../src/features/connectors");
+    for (const file of readdirSync(dir).filter((f) => f.endsWith(".tsx"))) {
+      for (const field of read(file).match(/<TextInput\b[\s\S]*?\/>/g) ?? []) {
+        if (!field.includes("placeholder=")) continue;
+        expect({ file, colored: field.includes("placeholderTextColor=") }).toEqual({ file, colored: true });
+      }
+    }
   });
 });

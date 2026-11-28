@@ -7,17 +7,25 @@ import type { RowAction } from "../channel-sectors/menus";
 import { WaitMark } from "../chat/WaitMark";
 import { AgentFace, Face } from "../shared/Face";
 import { useColors } from "../shared/hooks";
-import { Tile } from "../shared/parts";
+import { ChannelTile } from "../shared/parts";
 import { OpensConversation } from "./ConversationRowView";
 import { CollapsibleSection } from "./HomeSection";
 import type { ConversationRow } from "./logic";
 import { faceMark, type RowFacts } from "./rowFacts";
 
-/** A face on the strip: a little larger than a row's, as the faces people keep at hand are. */
-const FACE = 56;
+/**
+ * A face on the strip, the same for an agent, a person and a channel: clearly larger than a row's (48), as the faces
+ * people keep at hand are.
+ */
+const FACE = 60;
 /** Each one's column, the same for every face: room for a short name under it, and the next face peeks past the edge. */
-const ITEM = 72;
+const ITEM = 76;
 const GAP = 8;
+/**
+ * The strip's start: the column centres its face, so this much in puts the first face's edge on the screen's 16, in
+ * line with the rows' faces under it. The faces keep to the left with the same room between them, however few.
+ */
+const SIDE = SCREEN_X - (ITEM - FACE) / 2;
 /** The marks before the name: the footnote's own height, so they read as part of its line. */
 const MARK = 12;
 
@@ -42,8 +50,8 @@ export interface PinnedStripProps {
 
 /**
  * Favoritos, under Início's widgets: what the person keeps there (the web sidebar's Favoritos, ADR 0260: their own agents
- * until they choose),
- * side by side on a strip that scrolls sideways. Each is the app's own face for it: an agent's living body (at work,
+ * until they choose), side by side from the left, the first face in line with the rows' faces, on a strip that scrolls
+ * sideways once they pass the edge. Each is the app's own face for it, all of one size: an agent's living body (at work,
  * dozing while it waits for its offline computer, its presence on the corner), a person's photo, a channel's tile; its
  * name under it on one line, after the mark its row's second line would carry (the orbit at work, the amber square for
  * what waits on you, a clock for a wait elsewhere), and its unread count on the face's corner as the app's badge. A tap
@@ -55,12 +63,7 @@ export function PinnedStrip({ items, collapsed, onToggle, onStart, onHold, holdA
   const { t } = useTranslation();
   if (items.length === 0) return null;
   return (
-    <CollapsibleSection
-      title={t("mobile.chats.favorites")}
-      count={items.length}
-      collapsed={collapsed}
-      onToggle={onToggle}
-    >
+    <CollapsibleSection title={t("mobile.chats.favorites")} collapsed={collapsed} onToggle={onToggle}>
       {/* A fade at the edge where more pinned faces wait past it. */}
       <SideScroll contentContainerStyle={styles.strip}>
         {items.map((it) => (
@@ -101,12 +104,12 @@ const PinnedFace = memo(function PinnedFace({
   const face =
     r.kind === "dm" ? (
       r.with.type === "agent" ? (
-        <AgentFace agentId={r.with.id} size={FACE - 2} mode={facts.face} live={live} presence orbit={ringed} />
+        <AgentFace agentId={r.with.id} size={FACE} mode={facts.face} live={live} presence orbit={ringed} />
       ) : (
         <Face who={{ type: r.with.type, id: r.with.id }} size={FACE} live={false} presence />
       )
     ) : (
-      <Tile icon="hash" size={FACE} />
+      <ChannelTile size={FACE} />
     );
   const lineMark = faceMark(facts.line);
   const mark = ringed && lineMark === "orbit" ? null : lineMark;
@@ -184,14 +187,14 @@ const PinnedFace = memo(function PinnedFace({
 });
 
 const styles = StyleSheet.create({
-  // The screen's sides, and room above for a badge standing over a face's corner and for the orbit's tip: a ring turned
-  // upright reaches 0.24 of the face past it (13 points here), and the strip scrolls, so it clips what passes its top.
-  strip: { paddingHorizontal: SCREEN_X, gap: GAP, paddingTop: 9, paddingBottom: 4 },
+  // Room above for a badge standing over a face's corner and for the orbit's tip: a ring turned upright reaches 0.24 of
+  // the face past it (14 points here), and a strip that scrolls clips what passes its top.
+  strip: { paddingHorizontal: SIDE, gap: GAP, paddingTop: 11, paddingBottom: 4 },
   item: { width: ITEM },
   // The name far enough under the face that the upright ring's tip stays above its letters.
   itemIn: { alignItems: "center", gap: 10, paddingVertical: 4 },
   badge: { position: "absolute", top: -6, right: -8, padding: 2, borderRadius: 999 },
-  name: { flexDirection: "row", alignItems: "center", gap: 4, maxWidth: ITEM },
+  name: { flexDirection: "row", alignItems: "center", gap: 4, maxWidth: "100%" },
   shrink: { flexShrink: 1 },
   unread: { fontWeight: weights.semibold },
 });

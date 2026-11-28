@@ -337,7 +337,7 @@ function WaitingRow({ item: n, divider }: { item: AppNotification; divider: bool
     else if (web) openWebPath(web);
   };
   const leading = who ? (
-    <Face who={who} size={who.type === "agent" ? LIST_AVATAR - 2 : LIST_AVATAR} mode="idle" live={false} />
+    <Face who={who} size={LIST_AVATAR} mode="idle" live={false} />
   ) : join ? (
     <View style={styles.faces}>
       {join.faces.map((face, i) => (
@@ -369,7 +369,7 @@ function WaitingRow({ item: n, divider }: { item: AppNotification; divider: bool
           <UsageLimitActions n={n} />
         </View>
       ) : null}
-      {divider ? <View style={[styles.divider, { backgroundColor: c.line2 }]} /> : null}
+      {divider ? <View style={[styles.divider, { backgroundColor: c.separator }]} /> : null}
     </View>
   );
 }
@@ -406,7 +406,7 @@ function DecidedRequests() {
           onPress={() => router.push(`/approval/${a.id}`)}
           accessibilityRole="button"
           divider={i > 0}
-          leading={<AgentFace agentId={a.agentId} size={LIST_AVATAR - 2} live={false} />}
+          leading={<AgentFace agentId={a.agentId} size={LIST_AVATAR} live={false} />}
           title={dir.agentById.get(a.agentId)?.name ?? t("channel.unknownAgent")}
           time={when.short(a.decidedAt ?? a.expiresAt)}
           // How it ended, in one word after what it was.
@@ -452,7 +452,7 @@ function AllClear({ cheer }: { cheer: boolean }) {
             accessibilityRole="button"
             leading={
               nextAgent ? (
-                <AgentFace agentId={nextAgent.id} size={LIST_AVATAR - 2} live={false} />
+                <AgentFace agentId={nextAgent.id} size={LIST_AVATAR} live={false} />
               ) : (
                 <Tile icon="clock" size={LIST_AVATAR} />
               )
@@ -629,7 +629,7 @@ const ActivityRow = memo(function ActivityRow({
     faces.length === 0 ? (
       <Tile icon="bell" size={LIST_AVATAR} />
     ) : faces.length === 1 ? (
-      <Face who={faceOf(faces[0])} size={faces[0]?.type === "agent" ? LIST_AVATAR - 2 : LIST_AVATAR} live={false} />
+      <Face who={faceOf(faces[0])} size={LIST_AVATAR} live={false} />
     ) : (
       <View style={styles.stack}>
         <View style={styles.back}>
@@ -714,7 +714,7 @@ const ActivityRow = memo(function ActivityRow({
           <UsageLimitActions n={n} />
         </View>
       ) : null}
-      {divider ? <View style={[styles.divider, { backgroundColor: c.line2 }]} /> : null}
+      {divider ? <View style={[styles.divider, { backgroundColor: c.separator }]} /> : null}
     </View>
   );
 });

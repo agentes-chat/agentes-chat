@@ -14,26 +14,14 @@ import {
 import { can } from "@agenteschat/client/lib/permissions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
+import type { TFunction } from "i18next";
 import { createContext, type ReactNode, useCallback, useContext } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
+import { Alert, Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
 import { useOrg } from "@/providers/org";
-import {
-  Button,
-  haptics,
-  Icon,
-  IconButton,
-  LineIcon,
-  MESSAGE_CARD_X,
-  PixelOrbit,
-  Text,
-  textLineOf,
-  useToast,
-} from "@/ui";
+import { Button, haptics, Icon, IconButton, LineIcon, MESSAGE_CARD_X, PixelOrbit, Text, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
-import { useFontScale } from "@/ui/text-scale";
 import { chatHref, consultationHref } from "../links/logic";
-import { useBubblePart } from "../shared/bubble-part";
 import { AgentFace } from "../shared/Face";
 import { useColors, useNow, useOrgId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
@@ -88,6 +76,14 @@ function useLine(work: WorkView, inUpdatesThread = false) {
 const threadHref = (work: WorkView) =>
   chatHref(work.channelId, work.threadId ?? work.anchorMessageId, work.question?.messageId);
 
+/** When the agent's own work says more ("Próximo update em ~5 min"), from its promised time; null when none. */
+function nextUpdate(t: TFunction, work: WorkView): string | null {
+  if (!work.nextUpdateAt) return null;
+  const left = Date.parse(work.nextUpdateAt) - Date.now();
+  const words = left > 60_000 ? t("work.line.next", { minutes: Math.round(left / 60_000) }) : t("work.line.nextSoon");
+  return words.charAt(0).toLocaleUpperCase() + words.slice(1);
+}
+
 /** At most this many actions under the line: one row at the default text size, never a ragged second one. */
 const MAX_ACTIONS = 3;
 
@@ -118,12 +114,10 @@ function Line({
 }) {
   const c = useColors();
   const surface = useSurface();
-  const part = useBubblePart();
   const cardTop = useCardTop();
   const card = useMessageCardFrame();
   const dir = useRowDirectory();
   const agentColor = agentLook(dir.agentById.get(work.agentId)).color;
-  const fontScale = useFontScale();
   const inBody = useContext(RowPartContext) !== null;
   const line = useLine(work, inUpdatesThread);
   const { stop, t } = line;
@@ -164,10 +158,23 @@ function Line({
       label: t("work.stop"),
       danger: true,
       disabled: stop.isPending,
-      onPress: () => {
-        haptics.firm();
-        stop.mutate(runId);
-      },
+      // Asked first, in the system's alert, as a task's stop: it ends work that can't be taken back.
+      onPress: () =>
+        Alert.alert(
+          t("mobile.taskManager.stopTitle", { title: work.title }),
+          t("mobile.taskManager.stopBody", agentGrammar(line.agentName)),
+          [
+            { text: t("common.cancel"), style: "cancel" },
+            {
+              text: t("taskManager.confirm.stop", { count: 1 }),
+              style: "destructive",
+              onPress: () => {
+                haptics.firm();
+                stop.mutate(runId);
+              },
+            },
+          ],
+        ),
     });
   }
   const kept = new Set(
@@ -202,18 +209,26 @@ function Line({
     ) : (
       <LineIcon variant={variant} name={mark.icon} size={size} color={mark.color} />
     );
-  if (inBody && h) {
-    // Handed over, under the reply that handed it: a second bubble of the turn (the message's fill, joined to it; the
-    // conversation's card in the other looks) with the agent that took it, "Passado para o Atlas", and under it how it
-    // stands in its color with the way to it ("Pronto em 1 min · Ver resultado"). Loose words under the bubble read
-    // as small print; the bubble says it is part of what the agent said. "Parar" ends it while it works.
+  if (inBody) {
+    // In a message, a second bubble of the turn (the message's fill, joined to it; the conversation's card in the other
+    // looks): the agent at work on its face, what the work is ("Passado para o Atlas", or the agent's own long work
+    // "Em segundo plano"), its state as a badge with its facts and the way to it ("Trabalhando · 5 min · Ver"); the
+    // agent's own work adds its last update (or the question it waits on) and when the next one comes. Loose words
+    // under the bubble read as small print; the bubble says it is part of what the agent said. Stop is the kit's round
+    // button with the stop square, asked first; a tap on the card opens the work.
+    const state = h ?? line.handed();
     const go = actions.filter((a) => !a.danger).sort((a, b) => a.rank - b.rank)[0];
     const halt = actions.find((a) => a.danger);
     const g = agentGrammar(line.agentName);
+    const working = state.tone === "working";
     // Its state as a badge, as the web's line draws it; its facts and the way to it after it.
     const badgeTone =
-      view.tone === "done" ? "done" : h.tone === "working" ? "working" : h.tone === "waiting" ? "you" : "neutral";
-    const after = [...h.facts, go?.label].filter(Boolean).join(" · ");
+      view.tone === "done" ? "done" : working ? "working" : state.tone === "waiting" ? "you" : "neutral";
+    const after = [...state.facts, go?.label].filter(Boolean).join(" · ");
+    const title = h ? t("mobile.chat.handedTo", { name: g.name, context: g.context }) : t("mobile.chat.inBackground");
+    // The agent's own work: what it last said (or asks), and when it says more.
+    const detail = h ? null : (view.question?.text ?? view.update);
+    const next = h || !working ? null : nextUpdate(t, work);
     const frame = [styles.handed, card.style];
     return (
       <View style={cardTop}>
@@ -224,96 +239,50 @@ function Line({
           {...(go ? { accessibilityHint: go.label } : {})}
           style={({ pressed }) => [frame, pressed && go && styles.pressed]}
         >
-          <AgentFace
-            agentId={work.agentId}
-            size={HANDED_FACE}
-            live={false}
-            mode={h.tone === "working" ? "think" : "idle"}
-          />
-          <View style={styles.handedWords}>
-            <Text variant="cardTitle" numberOfLines={1}>
-              {t("mobile.chat.handedTo", { name: g.name, context: g.context })}
-            </Text>
-            <View style={styles.handedState}>
-              <StatusBadge text={h.state} tone={badgeTone} color={agentColor} />
-              {after ? (
-                <Text variant="footnote" numberOfLines={1} style={[styles.shrink, { color: c.muted }]}>
-                  {after}
+          <View style={styles.handedRow}>
+            <AgentFace
+              agentId={work.agentId}
+              size={HANDED_FACE}
+              live={false}
+              mode={working ? "run" : "idle"}
+              orbit={working}
+            />
+            <View style={styles.handedWords}>
+              <Text variant="cardTitle" numberOfLines={1}>
+                {title}
+              </Text>
+              <View style={styles.handedState}>
+                <StatusBadge text={state.state} tone={badgeTone} color={agentColor} />
+                {after ? (
+                  <Text variant="footnote" numberOfLines={1} style={[styles.shrink, { color: c.muted }]}>
+                    {after}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+            {halt ? (
+              // Stop as the kit's round button with the stop square, centred on the bubble's row: a word there took the
+              // room the state's words needed and sat off their middle.
+              <IconButton icon="stop" small label={halt.label} disabled={halt.disabled} onPress={halt.onPress} />
+            ) : go ? (
+              <Icon name="right" size={16} color={c.faint} />
+            ) : null}
+          </View>
+          {detail || next ? (
+            <View style={[styles.handedDetail, { borderTopColor: c.line }]}>
+              {detail ? (
+                <Text variant="small" tone={view.question ? "ink" : "ink2"} numberOfLines={3}>
+                  {detail}
+                </Text>
+              ) : null}
+              {next ? (
+                <Text variant="footnote" tone="faint">
+                  {next}
                 </Text>
               ) : null}
             </View>
-          </View>
-          {halt ? (
-            // Stop as the kit's round button with the stop square, centred on the bubble's row: a word there took the
-            // room the state's words needed and sat off their middle.
-            <IconButton icon="stop" small label={halt.label} disabled={halt.disabled} onPress={halt.onPress} />
-          ) : go ? (
-            <Icon name="right" size={16} color={c.faint} />
           ) : null}
         </Pressable>
-      </View>
-    );
-  }
-  if (inBody) {
-    // In a message: a quiet line under it, in the conversation's working line's words (a card under the bubble read
-    // as a dialog in the chat). The way to the work (its result, its task or its thread) is its words' tap, said after
-    // them; "Parar" ends the line after a thin rule, neutral until pressed.
-    const go = actions.filter((a) => !a.danger).sort((a, b) => a.rank - b.rank)[0];
-    const halt = actions.find((a) => a.danger);
-    return (
-      <View style={[styles.quiet, part ? styles.quietInBubble : null, cardTop]} accessibilityRole="summary">
-        <View style={styles.quietMark}>{markOf("caption", QUIET_MARK)}</View>
-        <Pressable
-          onPress={go?.onPress}
-          disabled={!go}
-          accessibilityRole={go ? "button" : undefined}
-          {...(go ? { accessibilityHint: go.label } : {})}
-          style={({ pressed }) => [styles.quietWords, pressed && styles.pressed]}
-        >
-          <Text variant="caption" tone="muted">
-            {said("caption")}
-            {go ? (
-              <>
-                {" · "}
-                <Text variant="caption" style={[styles.bold, { color: c.ink2 }]}>
-                  {go.label}
-                </Text>
-              </>
-            ) : null}
-          </Text>
-          {view.question ? (
-            <Text variant="caption" tone="ink" numberOfLines={2}>
-              {view.question.text}
-            </Text>
-          ) : null}
-          {view.update ? (
-            <Text variant="caption" tone="faint">
-              {view.update}
-            </Text>
-          ) : null}
-        </Pressable>
-        {halt ? (
-          <View style={[styles.quietStop, { height: textLineOf("caption", fontScale).height }]}>
-            <View style={[styles.rule, { backgroundColor: c.line }]} />
-            <Pressable
-              onPress={halt.onPress}
-              disabled={halt.disabled}
-              accessibilityRole="button"
-              accessibilityLabel={halt.label}
-              // A caption word: 14 above and under make the 44 a finger needs.
-              hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}
-            >
-              {({ pressed }) => (
-                <Text
-                  variant="caption"
-                  style={[styles.bold, { color: halt.disabled ? c.faint : pressed ? c.danger : c.ink }]}
-                >
-                  {halt.label}
-                </Text>
-              )}
-            </Pressable>
-          </View>
-        ) : null}
       </View>
     );
   }
@@ -359,11 +328,10 @@ interface WorkAction {
   disabled?: boolean;
 }
 
-/** The status mark beside the line, on its first line's middle; in a message's quiet line, the caption's size. */
+/** The status mark beside the line, on its first line's middle (the work's card on a task's screen). */
 const MARK = 16;
-const QUIET_MARK = 14;
-/** A handed work's bubble: the agent's face, and its state's mark. */
-const HANDED_FACE = 32;
+/** A work's bubble in a message: the agent's face, as large as the faces of the conversation's other cards. */
+const HANDED_FACE = 40;
 
 /** A state's words opening a line ("pronto em 1 min" → "Pronto em 1 min"). */
 
@@ -558,25 +526,12 @@ export function useShareWork(issue: Issue): { share: () => void; pending: boolea
 
 const styles = StyleSheet.create({
   // The app's card: radius 20 with the cut corner.
-  card: { borderRadius: 20, borderBottomLeftRadius: 6 },
+  card: { borderRadius: 20, borderTopLeftRadius: 6 },
   // The mark and the words: text at 14 + 16 + 10 = 40 from the card's left edge.
   line: { flexDirection: "row", gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
-  // In a message: the line under it, as wide as its words, a little under the part above.
-  quiet: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    alignSelf: "flex-start",
-    maxWidth: "100%",
-    gap: 6,
-    paddingTop: 4,
-  },
-  // Under a bubble: its mark where the bubble's words start.
-  quietInBubble: { paddingLeft: 14 },
-  // A handed work's bubble: the face, its two lines and the chevron on one row, as wide as the column allows.
+  // A work's bubble: the face, its two lines and the stop (or the chevron) on one row, as wide as the column allows;
+  // the agent's own work's last update under a hairline.
   handed: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
     alignSelf: "flex-start",
     maxWidth: "100%",
     minWidth: 240,
@@ -587,14 +542,17 @@ const styles = StyleSheet.create({
   },
   // As wide as its words (the bubble grows with them up to the column), shrinking only when the column runs out: with
   // no width of its own (`flex: 1`) the bubble stayed at its least and cut the words that had room.
-  handedWords: { flexShrink: 1, minWidth: 0, gap: 1 },
+  handedRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  handedWords: { flexShrink: 1, flexGrow: 1, minWidth: 0, gap: 1 },
+  // The last update on the words' column's full width, under a hairline, as the card's second part.
+  handedDetail: {
+    gap: 4,
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
   handedState: { flexDirection: "row", alignItems: "center", gap: 4 },
   shrink: { flexShrink: 1 },
-  quietMark: { width: QUIET_MARK, alignItems: "center" },
-  quietWords: { flexShrink: 1, minWidth: 0, gap: 2 },
-  // The rule and "Parar" on the words' first line.
-  quietStop: { flexDirection: "row", alignItems: "center", gap: 8, paddingLeft: 2 },
-  rule: { width: StyleSheet.hairlineWidth, height: 12 },
   mark: { width: 16, alignItems: "center" },
   body: { flex: 1, minWidth: 0, gap: 4 },
   actions: { flexDirection: "row", flexWrap: "wrap", columnGap: 16, rowGap: 4, marginTop: 4 },

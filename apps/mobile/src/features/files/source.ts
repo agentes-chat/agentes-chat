@@ -106,23 +106,23 @@ export const diskUri = (path: string) => (path.startsWith("/") ? `file://${path}
  * no request for a link, else the short-lived link (`useRemoteFile`). `onError` gives up a copy the system removed
  * meanwhile and takes the link instead; `failed`: there is no picture to show.
  */
-export function usePicture(orgId: string, id: string, version?: number) {
-  const key = pictureKey(id, version);
+export function usePicture(orgId: string, id: string | null, version?: number) {
+  const key = pictureKey(id ?? "", version);
   const [fromServer, setFromServer] = useState(false);
   const [failed, setFailed] = useState(false);
-  const local = localCopies.has(id);
+  const local = id ? localCopies.has(id) : false;
   const disk = useQuery({
     queryKey: ["picture-on-disk", key],
     queryFn: async () => {
       const path = await Image.getCachePathAsync(key).catch(() => null);
       return path ? diskUri(path) : "";
     },
-    enabled: !local && !fromServer,
+    enabled: Boolean(id) && !local && !fromServer,
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: DISK_LOOK_KEPT_MS,
   });
   const cached = !local && !fromServer && disk.data ? disk.data : null;
-  const askServer = local || fromServer || (disk.isFetched && !disk.data);
+  const askServer = Boolean(id) && (local || fromServer || (disk.isFetched && !disk.data));
   const link = useRemoteFile(orgId, askServer ? id : null, version);
   const source = cached
     ? { uri: cached, cacheKey: key }
@@ -133,7 +133,21 @@ export function usePicture(orgId: string, id: string, version?: number) {
     key,
     source,
     failed: failed || (!cached && link.isError),
-    onError: () => (cached ? setFromServer(true) : setFailed(true)),
+    retrying: link.isFetching,
+    /** It didn't draw: a copy the system removed gives way to the link (true: another source comes), else it failed. */
+    onError: () => {
+      if (cached) {
+        setFromServer(true);
+        return true;
+      }
+      setFailed(true);
+      return false;
+    },
+    /** "Try again": the link read again. */
+    retry: () => {
+      setFailed(false);
+      void link.refetch();
+    },
   };
 }
 

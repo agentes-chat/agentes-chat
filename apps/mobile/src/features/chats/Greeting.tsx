@@ -109,7 +109,8 @@ export function Greeting({
   return (
     <View style={styles.mini}>
       <View>
-        <Text variant="body" tone="ink2" numberOfLines={1}>
+        {/* Quieter than the title over it and the field under it: the greeting is said, not read. */}
+        <Text variant="body" tone="muted" numberOfLines={1}>
           {greeting}
         </Text>
         {/* Nobody at work and nothing new: the greeting alone (no line of sleeping faces). */}
@@ -211,8 +212,9 @@ export function FirstAgentEmpty() {
 const EMPTY_PAD = CARD_PAD;
 const styles = StyleSheet.create({
   sky: { opacity: 0.5 },
-  // At the screen's sides, as the field under it and the list.
-  mini: { paddingHorizontal: SCREEN_X, paddingTop: 8, paddingBottom: 16 },
+  // At the screen's sides, as the field under it and the list; the first section's own 28 above it is the room under
+  // the field (one step between the home's blocks).
+  mini: { paddingHorizontal: SCREEN_X, paddingTop: 8 },
   line: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 },
   after: { marginTop: 16 },
   part: { flexDirection: "row", alignItems: "center", gap: 8 },

@@ -10,22 +10,25 @@ import {
   returnCanceledText,
   returnPlace,
   shownCauses,
-  taskTitle,
   taskWaitGroups,
   taskWaitGroupText,
 } from "@agenteschat/client/lib/task-manager";
 import {
   agentTasksHref,
   agentTasksOf,
+  busyComputers,
   doneTodayOf,
-  endedLatestFirst,
   groupLine,
   isHere,
+  requestWords,
   rowState,
   taskHref,
+  taskLine,
+  taskSection,
   taskStateWords,
-  taskSubline,
+  taskStepLines,
   tasksBadge,
+  tasksByState,
 } from "../../src/features/task-manager/logic";
 import { pushedByDefault } from "../main-stack";
 import { translator } from "./fixtures";
@@ -84,41 +87,6 @@ describe("a task's row (ADR 0128)", () => {
     expect(said({ status: "waiting_approval" }, new Set(["r1"]))).toBe("Parando…");
   });
 
-  test("under the title: where, who asked and the plan; where is left out when it already is the title", async () => {
-    const t = await translator("pt-BR");
-    const asked = task({
-      runId: "r1",
-      channelKind: "channel",
-      channelName: "produto",
-      label: "Corrigir o link de cancelar",
-      requester: { userId: "me", name: "Bia" },
-      plan: { done: 9, total: 14 },
-    });
-    expect(taskSubline(t, asked, "me", taskTitle(t, asked))).toBe("#produto · Você pediu · 9 de 14 feitos");
-    expect(taskSubline(t, { ...asked, plan: null }, "other", taskTitle(t, asked))).toBe("#produto · Bia pediu");
-    // A DM's task with no label of its own is titled by where it is: said once.
-    const dm = task({ runId: "r2", requester: { userId: "me", name: "Bia" } });
-    expect(taskTitle(t, dm)).toBe("Conversa direta");
-    expect(taskSubline(t, dm, "me", taskTitle(t, dm))).toBe("Você pediu");
-  });
-
-  test("a task agents asked of each other says who asked and what started it; helpers are counted", async () => {
-    const t = await translator("pt-BR");
-    const helper = task({
-      runId: "r3",
-      betweenAgents: true,
-      label: "Vê o log",
-      requester: null,
-      delegation: { agentId: "a1", origin: { kind: "person", userId: "u2", name: "Ana" } },
-    });
-    const name = (id: string) => (id === "a1" ? "Theo" : undefined);
-    expect(taskSubline(t, helper, "me", "Vê o log", name)).toBe(
-      "Conversa entre agentes · a pedido de Theo · começou com Ana",
-    );
-    const boss = task({ runId: "r4", label: "Bugs", requester: null, helpers: 3 });
-    expect(taskSubline(t, boss, "me", "Bugs")).toContain("3 ajudantes");
-  });
-
   test("an agent's row: how its tasks stand, or queued when they only wait their turn", async () => {
     const t = await translator("pt-BR");
     expect(groupLine(t, { working: 1, waiting: 1 })).toEqual({
@@ -133,91 +101,189 @@ describe("a task's row (ADR 0128)", () => {
   });
 });
 
-describe("one line a row", () => {
+describe("by how each stands (direction A)", () => {
   const read = (f: string) => readFileSync(join(import.meta.dir, "../../src/features/task-manager", f), "utf8");
-
-  test("a task's row: its mark under its agent's face, its title and what it is about cut at the end, its time", () => {
-    const screen = read("TaskManagerScreen.tsx");
-    // One Text, one line: the title, then what it is about in quiet type; "…" at the end when it doesn't fit.
-    expect(screen).toMatch(
-      /<Text variant=\{variant\} numberOfLines=\{1\} style=\{styles\.grow\}>\s*\{title\}\s*\{line \? <Text variant="footnote" tone="muted">/,
-    );
-    expect(screen).toContain("<OneLine title={title} line={line} />");
-    // Its state is its mark, in a box as wide as the agent's face above it; the words stay on its screen.
-    expect(screen).toMatch(/<View style=\{styles\.lead\}>\s*<TaskMark state=\{state\} color=\{color\} \/>/);
-    expect(screen).toContain('lead: { width: LEAD, alignItems: "center" }');
-    expect(screen).not.toContain("<StateLine");
-    expect(screen).not.toContain("MediaRow");
-    // Every row opens what says it whole (a task's screen, its agent's tasks, a computer's line): a chevron, never a
-    // stop button squeezing the title.
-    expect(screen).not.toContain("end={stop}");
-    expect(screen).toContain("<Disclosure />");
-    for (const row of ["computer.name", "title"]) expect(screen).toContain(`<OneLine title={${row}}`);
+  const work = (state: NonNullable<ManagedTask["work"]>["state"], since = "2026-11-02T14:00:00.000Z") => ({
+    state,
+    since,
+    card: null,
   });
 
-  test("what holds the waiting work: its heading, then up to three causes, each one line that opens its way out", () => {
-    const screen = read("TaskManagerScreen.tsx");
-    expect(screen).toContain("const causes = shownCauses(all);");
-    // One block for what holds the work: no today's line, no second Computadores list.
-    expect(screen).toContain(
-      '<SectionHeader title={t("taskManager.capacity.label")} count={causes.length + lined.length} />',
-    );
-    expect(screen).not.toContain("taskManager.capacity.today");
-    expect(screen).not.toContain("taskManager.queue.computers");
-    // A computer with a line is a row of the same block, opening its line.
-    expect(screen).toContain("const lined = computersBesides(computers, causes).filter((m) => m.inLine > 0);");
-    // No screen asks for today's count any more.
-    for (const other of ["TaskManagerScreen.tsx", "TaskScreen.tsx", "AgentTasksScreen.tsx", "AgentTasksButton.tsx"])
-      expect(read(other)).not.toContain("doneToday: true");
-    expect(read("hooks.ts")).toContain("doneToday: options.doneToday ?? false,");
-    expect(screen).toContain('<OneLine title={title} line={line} variant="subhead" />');
-    for (const way of [
-      'router.push("/usage")',
-      'router.push("/settings/devices")',
-      "router.push(taskHref(first.runId))",
-    ])
-      expect(screen).toContain(way);
-    // Nothing waits, nothing shows.
-    expect(screen).toContain("{causes.length + lined.length > 0 ? (");
+  test("sections: waiting on you, at work, later; the server's word first, an older server's by status", () => {
+    const by = tasksByState([
+      task({ runId: "ok", status: "waiting_approval", work: work("you", "2026-11-02T13:42:00.000Z") }),
+      task({ runId: "ask", status: "waiting_input", work: work("you", "2026-11-02T13:57:00.000Z") }),
+      task({ runId: "run", work: work("working", "2026-11-02T13:50:00.000Z") }),
+      task({ runId: "routine", background: true, work: work("working", "2026-11-02T13:58:00.000Z") }),
+      task({ runId: "line", status: "queued", work: work("queued") }),
+      // Someone else's ok: later, never "Esperando você".
+      task({ runId: "theirs", status: "waiting_approval", work: work("approval") }),
+      // Held by its plan: the server sends no work.
+      task({ runId: "plan", status: "waiting_input", held: "plan", work: null }),
+      // An older server: by its status.
+      task({ runId: "old", status: "waiting_approval" }),
+    ]);
+    // Each section's longest standing first.
+    expect(by.you.map((x) => x.runId)).toEqual(["ok", "ask", "old"]);
+    expect(by.working.map((x) => x.runId)).toEqual(["run", "routine"]);
+    expect(by.later.map((x) => x.runId).sort()).toEqual(["line", "plan", "theirs"]);
+    expect(taskSection(task({ runId: "o2", status: "running" }))).toBe("working");
+    expect(taskSection(task({ runId: "o3", status: "queued" }))).toBe("later");
   });
 
-  test("its screen says it whole: the title and what it is about with no limit of lines, the state's words", () => {
+  test("the second line: what it asks of you, who asked and what it does, or what holds it", async () => {
+    const t = await translator("pt-BR");
+    const line = (x: ManagedTask, okWhat: string | null = null, stopping = NONE) =>
+      taskLine(t, "pt-BR", x, rowState(x, stopping), {
+        meId: "me",
+        agentName: (id) => (id === "a1" ? "Theo" : undefined),
+        now: Date.parse("2026-11-02T14:10:00.000Z"),
+        okWhat,
+      });
+    const ok = task({ runId: "ok", status: "waiting_approval", work: work("you") });
+    expect(line(ok)).toEqual({ text: "Quer seu ok", tone: "you" });
+    expect(line(ok, "Enviar um e-mail").text).toBe("Quer seu ok · Enviar um e-mail");
+    expect(line(task({ runId: "q", status: "waiting_input", work: work("you") }))).toEqual({
+      text: "Fez uma pergunta para você",
+      tone: "you",
+    });
+    // At work: the reader's own says only what it does; anyone else's says who asked first.
+    expect(line(task({ runId: "w1", requester: { userId: "me", name: "Bia" } }))).toEqual({
+      text: "Trabalhando",
+      tone: "working",
+    });
+    expect(line(task({ runId: "w2", requester: { userId: "u2", name: "Bruno Lima" } })).text).toBe(
+      "Bruno Lima pediu · trabalhando",
+    );
+    const handed = task({ runId: "w3", delegation: { agentId: "a1", origin: { kind: "agent" } } });
+    expect(line(handed).text).toBe("Theo pediu · trabalhando");
+    expect(line(task({ runId: "w4", background: true })).text).toBe("Rotina · trabalhando");
+    // Later: faint, in its wait's words; someone else's ok in neutral words.
+    expect(line(task({ runId: "l1", status: "queued", work: work("queued") }))).toEqual({
+      text: "Na fila",
+      tone: "later",
+    });
+    // The work line's own sentence-start words, never a translation with its first letter changed (ADR 0122).
+    expect(line(task({ runId: "l2", status: "waiting_approval", work: work("approval") })).text).toBe(
+      "Aguardando aprovação",
+    );
+    expect(line(ok, null, new Set(["ok"]))).toEqual({ text: "Parando…", tone: "stopping" });
+  });
+
+  test("a busy computer is said once over what it holds; the request row says who asked and where", async () => {
+    const t = await translator("pt-BR");
+    const line = { machineId: "m1", position: 1, of: 2, people: false, estimatedStartAt: null };
+    const held = task({ runId: "h", status: "waiting_input", held: "computer_busy", line });
+    const computers = [
+      { id: "m1", name: "Computador da equipe", working: 1, inLine: 1 },
+      { id: "m2", name: "Servidor", working: 0, inLine: 3 },
+    ];
+    expect(busyComputers([held, task({ runId: "x", status: "queued" })], computers).map((m) => m.id)).toEqual(["m1"]);
+    expect(busyComputers([], computers)).toEqual([]);
+    const names = (id: string) => (id === "a1" ? "Theo" : undefined);
+    const asked = task({ runId: "r", channelKind: "channel", channelName: "vendas" });
+    expect(requestWords(t, { ...asked, requester: { userId: "me", name: "Bia" } }, "me", names)).toEqual({
+      who: "Você pediu",
+      where: "#vendas",
+    });
+    expect(requestWords(t, { ...asked, requester: { userId: "u2", name: "Bruno Lima" } }, "me", names).who).toBe(
+      "Bruno Lima pediu",
+    );
+    expect(
+      requestWords(t, { ...asked, delegation: { agentId: "a1", origin: { kind: "agent" } } }, "me", names).who,
+    ).toBe("Theo pediu");
+    // Nobody asked by name: its place alone.
+    const routine = task({ runId: "rt", background: true, routine: { id: "rt1", name: "Resumo do dia" } });
+    expect(requestWords(t, routine, "me", names)).toEqual({ who: "Rotina «Resumo do dia»", where: null });
+  });
+
+  test("its steps: each call when it was made, the last one running while it works", () => {
+    const at = (s: number) => new Date(Date.UTC(2026, 10, 2, 14, 20, s)).toISOString();
+    const data = {
+      run: { createdAt: at(0), finishedAt: null },
+      steps: [
+        { seq: 1, kind: "tool_call", data: { toolUseId: "t1", name: "create_issue", input: {} }, createdAt: at(1) },
+        { seq: 2, kind: "tool_result", data: { toolUseId: "t1", content: "ok" }, createdAt: at(2) },
+        { seq: 3, kind: "tool_call", data: { toolUseId: "t2", name: "list_issues", input: {} }, createdAt: at(3) },
+      ],
+    };
+    expect(taskStepLines(data, true).map((s) => [s.line.key, s.line.state, s.at])).toEqual([
+      ["t1", "done", at(1)],
+      ["t2", "run", at(3)],
+    ]);
+    // Not working (it waits on you, or it ended): the held call stays held.
+    expect(taskStepLines(data, false).map((s) => s.line.state)).toEqual(["done", "stop"]);
+  });
+
+  test("the list: its large title, the sections, no summary line, no agent groups, no causes block", () => {
+    const screen = read("TaskManagerScreen.tsx");
+    expect(screen).toContain('title={t("mobile.taskManager.title")}');
+    expect(screen).toContain("<TaskSections");
+    for (const gone of ["AgentGroup", "taskManager.capacity.label", "shownCauses", "mobile.taskManager.quiet"])
+      expect(screen).not.toContain(gone);
+    // Agentes' row says the same.
+    const agents = readFileSync(join(import.meta.dir, "../../src/features/agents/AgentsScreen.tsx"), "utf8");
+    expect(agents).toContain('title={t("mobile.taskManager.title")}');
+    const rows = read("rows.tsx");
+    for (const key of ["sections.you", "sections.working", "sections.later"])
+      expect(rows).toContain(`t("mobile.taskManager.${key}")`);
+    // Why "Mais tarde" waits, said once at its top: a busy computer opens its line.
+    expect(rows).toContain("onPress={() => openQueue(computer.id)}");
+    expect(rows).toContain("<WaitLines tasks={by.later} now={minuteNow} />");
+    // "Terminadas hoje" folds by default, remembered on this phone.
+    expect(rows).toContain("STORED.taskManagerOpened");
+    expect(rows).toContain("collapsed={!endedOpen}");
+  });
+
+  test("a row, two lines: the face (its rings at work), the title with its time and a chevron, how it stands", () => {
+    const rows = read("rows.tsx");
+    expect(rows).toContain(
+      '<AgentFace agentId={agentId} size={FACE} mode={working ? "run" : "idle"} live={live} orbit={working} />',
+    );
+    expect(rows).toMatch(/<Text variant="body" numberOfLines=\{1\} style=\{styles\.grow\}>\s*\{title\}/);
+    expect(rows).toContain('<Text variant="small" tone="faint" style={styles.num}>');
+    expect(rows).toContain("{chevron ? <Disclosure /> : null}");
+    // Hairlines from the words' column: 16 + 40 + 12.
+    expect(rows).toContain("faceDivider: { left: 16 + FACE + 12 }");
+    expect(rows).toContain("const FACE = 40;");
+    // An agent's tasks go without faces (the agent is the title).
+    expect(read("AgentTasksScreen.tsx")).toContain("faces={false}");
+  });
+
+  test("a task's screen: the title whole, the agent's group, what it asks with Aprovar and Recusar, its steps", () => {
     const page = read("TaskScreen.tsx");
-    expect(page).toMatch(
-      /label=\{title\}\s*labelLines=\{0\}\s*\{\.\.\.\(request \? \{ sub: request, subLines: 0 \} : \{\}\)\}/,
-    );
-    expect(page).toContain("state={<StateLine task={task} state={state} now={now} />}");
-    // 0 lines is as many as the words need, and such a row puts its lead on the first line.
-    const grouped = readFileSync(join(import.meta.dir, "../../src/ui/Grouped.tsx"), "utf8");
-    expect(grouped).toContain("labelLines !== 1 || subLines !== 1");
-  });
-
-  test("an agent's tasks from its DM: one line each too, its computer's line opened from the task's screen", () => {
-    const list = read("AgentTasksScreen.tsx");
-    expect(list).toMatch(/<Text variant="body" numberOfLines=\{1\} style=\{styles\.grow\}>\s*\{title\}/);
-    expect(list).not.toContain("<StateLine");
-    expect(list).not.toContain("openQueue(");
-    expect(read("TaskScreen.tsx")).toContain("onPress={() => openQueue(line)}");
-  });
-
-  test("an agent's tasks stay folded under its row until it is tapped; the row says how long, as its tasks do", () => {
-    const screen = read("TaskManagerScreen.tsx");
-    expect(screen).toContain("useState<ReadonlySet<string>>(() => new Set())");
-    expect(screen).toContain("open={opened.has(g.agentId)}");
-    expect(screen).toContain("open={opened.has(`by:");
-    expect(screen).not.toContain("closed.has(");
-    expect(screen).toContain("taskTime(t, groupLead(group), now)");
-    // A task's time is its clock at work, how long it has waited otherwise: never "82:07:59".
-    expect(read("parts.tsx")).toContain("taskTime(t, task, now)");
-    expect(read("parts.tsx")).not.toContain("taskClock");
+    expect(page).toContain('<Text variant="display2" style={styles.title}>');
+    expect(page).toContain('<PushedHeader title="" solid={false} grouped />');
+    expect(page).toContain('<AgentFace agentId={agentId} size={36} mode={working ? "run" : "idle"} orbit={working} />');
+    expect(page).toContain('<GroupedField label={t("taskManager.now")} stacked>');
+    // What it asks: the server's own request and its actions, no new endpoint.
+    expect(page).toContain("useApproveNow(a)");
+    expect(page).toContain("useRefuseApproval(a)");
+    expect(page).toContain('t("mobile.taskManager.approveNote", agentGrammar(name))');
+    // Steps as rows of a group, the last few and the rest in place.
+    expect(page).toContain("taskStepLines(run.data, live)");
+    expect(page).toContain('t("mobile.taskManager.allSteps", { count: lines.length })');
+    // "Parar tarefa": a centred red row alone in its group, asked first, its note under it.
+    expect(page).toContain("const ask = () => askToStop(t, task, title, name, stop);");
+    expect(page).toContain('<GroupedRow label={t("taskManager.actions.stopTask")} danger centered onPress={stop} />');
+    expect(page).toContain("{stopNote ? <GroupedFooter>{stopNote}</GroupedFooter> : null}");
+    // Its computer's line opens from here.
+    expect(page).toContain("onPress={() => openQueue(line)}");
   });
 
   test("stopping several asks once, in the system's alert: how many and whose, never a card opened in place", () => {
     const list = read("AgentTasksScreen.tsx");
     expect(list).toContain("Alert.alert(");
     expect(list).toContain('text: t("taskManager.confirm.stop", { count: stoppable.length }),');
+    expect(list).toContain('t("mobile.taskManager.stopAll", { count: stoppable.length })');
     // The in-place confirmation card it replaced is gone.
     expect(read("parts.tsx")).not.toContain("StopConfirm");
+    // A task's time is its clock at work, how long it has waited otherwise: never "82:07:59".
+    expect(read("rows.tsx")).toContain("taskTime(t, task, now)");
+    expect(read("parts.tsx")).not.toContain("taskClock");
+    for (const other of ["TaskManagerScreen.tsx", "TaskScreen.tsx", "AgentTasksScreen.tsx", "AgentTasksButton.tsx"])
+      expect(read(other)).not.toContain("doneToday: true");
+    expect(read("hooks.ts")).toContain("doneToday: options.doneToday ?? false,");
   });
 
   test("a list that didn't load says so and offers to try again; a task's screen loads in its rows' shape", () => {
@@ -226,7 +292,6 @@ describe("one line a row", () => {
     const page = read("TaskScreen.tsx");
     expect(page).toContain("<SkeletonList rows={3} />");
     expect(page).not.toContain("ActivityIndicator");
-    expect(page).toContain("{stopNote ? <GroupedFooter>{stopNote}</GroupedFooter> : null}");
   });
 });
 
@@ -243,14 +308,6 @@ describe("what ended today", () => {
     // The right hand stopped it at my word: its name, never "Você parou".
     const byLodi = ended({ runId: "f", status: "canceled", stoppedBy: { userId: "me", name: "Bia", agentId: "lodi" } });
     expect(endedText(t, byLodi, "me", (id) => (id === "lodi" ? "Lodi" : undefined))).toBe("Lodi parou");
-  });
-
-  test("the latest first", () => {
-    const list = [
-      ended({ runId: "old", finishedAt: "2026-11-02T09:00:00.000Z" }),
-      ended({ runId: "new", finishedAt: "2026-11-02T15:00:00.000Z" }),
-    ];
-    expect(endedLatestFirst(list).map((e) => e.runId)).toEqual(["new", "old"]);
   });
 });
 
@@ -482,21 +539,23 @@ describe("returns agents set (Retornos, ADR 0037 addendum)", () => {
     );
   });
 
-  test("the screen lists them after the routines, one line each; a tap or a long press opens their whole words", () => {
-    const src = readFileSync(join(import.meta.dir, "../../src/features/task-manager/TaskManagerScreen.tsx"), "utf8");
+  test("the screen lists them under Mais tarde after its tasks; a tap or a long press opens their whole words", () => {
+    const src = readFileSync(join(import.meta.dir, "../../src/features/task-manager/rows.tsx"), "utf8");
     const at = (s: string) => src.indexOf(s);
     const fn = (name: string) => src.slice(at(`function ${name}(`), src.indexOf("\n}\n", at(`function ${name}(`)));
-    expect(at('t("taskManager.sections.returns")')).toBeGreaterThan(at('t("taskManager.sections.background")'));
-    // Note A on the phone: one line, cut at the end; a tap shows it whole where a return has no screen of its own (a
-    // canceled one shows nowhere else: the conversation has no line for it).
+    expect(at("<ReturnRow item={r}")).toBeGreaterThan(at("{rows(by.later)}"));
+    // A return's words are cut at the end of its row; a tap shows them whole where a return has no screen of its own
+    // (a canceled one shows nowhere else: the conversation has no line for it).
     for (const row of ["ReturnRow", "CanceledReturnRow"]) {
       const code = fn(row);
-      expect(code).toMatch(/<OneLine title=\{item\.about\}/);
+      expect(code).toContain("title={item.about}");
+      expect(code).toContain("chevron={false}");
       expect(code).toContain("onPress={open}");
-      expect(code).toContain("onLongPress={open}");
       expect(code).toContain("<ReturnSheet");
       expect(code).not.toContain("router.push(chatHref(item.channelId, item.threadId)}");
     }
+    // A row that opens no screen of its own takes the long press too.
+    expect(src).toContain("{...(chevron ? {} : { onLongPress: onPress })}");
     // The same sheet on iOS and Android: her words whole, whose and where, when or how it ended, then its actions.
     expect(src).not.toContain("ActionSheetIOS");
     const sheet = fn("ReturnSheet");

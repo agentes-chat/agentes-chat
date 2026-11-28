@@ -32,6 +32,8 @@ export interface ButtonProps {
   hint?: string;
   /** The label wraps instead of being cut: it carries a name the server sets, of any length. */
   wrap?: boolean;
+  /** A destructive action said as words (`text`): in the danger color, as the system's destructive buttons. */
+  danger?: boolean;
 }
 
 /**
@@ -85,13 +87,14 @@ export function Button({
   loading = false,
   hint,
   wrap = false,
+  danger = false,
 }: ButtonProps) {
   const theme = useTheme();
   const { colors } = theme;
   const s = BUTTON_SIZES[size];
   const primary = variant === "primary";
   const look = primaryLook(theme);
-  const textColor = primary ? look.text : colors.ink;
+  const textColor = primary ? look.text : danger ? colors.danger : colors.ink;
   return (
     <PressScale
       onPress={onPress}

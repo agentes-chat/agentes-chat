@@ -2,7 +2,7 @@ import type { NativeStackNavigationOptions } from "expo-router";
 import { type ReactNode, useLayoutEffect, useMemo, useRef } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { ScrollToTopGuard } from "react-native-screens/experimental";
-import { IconButton, usePlateEdge } from "./IconButton";
+import { IconButton, PLATE_EDGE_ROOM, usePlateEdge } from "./IconButton";
 import type { IconName } from "./icons.data";
 import type { SFSymbolName } from "./icons.sf";
 import { HeaderSlot, useHeaderSlot } from "./navigation";
@@ -213,16 +213,22 @@ export function BarPressable({ children }: { children: ReactNode }) {
 /**
  * Buttons of a bar floating over the content (Android): one opaque plate with round ends around them, like the
  * glass capsule iOS 26 draws around a bar's buttons; one button makes a circle. Nothing of its own on iOS,
- * where the system draws the capsule.
+ * where the system draws the capsule. Its edge has room of its own inside the bar's view (`PLATE_EDGE_ROOM`): the
+ * native view that holds it clips it to its box, and the round "…" lost its ring and shadow at its four sides.
  */
 export function HeaderCapsule({ children }: { children: ReactNode }) {
   const { colors } = useTheme();
   const edge = usePlateEdge();
   if (IOS) return <>{children}</>;
-  return <View style={[styles.row, styles.capsule, { backgroundColor: colors.glassSolid }, edge]}>{children}</View>;
+  return (
+    <View style={styles.edgeRoom}>
+      <View style={[styles.row, styles.capsule, { backgroundColor: colors.glassSolid }, edge]}>{children}</View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 4 },
   capsule: { gap: 0, borderRadius: 20 },
+  edgeRoom: PLATE_EDGE_ROOM,
 });

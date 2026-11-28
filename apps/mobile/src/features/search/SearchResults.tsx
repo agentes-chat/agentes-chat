@@ -16,7 +16,7 @@ import { AgentFace, Face } from "../shared/Face";
 import { LoadFailed } from "../shared/FirstUse";
 import { useDirectory, useOrgId, useWhen } from "../shared/hooks";
 import { previewOf } from "../shared/logic";
-import { type ActionItem, ActionList, Tile } from "../shared/parts";
+import { type ActionItem, ActionList, ChannelTile, Tile } from "../shared/parts";
 import { hitHref, hitResults, isEmpty, localResults, SEARCH_KINDS, type SearchAction } from "./logic";
 import { RESULT_LEAD } from "./SearchFilters";
 
@@ -135,7 +135,7 @@ const Results = memo(function Results({ q }: { q: string }) {
       })),
       ...local.channels.map((ch) => ({
         key: `c:${ch.id}`,
-        leading: <Tile icon="hash" size={RESULT_LEAD} />,
+        leading: <ChannelTile size={RESULT_LEAD} />,
         label: `#${ch.name}`,
         marks: terms,
         oneLine: true,

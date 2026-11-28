@@ -135,6 +135,8 @@
     "directChat": "Czat bezpośredni"
   },
   "approval": {
+    "cancelAheadTitle": "Anulować tę zaplanowaną akcję?",
+    "cancelAheadText": "Nie zostanie wykonana o zaplanowanej porze. Aby zrobić to później, zatwierdź ją ponownie, gdy agent poprosi.",
     "asksIn": "prosi o zatwierdzenie · #{{channel}}",
     "asksYou": "prosi o zatwierdzenie",
     "expiresIn_one": "wygasa za {{count}} min",
@@ -353,12 +355,16 @@
     "recording": "Nagrywanie",
     "discard": "Usuń",
     "send": "Wyślij",
-    "seeAll": "Pokaż wszystko"
+    "seeAll": "Pokaż wszystko",
+    "nowPlaying": "Wiadomość głosowa",
+    "nowPlayingFile": "Audio"
   },
   "chat": {
+    "followUpCancelTitle": "Anulować przypomnienie {{name}} {{when}}?",
     "someone": "Ktoś",
     "handedTo": "Przekazano: {{name}}",
     "handedTo_female": "Przekazano: {{name}}",
+    "inBackground": "W tle",
     "pairAsked": "{{from}} pyta",
     "messageTo": "Wiadomość do: {{name}}",
     "messageIn": "Wiadomość w {{channel}}",
@@ -1542,7 +1548,9 @@
       "priority": "Priorytet",
       "assignee": "Kto to robi",
       "cancel": "Anuluj zadanie",
-      "canceled": "#{{number}} anulowane"
+      "canceled": "#{{number}} anulowane",
+      "cancelTitle": "Anulować zadanie #{{number}}?",
+      "cancelText": "Zniknie z otwartych zadań. Możesz otworzyć je ponownie później."
     },
     "nobody": "Nikt",
     "you": "Ty",
@@ -1693,7 +1701,40 @@
       "lastDay": "Ostatni dzień"
     }
   },
+  "calendar": {
+    "proposalBy": "Propozycja {{name}}",
+    "confirm": "Potwierdź",
+    "due": "termin",
+    "allDay": "cały dzień",
+    "until": "do {{time}}",
+    "nothingThatDay": "Nic nie zaplanowano.",
+    "after": "Później",
+    "showWeek": "Pokaż tylko tydzień",
+    "showMonth": "Pokaż miesiąc",
+    "day": "Dzień",
+    "time": "Godzina",
+    "repeats": "Powtarza się",
+    "going": "Będziesz?",
+    "participantsCount": "Uczestnicy · {{count}}",
+    "timeRange": "Od {{from}} do {{to}}",
+    "dayRange": "Od {{from}} do {{to}}",
+    "noAnswer": "jeszcze nie odpowiedział(a)",
+    "agentPrepares": "Przygotowuje wcześniej podsumowanie",
+    "task": "Zadanie",
+    "conversation": "Rozmowa",
+    "deleteEvent": "Usuń wydarzenie",
+    "deleteAsk": "Usunąć to wydarzenie?",
+    "starts": "Początek",
+    "ends": "Koniec",
+    "noRepeat": "Nie powtarza się",
+    "addPeople": "Dodaj osobę lub agenta"
+  },
   "coding": {
+    "removeTitle": "Usunąć {{name}} z sesji?",
+    "removeText": "Ta osoba przestanie widzieć sesję i jej rozmowę. Aby ją przywołać, wpisz w rozmowie @ i jej imię.",
+    "removeConfirm": "Usuń z sesji",
+    "leaveTitle": "Opuścić sesję?",
+    "leaveText": "Zniknie z twojej listy. Aby wrócić, ktoś z sesji musi cię zaprosić.",
     "pill": "{{who}}. Zobacz kod",
     "seeChanges": "Zobacz zmiany",
     "project": "Projekt",
@@ -1718,11 +1759,28 @@
   "taskManager": {
     "loadFailed": "Nie udało się wczytać zadań.",
     "gone": "Tego zadania już tu nie ma.",
-    "quiet": "Nic w toku",
-    "doneToday_one": "ukończone dziś: {{count}}",
-    "doneToday_few": "ukończone dziś: {{count}}",
-    "doneToday_many": "ukończone dziś: {{count}}",
-    "doneToday_other": "ukończone dziś: {{count}}",
+    "title": "W toku",
+    "sections": {
+      "you": "Czeka na ciebie",
+      "working": "Pracuje",
+      "later": "Później"
+    },
+    "computerBusy": "{{name}} jest zajęty.",
+    "wantsOk": "Chce twojej zgody",
+    "asked": "Zadał ci pytanie",
+    "routine": "Rutyna",
+    "asks": "O co prosi {{name}}",
+    "approveNote": "{{name}} działa dalej, gdy tylko zatwierdzisz.",
+    "answer": "Odpowiedz w rozmowie",
+    "progress": "Postęp",
+    "allSteps_one": "Zobacz krok",
+    "allSteps_few": "Zobacz {{count}} kroki",
+    "allSteps_many": "Zobacz {{count}} kroków",
+    "allSteps_other": "Zobacz {{count}} kroku",
+    "stopAll_one": "Zatrzymaj zadanie",
+    "stopAll_few": "Zatrzymaj {{count}} zadania",
+    "stopAll_many": "Zatrzymaj {{count}} zadań",
+    "stopAll_other": "Zatrzymaj {{count}} zadania",
     "request": "Prośba",
     "stopTitle": "Zatrzymać „{{title}}”?",
     "stopBody": "{{name}} zatrzymuje się teraz i pisze w rozmowie, co udało się dotąd zrobić."
@@ -2174,6 +2232,8 @@
       "name": "Nazwa",
       "renamed": "Nowa nazwa: {{name}}",
       "stop": "Zatrzymaj: {{name}}",
+      "stopTitle": "Zatrzymać {{name}} na {{device}}?",
+      "stopText": "To, co na nim działa, zatrzyma się teraz. Możesz poprosić ponownie później.",
       "stopped": "{{name}} już nie używa {{device}}",
       "forget": "Zapomnij ten telefon",
       "forgetTitle": "Zapomnieć {{name}}?",
@@ -2327,7 +2387,8 @@
       "allowOnce": "Zezwól raz",
       "always": "Zawsze zezwalaj: {{name}}",
       "no": "Nie",
-      "stop": "Zatrzymaj"
+      "stop": "Zatrzymaj",
+      "stopTitle": "Przestać używać {{device}}?"
     },
     "wait": {
       "waiting": "Czekam na {{device}}",
@@ -2541,6 +2602,8 @@
     "failed": "Nie udało się zapisać. Spróbuj ponownie."
   },
   "ai": {
+    "dontRunTitle": "Nie uruchamiać tej prośby?",
+    "dontRunText": "Zostanie anulowana i nie uruchomi się, gdy limit wróci.",
     "yourPlan": "Twój plan AI",
     "plansSub": "Claude, ChatGPT, Gemini, GLM i inne",
     "plansFoot": "Agenci myślą za pomocą twojego planu, bez klucza API. Logowanie odbywa się na komputerze agenta.",

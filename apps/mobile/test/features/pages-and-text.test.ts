@@ -27,6 +27,20 @@ test("a page opens as a page: an HTML file or an agent's page, never its source"
     expect(blocks).toContain(what);
 });
 
+test("a page's end clears the home indicator and Android's navigation bar", () => {
+  const viewer = src("features/files/DocumentViewer.tsx");
+  const page = viewer.slice(
+    viewer.indexOf("function HtmlPage("),
+    viewer.indexOf("\n}\n", viewer.indexOf("function HtmlPage(")),
+  );
+  // Android: a web view has no content inset, so the page stops over a band as tall as the bar, on the page's white.
+  expect(page).toContain('Platform.OS === "android" && html !== undefined ? (');
+  expect(page).toContain("<View style={[styles.white, { height: insets.bottom }]} />");
+  // iOS: the page scrolls under the home indicator and ends above it.
+  const html = viewer.slice(viewer.indexOf("function IsolatedHtml("));
+  expect(html).toContain('contentInsetAdjustmentBehavior="automatic"');
+});
+
 test("a long text shows in pieces the phone can draw, nothing lost", () => {
   const text = Array.from({ length: 1000 }, (_, i) => `line ${i}`).join("\n");
   const pieces = textChunks(text);

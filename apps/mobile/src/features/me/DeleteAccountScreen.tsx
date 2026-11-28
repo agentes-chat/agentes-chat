@@ -35,6 +35,7 @@ import {
   useToast,
 } from "@/ui";
 import { AuthField } from "@/ui/auth/AuthField";
+import { DRAG_DISMISS } from "@/ui/auth/AuthScaffold";
 import { PasswordField } from "@/ui/auth/PasswordField";
 import { openWebPath } from "../links/open-web";
 import { ResendCode } from "../settings/parts";
@@ -187,7 +188,7 @@ export function DeleteAccountScreen() {
       <KeyboardAwareScrollView
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="interactive"
+        keyboardDismissMode={DRAG_DISMISS}
         bottomOffset={24}
         contentContainerStyle={[styles.in, { paddingBottom: insets.bottom + 24 }]}
       >

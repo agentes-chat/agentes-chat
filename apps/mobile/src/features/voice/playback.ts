@@ -4,7 +4,19 @@ import { releaseVoiceAudio, voiceAudio } from "@/lib/audio-mode";
 /**
  * One voice plays at a time, in the whole app: a single player that rows take turns on, so a list scrolling past
  * never holds one per message. Where each clip stands lives here too (`placeOf`), moved by a timer outside React.
+ *
+ * What plays belongs to the system, as a messaging app's voice notes do: it goes on when the person leaves the
+ * conversation or the app, and the system shows it with its own controls (iOS: Now Playing on the Lock Screen, in
+ * Control Center and the Dynamic Island; Android: the media notification and the lock screen), with who said it.
+ * Paused there, the clip keeps its place and its controls (`held`), and playing again there brings it back; a stop of
+ * ours, an end, or another clip takes the system's entry away. Nothing plays with no way to stop it.
  */
+
+/** What the system shows for a clip while it plays: who said it (or the file's name), and what it is. */
+export interface NowPlaying {
+  title: string;
+  artist?: string;
+}
 export interface PlayRequest {
   id: string;
   source: AudioSource;
@@ -14,15 +26,21 @@ export interface PlayRequest {
   /** Each tick of the timer with where the clip is (0–1); a seek on its way holds the ticks back. */
   onProgress?: (fraction: number) => void;
   onEnd?: () => void;
-  /** It didn't load or play: playback stopped, and the row says so. */
-  onError: () => void;
+  /** It didn't load or play: playback stopped, and the row says so (`reason`: the player's own words, when it said). */
+  onError: (reason?: string) => void;
+  /** Shown by the system while it plays (`NowPlaying`). */
+  nowPlaying?: NowPlaying;
 }
 
 const TICK_MS = 50;
+/** Paused from the system, the player is asked whether it plays again every this many ticks. */
+const HELD_EVERY = 6;
 /** Moved this far past where it started (s), the clip is playing: its button stops showing it starting. */
 const MOVED_S = 0.05;
 let player: AudioPlayer | null = null;
 let now: PlayRequest | null = null;
+/** Paused from the system's controls (the Lock Screen, a headset, a call): its controls stay, to play it again. */
+let held: PlayRequest | null = null;
 let timer: ReturnType<typeof setInterval> | null = null;
 /** Goes up with every stop (each start begins with one): a start that waited sees it was overtaken. */
 let turn = 0;
@@ -30,6 +48,14 @@ let turn = 0;
 let starting: string | null = null;
 /** The seek on its way: until the player lands on it, it still reads its old place, which would pull the wave back. */
 let seeking: Promise<unknown> | null = null;
+/**
+ * What else plays and gives way to a voice (a video in the viewer): told when a clip starts, so one thing plays at a
+ * time across the app. Set once by the video player's module.
+ */
+let otherMedia: (() => void) | null = null;
+export const onVoiceStarts = (pause: () => void) => {
+  otherMedia = pause;
+};
 const listeners = new Set<() => void>();
 const say = () => {
   for (const listener of listeners) listener();
@@ -79,10 +105,14 @@ const fraction = (p: AudioPlayer, durationMs: number) => {
   return total > 0 ? Math.min(1, p.currentTime / total) : 0;
 };
 
-/** The clip playing reached its end: it stops and goes back to its start. */
+/**
+ * The clip reached its end: it stops and goes back to its start. Also one the timer took for paused a moment before the
+ * player said it ended (it stops playing at its end too), so its controls leave the Lock Screen with it.
+ */
 function ended() {
-  if (!now) return;
-  const { onEnd, id } = now;
+  const done = now ?? held;
+  if (!done) return;
+  const { onEnd, id } = done;
   stopPlayback();
   setPlace(id, 0);
   onEnd?.();
@@ -94,8 +124,11 @@ export function stopPlayback() {
   timer = null;
   seeking = null;
   player?.pause();
-  if (!now && !starting) return;
+  if (!now && !starting && !held) return;
+  // The system's entry goes with it: nothing stays on the Lock Screen or in the notifications for a clip that stopped.
+  player?.clearLockScreenControls();
   now = null;
+  held = null;
   starting = null;
   // The app's own sounds get the session back (silent in silent mode, with the music), unless a voice takes it again.
   releaseVoiceAudio();
@@ -111,7 +144,8 @@ function makePlayer() {
     if (!status.error || !now) return;
     const { onError } = now;
     stopPlayback();
-    onError();
+    // The player's own words go with it: a phone where clips don't play says why in the error reports.
+    onError(String(status.error));
   });
   return p;
 }
@@ -122,6 +156,7 @@ function makePlayer() {
  */
 export async function startPlayback(request: PlayRequest) {
   stopPlayback();
+  otherMedia?.();
   const mine = turn;
   starting = request.id;
   say();
@@ -138,6 +173,11 @@ export async function startPlayback(request: PlayRequest) {
     if (request.from > 0) await p.seekTo(from);
     if (mine !== turn) return;
     p.play();
+    // A message's clip is the system's, with its controls (the audio mode keeps it going in the background:
+    // `voiceAudio`); a take heard back before sending stays in the composer.
+    if (request.nowPlaying) {
+      p.setActiveForLockScreen(true, request.nowPlaying, { showSeekForward: false, showSeekBackward: false });
+    }
   } catch (error) {
     // Its button stops spinning; the caller says why.
     if (mine === turn) stopPlayback();
@@ -145,8 +185,22 @@ export async function startPlayback(request: PlayRequest) {
   }
   now = request;
   say();
+  let idle = 0;
   timer = setInterval(() => {
-    if (!now) return;
+    // Paused from the system: played again there, it is the clip playing again, from where it is (asked a few times a
+    // second, not on every tick, while it waits).
+    if (!now) {
+      if (held && ++idle % HELD_EVERY === 0) {
+        const status = p.currentStatus;
+        if (status.playbackState === "ended") ended();
+        else if (status.playing) {
+          now = held;
+          held = null;
+          say();
+        }
+      }
+      return;
+    }
     const status = p.currentStatus;
     // The end is the player's (the event, or Android's state), never the place: a length a little off would cut it.
     if (status.playbackState === "ended") {
@@ -168,6 +222,13 @@ export async function startPlayback(request: PlayRequest) {
     if (seeking) return;
     setPlace(now.id, at);
     now.onProgress?.(at);
+    // Paused from the system's controls (or by a call): its row shows it stopped where it is, and the system keeps
+    // its controls to play it again.
+    if (starting !== now.id && status.isLoaded === true && status.playing === false && status.isBuffering !== true) {
+      held = now;
+      now = null;
+      say();
+    }
   }, TICK_MS);
 }
 

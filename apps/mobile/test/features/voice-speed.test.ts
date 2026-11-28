@@ -30,6 +30,9 @@ const clock = {
   status: null as null | ((status: { didJustFinish?: boolean; error?: string }) => void),
 };
 const finish = () => clock.status?.({ didJustFinish: true });
+// What the player says of itself (the system's controls pause and play it), and what it gave the system to show.
+const status: { isLoaded?: boolean; playing?: boolean; isBuffering?: boolean } = {};
+const shown: { active: boolean; title?: string; artist?: string }[] = [];
 mock.module("expo-audio", () => ({
   setAudioModeAsync: async () => undefined,
   createAudioPlayer: () => ({
@@ -49,8 +52,11 @@ mock.module("expo-audio", () => ({
       }),
     play: () => undefined,
     pause: () => undefined,
+    setActiveForLockScreen: (active: boolean, metadata?: { title?: string; artist?: string }) =>
+      void shown.push({ active, ...metadata }),
+    clearLockScreenControls: () => void shown.push({ active: false }),
     get currentStatus() {
-      return { didJustFinish: false, playbackState: clock.state };
+      return { ...status, didJustFinish: false, playbackState: clock.state };
     },
     get currentTime() {
       return clock.currentTime;
@@ -227,5 +233,84 @@ describe("where a voice message stands lives in the playback module, not in its 
     await ticks();
     expect(placeOf("clip-h")).toBeCloseTo(0.5, 5);
     stopPlayback();
+  });
+});
+
+describe("what plays is the system's: its controls, who said it, paused there and played again", () => {
+  test("a message's clip goes to the system with who said it; a take heard back stays in the app; a stop takes it away", async () => {
+    clock.currentTime = 0;
+    shown.length = 0;
+    await startPlayback({ ...request("clip-i"), nowPlaying: { title: "Ana Souza", artist: "Mensagem de voz" } });
+    expect(shown).toEqual([{ active: true, title: "Ana Souza", artist: "Mensagem de voz" }]);
+    stopPlayback();
+    expect(shown.at(-1)).toEqual({ active: false });
+    shown.length = 0;
+    await startPlayback(request("voice-take"));
+    expect(shown.filter((s) => s.active)).toEqual([]);
+    stopPlayback();
+  });
+
+  test("paused from the Lock Screen it shows stopped where it is, keeps its controls, and plays on from there", async () => {
+    clock.currentTime = 0;
+    shown.length = 0;
+    await startPlayback({ ...request("clip-j"), nowPlaying: { title: "Bruno Lima" } });
+    clock.currentTime = 3;
+    Object.assign(status, { isLoaded: true, playing: true, isBuffering: false });
+    await ticks();
+    expect(playingId()).toBe("clip-j");
+    // The system paused it: the row shows play, its place kept, the controls still there.
+    status.playing = false;
+    await ticks();
+    expect(playingId()).toBeNull();
+    expect(placeOf("clip-j")).toBeCloseTo(1 / 3, 5);
+    expect(shown.some((s) => !s.active)).toBe(false);
+    // Played again there: it is the clip playing again.
+    status.playing = true;
+    await Bun.sleep(400);
+    expect(playingId()).toBe("clip-j");
+    stopPlayback();
+    expect(shown.at(-1)).toEqual({ active: false });
+    Object.assign(status, { isLoaded: undefined, playing: undefined, isBuffering: undefined });
+  });
+
+  test("a clip that ends just after it read as paused (it stops playing at its end) leaves the Lock Screen with its end", async () => {
+    for (const end of ["event", "state"] as const) {
+      clock.currentTime = 0;
+      shown.length = 0;
+      let ended = 0;
+      await startPlayback({ ...request(`clip-end-${end}`), nowPlaying: { title: "Bruno Lima" }, onEnd: () => ended++ });
+      Object.assign(status, { isLoaded: true, playing: true, isBuffering: false });
+      clock.currentTime = 8.9;
+      await ticks();
+      // At its end it stops playing, which a tick takes for a pause from the system before the end is said.
+      status.playing = false;
+      clock.currentTime = 9;
+      await ticks();
+      expect(playingId()).toBeNull();
+      // iOS says it in the event; Android's state says it, read while it waits.
+      if (end === "event") finish();
+      else clock.state = "ended";
+      await Bun.sleep(400);
+      expect([placeOf(`clip-end-${end}`), ended, shown.at(-1)]).toEqual([0, 1, { active: false }]);
+      clock.state = "ready";
+      Object.assign(status, { isLoaded: undefined, playing: undefined, isBuffering: undefined });
+    }
+  });
+
+  test("the audio mode keeps a playing voice going in the background, never a take", () => {
+    const mode = readFileSync(join(import.meta.dir, "../../src/lib/audio-mode.ts"), "utf8");
+    expect(mode).toContain("shouldPlayInBackground: !recording,");
+    const config = readFileSync(join(import.meta.dir, "../../app.config.ts"), "utf8");
+    expect(config).toContain("enableBackgroundPlayback: true,");
+    expect(config).toContain('["expo-video", { supportsBackgroundPlayback: true, supportsPictureInPicture: false }]');
+    // Android's media-playback service needs its permission: never blocked again.
+    expect(config).not.toContain('"android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",');
+    const video = readFileSync(join(import.meta.dir, "../../src/features/files/VideoPlayer.tsx"), "utf8");
+    expect(video).toContain("p.staysActiveInBackground = true;");
+    // No Now Playing entry for a video: the video module's own crashed a second video once the first was let go.
+    expect(video).not.toContain("p.showNowPlayingNotification = true;");
+    // One thing plays at a time: a video stops a voice, a voice pauses a video.
+    expect(video).toContain("onVoiceStarts(pauseCurrent);");
+    expect(video).toMatch(/current = player;\s*stopPlayback\(\);/);
   });
 });

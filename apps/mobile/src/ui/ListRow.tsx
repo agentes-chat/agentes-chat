@@ -8,15 +8,18 @@ import { useFontScale } from "./text-scale";
 import { useTheme } from "./theme";
 import { weights } from "./type-scale";
 
-/** The avatar column of a full-width list row (52pt: an agent's body, a person's photo, a tile). */
-export const LIST_AVATAR = 52;
+/**
+ * The avatar column of a full-width list row: 48pt, and every face fills it the same (an agent's sky tile, a person's
+ * photo, a channel's tile), so names and hairlines start on one line whoever leads the row.
+ */
+export const LIST_AVATAR = 48;
 /** The row's side margin: the screen's 16, as every list and card. */
 const SIDE = 16;
 /** The gap between the avatar and the text. */
 const GAP = 12;
 /** The unread dot sits nearer the text than the row's gap. */
 const DOT_GAP = 10;
-/** Where the hairline between rows starts: the text column (16 + 52 + 12 = 80). */
+/** Where the hairline between rows starts: the text column (16 + 48 + 12 = 76). */
 export const LIST_INSET = SIDE + LIST_AVATAR + GAP;
 
 const IOS = Platform.OS === "ios";
@@ -33,7 +36,7 @@ export const LIST_TIME: TextStyle = { fontVariant: ["tabular-nums"] };
 const TIME_VARIANT = IOS ? "footnote" : "small";
 
 export interface ListRowProps extends Omit<PressableProps, "style" | "children"> {
-  /** The 52pt avatar box's content. */
+  /** The 48pt avatar box's content. */
   leading: ReactNode;
   /** Line 1 (a string is drawn as the semibold name; bold when unread). */
   title: ReactNode;
@@ -75,8 +78,8 @@ export interface ListRowProps extends Omit<PressableProps, "style" | "children">
 
 /**
  * One full-width row of a list: no card, the
- * 52pt avatar, the semibold 17 name and the time (13) on line 1, the preview (15/20, up to two lines) with a badge or
- * state on line 2, hairlines inset to the text column at 80, 76pt tall with a one-line preview. Unread: bold name,
+ * 48pt avatar, the semibold 17 name and the time (13) on line 1, the preview (15/20, up to two lines) with a badge or
+ * state on line 2, hairlines inset to the text column at 76, 72pt tall with a one-line preview. Unread: bold name,
  * darker time and preview. Conversas, Atividade and Agentes use it.
  */
 export function ListRow({
@@ -171,7 +174,7 @@ const styles = StyleSheet.create({
     gap: GAP,
     paddingVertical: 12,
     paddingHorizontal: SIDE,
-    minHeight: 76,
+    minHeight: 72,
   },
   divider: { position: "absolute", top: 0, left: LIST_INSET, right: 0, height: StyleSheet.hairlineWidth },
   dot: { width: 10, height: 10, borderRadius: 5, marginLeft: DOT_GAP - GAP },

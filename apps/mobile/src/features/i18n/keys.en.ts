@@ -130,6 +130,9 @@ export const featureKeysEn = {
     directChat: "Direct chat",
   },
   approval: {
+    /** The system alert before withdrawing an action approved ahead. */
+    cancelAheadTitle: "Cancel this scheduled action?",
+    cancelAheadText: "It won't run at its time. To do it later, approve it again when the agent asks.",
     asksIn: "asks for your approval · #{{channel}}",
     asksYou: "asks for your approval",
     expiresIn_one: "expires in {{count}} min",
@@ -365,12 +368,21 @@ export const featureKeysEn = {
     send: "Send",
     /** Under a voice message's first line of words, when there is more. */
     seeAll: "See all",
+    /** Under the speaker's name on the Lock Screen and in the media notification while a voice message plays. */
+    nowPlaying: "Voice message",
+    /** The same for an audio file, under its name. */
+    nowPlayingFile: "Audio",
   },
   chat: {
+    /** The system alert before cancelling an agent's scheduled return (`when`: "tomorrow at 9:00 AM"). */
+    followUpCancelTitle: "Cancel {{name}}'s follow-up {{when}}?",
+    followUpCancelTitle_female: "Cancel {{name}}'s follow-up {{when}}?",
     someone: "Someone",
     /** A handed work's bubble under the reply that handed it: the agent that took it. */
     handedTo: "Handed to {{name}}",
     handedTo_female: "Handed to {{name}}",
+    /** The agent's own long work, as a bubble under the reply that started it. */
+    inBackground: "In the background",
     /** Two agents' talk quoted on its own (its reply not here): who asked, before the agent asked. */
     pairAsked: "{{from}} asked",
     messageTo: "Message {{name}}",
@@ -1491,6 +1503,9 @@ export const featureKeysEn = {
       assignee: "Who does it",
       cancel: "Cancel task",
       canceled: "#{{number}} canceled",
+      /** The system alert before cancelling a task from its menu. */
+      cancelTitle: "Cancel task #{{number}}?",
+      cancelText: "It leaves the open tasks. You can reopen it later.",
     },
     nobody: "Nobody",
     you: "You",
@@ -1639,8 +1654,63 @@ export const featureKeysEn = {
       lastDay: "Last day",
     },
   },
+  // Calendário (the web's words are `calendar.*`; these are the phone's own).
+  calendar: {
+    /** An agent's proposed time among the day's rows, under its title. */
+    proposalBy: "{{name}}'s proposal",
+    proposalBy_female: "{{name}}'s proposal",
+    /** A proposal's answer that makes it an event and sends the invitations. */
+    confirm: "Confirm",
+    /** A task due that day, in the time's column. */
+    due: "due",
+    /** An all-day event, in the time's column. */
+    allDay: "all day",
+    /** An event on now, under its title: until when it lasts. */
+    until: "until {{time}}",
+    /** A day with nothing on it. */
+    nothingThatDay: "Nothing planned.",
+    /** Over the next thing planned, under a day with nothing. */
+    after: "Later",
+    /** The handle under the month: folds it into its week, or opens it again. */
+    showWeek: "Show only the week",
+    showMonth: "Show the month",
+    /** An event's page: its rows. */
+    day: "Day",
+    time: "Time",
+    repeats: "Repeats",
+    /** Over the reader's answer to an event they're invited to: Going / Not going. */
+    going: "Are you going?",
+    participantsCount: "Participants · {{count}}",
+    /** An event's times on its page: "2:00 PM to 3:00 PM". */
+    timeRange: "{{from}} to {{to}}",
+    /** An event over several days, on its page. */
+    dayRange: "{{from}} to {{to}}",
+    /** An invited person who hasn't answered yet. */
+    noAnswer: "no answer yet",
+    /** An agent among an event's participants: what it does with it. */
+    agentPrepares: "Prepares a summary before",
+    /** The task an event belongs to. */
+    task: "Task",
+    /** The conversation an event was made in. */
+    conversation: "Conversation",
+    deleteEvent: "Delete event",
+    deleteAsk: "Delete this event?",
+    /** New event: when it starts and ends, each with its day and its hour. */
+    starts: "Starts",
+    ends: "Ends",
+    /** The repeat row's value for an event that happens once. */
+    noRepeat: "Doesn't repeat",
+    /** The participants' last row: opens the picker of people and agents. */
+    addPeople: "Add a person or agent",
+  },
   // Código (ADR 0215; the rest of its words are the web's, `codeSessions.*`).
   coding: {
+    /** The system alerts before taking someone out of a code session, or leaving it. */
+    removeTitle: "Take {{name}} out of the session?",
+    removeText: "They stop seeing the session and its conversation. To bring them back, type @ and their name in it.",
+    removeConfirm: "Take out",
+    leaveTitle: "Leave the session?",
+    leaveText: "It leaves your list. To come back, someone in the session has to call you in.",
     /** A session's pill in its conversation, which opens its code. */
     pill: "{{who}}. See the code",
     /** The step line's words over the composer ("3 files changed"), which open the session's Git view. */
@@ -1677,11 +1747,37 @@ export const featureKeysEn = {
   taskManager: {
     loadFailed: "Couldn't load the tasks.",
     gone: "This task is no longer here.",
-    /** Under the title when nothing runs or waits. */
-    quiet: "Nothing in progress",
-    /** In the line under an agent's tasks: how many it finished today. */
-    doneToday_one: "{{count}} done today",
-    doneToday_other: "{{count}} done today",
+    /** The task manager's title, and the Agentes row that opens it. */
+    title: "In progress",
+    /** The task manager's sections (and an agent's tasks'), by how each task stands. */
+    sections: {
+      you: "Waiting on you",
+      working: "Working",
+      later: "Later",
+    },
+    /** Said once over "Mais tarde": a computer whose line holds some of its tasks (`name`: the computer's own). */
+    computerBusy: "{{name}} is busy.",
+    /** A task's second line while it waits on you: a request (its words follow after " · "), a question. */
+    wantsOk: "Wants your OK",
+    asked: "Asked you a question",
+    /** Before what a routine's run does now: "Routine · writing the summary". */
+    routine: "Routine",
+    /** The group over what it asks of you, on a task's screen. */
+    asks: "What {{name}} asks",
+    asks_female: "What {{name}} asks",
+    /** Under a request's buttons, on a task's screen. */
+    approveNote: "{{name}} goes on as soon as you approve.",
+    approveNote_female: "{{name}} goes on as soon as you approve.",
+    /** A question it asked you: answered where it asked it. */
+    answer: "Answer in the conversation",
+    /** A long work's plan on a task's screen; its value is "9 of 14 done". */
+    progress: "Progress",
+    /** Under a task's last steps: all of them, in place. */
+    allSteps_one: "See the step",
+    allSteps_other: "See all {{count}} steps",
+    /** The red row at the end of an agent's tasks (asked first). */
+    stopAll_one: "Stop the task",
+    stopAll_other: "Stop all {{count}} tasks",
     /** The group over who asked for the task, on its screen. */
     request: "Request",
     /** The system alert before stopping one task from its screen. */
@@ -2109,6 +2205,9 @@ export const featureKeysEn = {
       name: "Name",
       renamed: "Renamed to {{name}}",
       stop: "Stop {{name}}",
+      /** The system alert before stopping who uses the phone now. */
+      stopTitle: "Stop {{name}} on {{device}}?",
+      stopText: "What runs on it stops now. You can ask again later.",
       stopped: "{{device}} is back from {{name}}",
       forget: "Forget this phone",
       forgetTitle: "Forget {{name}}?",
@@ -2288,6 +2387,8 @@ export const featureKeysEn = {
       always: "Always allow {{name}}",
       no: "No",
       stop: "Stop",
+      /** The system alert before stopping an agent on this person's phone, from the inbox. */
+      stopTitle: "Stop the use of {{device}}?",
     },
     /** A run waiting for a device, in its conversation. */
     wait: {
@@ -2515,6 +2616,9 @@ export const featureKeysEn = {
     failed: "Couldn't save. Try again.",
   },
   ai: {
+    /** The system alert before "Don't run" drops a request waiting for a limit. */
+    dontRunTitle: "Don't run this request?",
+    dontRunText: "It's cancelled and won't run when the limit is back.",
     yourPlan: "Your AI plan",
     plansSub: "Claude, ChatGPT, Gemini, GLM and others",
     plansFoot: "Agents think with your plan, no API key needed. It signs in on the agent's computer.",

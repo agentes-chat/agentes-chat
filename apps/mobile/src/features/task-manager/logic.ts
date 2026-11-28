@@ -1,8 +1,11 @@
-import type { EndedTask, ManagedTask } from "@agenteschat/client";
+import type { ComputerSummary, EndedTask, ManagedTask, TaskSteps } from "@agenteschat/client";
+import { activityVerb } from "@agenteschat/client/lib/activity";
+import { capitalize } from "@agenteschat/client/lib/format";
 import {
   type AgentTasks,
-  delegationText,
   endedState,
+  linePlace,
+  taskProgram,
   taskState,
   tasksOf,
   taskWaitWords,
@@ -10,6 +13,7 @@ import {
   waitsFor,
   waitsOnPerson,
 } from "@agenteschat/client/lib/task-manager";
+import { type ToolLine, toolItemsSaved, workFromSteps } from "@agenteschat/client/lib/work";
 import type { TFunction } from "i18next";
 import { type AppHref, chatHref } from "../links/logic";
 
@@ -87,45 +91,6 @@ export function groupLine(t: TFunction, group: Pick<AgentTasks, "working" | "wai
   return { mark, text: parts.length > 0 ? parts.join(" · ") : (held ?? t("taskManager.state.queued")) };
 }
 
-/**
- * Under a task's title: where it is, who asked and how far its plan got ("#produto · Ana pediu · 9 de 14 feitos"); a
- * task agents asked of each other says who asked and what started it, and one with helpers how many. Where is left out
- * when it already is the title (a task with no label of its own).
- */
-export function taskSubline(
-  t: TFunction,
-  task: Pick<
-    ManagedTask,
-    | "routine"
-    | "channelKind"
-    | "channelName"
-    | "betweenAgents"
-    | "background"
-    | "requester"
-    | "plan"
-    | "delegation"
-    | "helpers"
-  >,
-  meId: string | null,
-  title: string,
-  agentName: (id: string) => string | undefined = () => undefined,
-): string {
-  const where = taskWhere(t, task);
-  const asked = task.requester
-    ? task.requester.userId === meId
-      ? t("taskManager.askedByYou")
-      : t("taskManager.askedBy", { name: task.requester.name })
-    : null;
-  const plan = task.plan && task.plan.total > 0 ? t("taskManager.plan", task.plan) : null;
-  const chain = delegationText(t, task, agentName, meId);
-  const helpers = task.helpers ? t("taskManager.helpers", { count: task.helpers }) : null;
-  return [where === title ? null : where, chain ?? asked, plan, helpers].filter(Boolean).join(" · ");
-}
-
-/** "Terminadas hoje", the latest first. */
-export const endedLatestFirst = (ended: readonly EndedTask[]) =>
-  [...ended].sort((a, b) => Date.parse(b.finishedAt) - Date.parse(a.finishedAt));
-
 /** One agent's tasks now: its DM header's count and its tasks screen (ADR 0128). */
 export interface AgentTaskView {
   /** People's first, then its routines', oldest first; `here`: asked in the conversation it was opened from. */
@@ -190,4 +155,160 @@ export function tasksBadge(view: Pick<AgentTaskView, "rows" | "working" | "waiti
   const both = view.working > 0 && view.waiting > 0;
   const mark: RowState = view.working > 0 ? "working" : view.waiting > 0 ? "ok" : "queued";
   return { count: view.rows.length, mark, waiting: both ? view.waiting : null, room: both ? 1.9 : 1.3 };
+}
+
+// ── Sections by state (the task manager and an agent's tasks) ───────────────────────────────────────────────────────
+
+/**
+ * Where a task stands for the reader: waiting on them (`you`), at work (`working`), or later (in line, held by its
+ * computer, its plan or its budget, or waiting on someone else). The server's own word for it (`work`, ADR 0084
+ * addendum) when it sends one: null there is a wait on a plan or a budget; an older server's task goes by its status.
+ */
+export type TaskSection = "you" | "working" | "later";
+
+export function taskSection(task: Pick<ManagedTask, "status" | "held" | "work">): TaskSection {
+  if (task.work !== undefined) {
+    const state = task.work?.state;
+    return state === "you" ? "you" : state === "working" ? "working" : "later";
+  }
+  if (waitsOnPerson(task)) return "you";
+  return taskState(task) === "working" ? "working" : "later";
+}
+
+/** The sections' tasks. */
+export interface TasksByState {
+  you: ManagedTask[];
+  working: ManagedTask[];
+  later: ManagedTask[];
+}
+
+/** Since when a task stands as it does: its state's own time when the server sends it. */
+const standsSince = (task: Pick<ManagedTask, "work" | "startedAt" | "createdAt">) =>
+  Date.parse(task.work?.since ?? task.startedAt ?? task.createdAt);
+
+/** The tasks in their sections, each section's longest standing first (what has waited or worked longest leads). */
+export function tasksByState(tasks: readonly ManagedTask[]): TasksByState {
+  const by: TasksByState = { you: [], working: [], later: [] };
+  for (const task of [...tasks].sort((a, b) => standsSince(a) - standsSince(b))) by[taskSection(task)].push(task);
+  return by;
+}
+
+/** The computers whose line holds some of these tasks: "Mais tarde" says once that each is busy. */
+export function busyComputers(tasks: readonly ManagedTask[], computers: readonly ComputerSummary[]) {
+  const held = new Set(tasks.flatMap((task) => linePlace(task)?.machineId ?? []));
+  return computers.filter((m) => held.has(m.id));
+}
+
+/** What it does now, in a few words ("consultando o GitHub"); "trabalhando" before its first step. */
+export function taskDoing(t: TFunction, task: Pick<ManagedTask, "brain" | "now" | "status">): string {
+  const program = taskProgram(task);
+  const inner = program.kind === "brain" ? program.inner : program;
+  return inner && inner.kind !== "none" && inner.kind !== "brain"
+    ? activityVerb(t, inner.activity)
+    : t("chat.activity.thinking");
+}
+
+/** What it does now, whole, for a task's screen: the words and what they are about ("Usando o navegador · loja.com"). */
+export function taskNowWords(t: TFunction, locale: string, task: Pick<ManagedTask, "brain" | "now" | "status">) {
+  const program = taskProgram(task);
+  const inner = program.kind === "brain" ? program.inner : program;
+  const detail = inner && inner.kind !== "none" ? inner.detail : null;
+  return [capitalize(taskDoing(t, task), locale), detail].filter(Boolean).join(" · ");
+}
+
+/** Who asked, when it wasn't the reader: "Theo pediu", "Ana pediu", "Rotina"; null for the reader's own. */
+export function askedBy(
+  t: TFunction,
+  task: Pick<ManagedTask, "background" | "requester" | "delegation">,
+  meId: string | null,
+  agentName: (id: string) => string | undefined,
+): string | null {
+  if (task.background) return t("mobile.taskManager.routine");
+  const agent = task.delegation ? agentName(task.delegation.agentId) : undefined;
+  if (agent) return t("taskManager.askedBy", { name: agent });
+  if (task.requester && task.requester.userId !== meId) return t("taskManager.askedBy", { name: task.requester.name });
+  return null;
+}
+
+/** How a task's second line reads: amber while it waits on the reader, the agent's at work, faint later. */
+export type LineTone = "you" | "working" | "later" | "stopping";
+
+/**
+ * A task's second line, how it stands: "Quer seu ok · Enviar um e-mail" (`okWhat`: the request's words, once loaded) or
+ * "Fez uma pergunta para você"; at work, who asked when it wasn't the reader and what it does now ("Theo pediu ·
+ * desenhando a capa", "Rotina · escrevendo o resumo"); later, what holds it and what comes next ("Na fila").
+ */
+export function taskLine(
+  t: TFunction,
+  locale: string,
+  task: ManagedTask,
+  state: RowState,
+  opts: {
+    meId: string | null;
+    agentName: (id: string) => string | undefined;
+    now: number;
+    okWhat?: string | null;
+  },
+): { text: string; tone: LineTone } {
+  if (state === "stopping") return { text: t("taskManager.state.stopping"), tone: "stopping" };
+  const section = taskSection(task);
+  if (section === "you") {
+    if (task.status === "waiting_input") return { text: t("mobile.taskManager.asked"), tone: "you" };
+    return { text: [t("mobile.taskManager.wantsOk"), opts.okWhat].filter(Boolean).join(" · "), tone: "you" };
+  }
+  if (section === "working") {
+    const who = askedBy(t, task, opts.meId, opts.agentName);
+    const doing = taskDoing(t, task);
+    return { text: who ? `${who} · ${doing}` : capitalize(doing, locale), tone: "working" };
+  }
+  // Someone else's ok or answer: never "Esperando você".
+  const theirs = task.work?.state;
+  const other = theirs === "approval" || theirs === "answer" ? theirs : null;
+  // The work line's own sentence-start words ("Esperando aprovação"), as each language writes them.
+  if (other)
+    return { text: t(other === "approval" ? "work.status.wait.approval" : "work.status.wait.answer"), tone: "later" };
+  const words = taskStateWords(t, locale, task, state, opts.now);
+  return { text: [words.state, words.next].filter(Boolean).join(" · "), tone: "later" };
+}
+
+/**
+ * A task's steps as its screen lists them, oldest first: each call's line and when it was made (null where the run's
+ * record has no time for it). While the task works its last call is the one running.
+ */
+export function taskStepLines(data: TaskSteps, live: boolean): { line: ToolLine; at: string | null }[] {
+  const made = new Map<string, string>();
+  for (const s of data.steps)
+    if (s.kind === "tool_call")
+      made.set(typeof s.data.toolUseId === "string" ? s.data.toolUseId : `${s.seq}`, s.createdAt);
+  const lines = toolItemsSaved(workFromSteps(data.steps, data.run)).flatMap((i) => (i.kind === "call" ? [i.line] : []));
+  const last = lines.length - 1;
+  return lines.map((line, i) => ({
+    line: live && i === last && line.state === "stop" ? { ...line, state: "run" as const } : line,
+    at: made.get(line.key) ?? null,
+  }));
+}
+
+/**
+ * A task's "Pedido" row: who asked ("Você pediu", "Bruno Lima pediu", "Theo pediu") and where ("#vendas"); work nobody
+ * asked by name (a routine's, an event's) is said by its place alone.
+ */
+export function requestWords(
+  t: TFunction,
+  task: Pick<ManagedTask, "routine" | "channelKind" | "channelName" | "betweenAgents" | "background"> & {
+    requester?: ManagedTask["requester"];
+    delegation?: ManagedTask["delegation"];
+  },
+  meId: string | null,
+  agentName: (id: string) => string | undefined,
+): { who: string; where: string | null } {
+  const where = taskWhere(t, task);
+  const agent = task.delegation ? agentName(task.delegation.agentId) : undefined;
+  const who = agent
+    ? t("taskManager.askedBy", { name: agent })
+    : task.requester
+      ? task.requester.userId === meId
+        ? t("taskManager.askedByYou")
+        : t("taskManager.askedBy", { name: task.requester.name })
+      : null;
+  return who ? { who, where } : { who: where, where: null };
 }

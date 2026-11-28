@@ -39,7 +39,8 @@ import { StatusBar } from "expo-status-bar";
 import type { TFunction } from "i18next";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import Animated, { useAnimatedReaction } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
@@ -442,10 +443,12 @@ function FlowScreen({
   return (
     <View style={[styles.screen, { backgroundColor: c.grouped }]}>
       <PushedHeader title={title} solid={false} grouped />
-      <ScrollView
+      {/* A key, an address or a sign-in's code low on the page scrolls clear of the keyboard on both systems (the
+          keyboard library's provider keeps Android's window from shrinking for it, and iOS's inset is iOS's alone). */}
+      <KeyboardAwareScrollView
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
-        automaticallyAdjustKeyboardInsets
+        bottomOffset={FIELD_CLEARANCE}
         contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 32 }]}
       >
         {/* A plan's page opens on its mark, centred: its line is too. */}
@@ -453,7 +456,7 @@ function FlowScreen({
           {stepLine}
         </Text>
         {page}
-      </ScrollView>
+      </KeyboardAwareScrollView>
       {done ? (
         // The last step's one button, pinned at the screen's foot.
         <BottomBar bottom={insets.bottom}>
@@ -483,6 +486,8 @@ const BAR_HEIGHT = 44;
 const SCENE_HEIGHT = 150;
 /** How far the question scrolls past the cover's foot before the bar takes it as its title. */
 const QUESTION_UNDER_BAR = 70;
+/** Between a focused field and the keyboard when a step's page scrolls it into view. */
+const FIELD_CLEARANCE = 24;
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },

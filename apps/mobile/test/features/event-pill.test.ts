@@ -75,7 +75,7 @@ describe("one stop, one pill", () => {
 describe("the event pill", () => {
   test("a hairline frame with the cut corner, no fill; actions after hairlines; what opens text is an action", () => {
     const pill = src("ui/EventPill.tsx");
-    expect(pill).toContain("borderBottomLeftRadius: CUT");
+    expect(pill).toContain("borderTopLeftRadius: CUT");
     expect(pill).not.toMatch(/frame: \{[^}]*backgroundColor/);
     expect(pill).toContain('<Icon name="right" size={12} color={c.faint} />');
     expect(pill).toContain('turned: { transform: [{ rotate: "90deg" }] }');

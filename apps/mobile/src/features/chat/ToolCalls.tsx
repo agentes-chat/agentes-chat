@@ -258,7 +258,7 @@ function useFlash(at: number | null, ms: number) {
 }
 
 /**
- * The card: a hairline and the app's cut corner (bottom left small), one line that opens on a tap. `live`:
+ * The card: a hairline and the app's cut corner (top left small), one line that opens on a tap. `live`:
  * new logos pop in and the line's words come up when they change; a saved block draws still. A single call (`one`)
  * is its own line, with nothing to open around it: what was said goes in that line's open view.
  */
@@ -977,10 +977,10 @@ const styles = StyleSheet.create({
   // Flat: a hairline and the cut corner (the app's "tato com canto"), no shadow.
   block: {
     borderWidth: StyleSheet.hairlineWidth,
-    borderTopLeftRadius: 14,
+    borderTopLeftRadius: 6,
     borderTopRightRadius: 14,
     borderBottomRightRadius: 14,
-    borderBottomLeftRadius: 6,
+    borderBottomLeftRadius: 14,
     overflow: "hidden",
   },
   // The block opens from here, 44 tall (a finger's target); its logos and words in the rows' columns (the lines'
