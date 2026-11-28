@@ -2,7 +2,13 @@ import { createECDH } from "node:crypto";
 import type { z } from "zod";
 import { type Config, configSchema, envVars } from "./schema";
 
-export { composioAuthConfigs, connectorOAuthApps, githubAppConfig, mcpCallerIdentity } from "./connectors";
+export {
+  composioAuthConfigs,
+  connectorOAuthApps,
+  githubAppConfig,
+  mcpCallerIdentity,
+  mcpFirstPartyHosts,
+} from "./connectors";
 export { type Config, type EnvVarDefinition, type EnvVarName, envVars } from "./schema";
 
 /** agentes.chat's own servers: their legal pages are their own, and their mail goes out from agentes.chat. */

@@ -7,7 +7,13 @@ import {
   type SpeechFetch,
   STREAM_CLOSE,
 } from "@agenteschat/adapters";
-import { type Config, connectorOAuthApps, githubAppConfig, mcpCallerIdentity } from "@agenteschat/config";
+import {
+  type Config,
+  connectorOAuthApps,
+  githubAppConfig,
+  mcpCallerIdentity,
+  mcpFirstPartyHosts,
+} from "@agenteschat/config";
 import type { Database } from "@agenteschat/db";
 import {
   AntigravityBrain,
@@ -560,6 +566,7 @@ export function buildEngine(o: EngineOptions) {
         judge: context.judge,
         githubApp: githubAppAccess,
         callerIdentity: mcpCallerIdentity(config),
+        firstPartyHosts: mcpFirstPartyHosts(config),
       }),
       // Connectors of our own (ADR 0170): no MCP server, every tool served here.
       createNativeConnectorToolSource({

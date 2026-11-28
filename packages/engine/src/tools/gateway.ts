@@ -610,9 +610,12 @@ export type InvokeResult =
  *    computer) is held once when the team already did it to the same target,
  *    and recorded for the team once it went out (ADR 0064, `team-actions.ts`).
  */
-/** A tool's answer carries text from outside the org (ADR 0117): an external or reading tool that said something. */
+/**
+ * A tool's answer carries text from outside the org (ADR 0117): an external or reading tool that said something. A
+ * server the operator listed as its own (`firstParty`, addendum of 2026-11-20) answers with the org's own text.
+ */
 const readsOutsideText = (tool: ToolDefinition, output: ToolOutput) =>
-  Boolean(tool.external || tool.readsOutside) && output.content.trim() !== "";
+  Boolean((tool.external && !tool.firstParty) || tool.readsOutside) && output.content.trim() !== "";
 
 /**
  * Whether a run may be handed a confidential answer (ADR 0190): only one that thinks through the Model Gateway, which
@@ -1311,7 +1314,7 @@ export function createToolGateway(deps: {
       approvalId: approval.id,
       isError: output.isError === true,
       content: shown(output.content),
-      ...(tool?.external ? { external: true } : {}),
+      ...(tool?.external && !tool.firstParty ? { external: true } : {}),
       ...(output.data || outside || confidential
         ? { data: { ...output.data, ...(outside ? { outside: true } : {}), ...(confidential ? { confidential } : {}) } }
         : {}),
@@ -1489,8 +1492,9 @@ export function createToolGateway(deps: {
           name: call.name,
           isError: output.isError === true,
           content: shown(output.content),
-          // `shown` drops the outside-content envelope; learning still needs to know the text came from outside.
-          ...(tool?.external ? { external: true } : {}),
+          // `shown` drops the outside-content envelope; learning still needs to know the text came from outside (a
+          // server the operator listed as its own, `firstParty`, answers with the org's own text).
+          ...(tool?.external && !tool.firstParty ? { external: true } : {}),
           ...(data ? { data } : {}),
           ...(autoApproved ? { autoApproved } : {}),
         };

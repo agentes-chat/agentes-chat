@@ -50,6 +50,7 @@ const DSN_MESSAGE = "must be a DSN such as https://<key>@errors.example.com/1";
 const HOST_NAME = "[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*";
 const HOST_SECRET = `${HOST_NAME}=[^\\s,]{32,}`;
 const HOST_SECRETS = new RegExp(`^${HOST_SECRET}(?:,${HOST_SECRET})*$`);
+const HOST_NAMES = new RegExp(`^${HOST_NAME}(?:,${HOST_NAME})*$`);
 
 /** Whether `value` is a web origin alone (http or https, host and port), the form a browser sends in `Origin`. */
 function isOrigin(value: string): boolean {
@@ -972,6 +973,18 @@ export const envVars = {
     section: "Connectors",
     example: "tools.example.com=<output of openssl rand -base64 48>",
     secret: true,
+  },
+  MCP_FIRST_PARTY_HOSTS: {
+    schema: z
+      .string()
+      .regex(HOST_NAMES, {
+        error: "must be lower-case host names separated by commas, with no spaces, scheme, port or path",
+      })
+      .optional(),
+    description:
+      "MCP servers of your own whose answers are your organization's own text, not outside content (ADR 0117 addendum of 2026-11-20): host names of servers connected by address in Settings › Connectors (lower case, with no scheme, port or path), separated by commas, reached over https. A run that reads their tools' results is not marked as having read outside content, so it can still create skills, change settings at once and save rules (a company memory the team writes, for example). Their text still reaches the model as a tool result, and their tools keep their access levels and approvals. List only servers whose content no outsider writes unchecked: what they return is trusted as your team's own words.",
+    section: "Connectors",
+    example: "memory.example.com",
   },
   MILLIONSEND_API_KEY: {
     schema: z.string().optional(),

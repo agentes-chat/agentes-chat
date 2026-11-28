@@ -48,6 +48,11 @@ export function mcpCallerIdentity(config: Pick<Config, "MCP_CALLER_IDENTITY">): 
   );
 }
 
+/** `MCP_FIRST_PARTY_HOSTS`: hosts whose MCP answers are the organization's own text (ADR 0117 addendum, 2026-11-20). */
+export function mcpFirstPartyHosts(config: Pick<Config, "MCP_FIRST_PARTY_HOSTS">): Set<string> {
+  return new Set((config.MCP_FIRST_PARTY_HOSTS ?? "").split(",").filter(Boolean));
+}
+
 /** Our GitHub App (git and PRs; ADR 0033), or null when `GITHUB_APP_ID` + `GITHUB_APP_PRIVATE_KEY` aren't set. */
 export function githubAppConfig(config: Config) {
   if (!config.GITHUB_APP_ID || !config.GITHUB_APP_PRIVATE_KEY) return null;

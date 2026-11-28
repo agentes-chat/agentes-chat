@@ -406,6 +406,8 @@ export function createConnectorToolSource(
     githubApp?: GitHubAppAccess;
     /** `MCP_CALLER_IDENTITY`, secret by host: a server by address there is told who calls its tools (ADR 0181). */
     callerIdentity?: ReadonlyMap<string, string>;
+    /** `MCP_FIRST_PARTY_HOSTS`: servers by address whose answers are the organization's own text (ADR 0117). */
+    firstPartyHosts?: ReadonlySet<string>;
   },
 ): ToolSource {
   const connect = deps.connect ?? connectOverHttp;
@@ -567,6 +569,13 @@ export function createConnectorToolSource(
     return url.protocol === "https:" ? deps.callerIdentity.get(url.host) : undefined;
   }
 
+  /** A server by address the operator listed in `MCP_FIRST_PARTY_HOSTS`, reached over https. */
+  function firstPartyServer(connection: ConnectorConnection): boolean {
+    if (!deps.firstPartyHosts?.size) return false;
+    const url = new URL(connection.serverUrl);
+    return url.protocol === "https:" && deps.firstPartyHosts.has(url.hostname);
+  }
+
   /**
    * What a tool call to a listed host carries in `params._meta` (ADR 0181): a JWT signed with that host's secret that
    * says which workspace, agent, run and connection is calling, the person the run acts for, what thinks for the run
@@ -643,6 +652,7 @@ export function createConnectorToolSource(
     const prefix = toolPrefixOfConnection(connection);
     // Never Composio's: no server at its address ever reads a request of ours, so none is the operator's own.
     const vouched = !composio && listedSecret(connection) !== undefined;
+    const firstParty = !composio && firstPartyServer(connection);
     const named = auditLabel(connection);
     return classified.flatMap((row): ToolDefinition[] => {
       const tool = byName.get(row.name);
@@ -674,7 +684,8 @@ export function createConnectorToolSource(
         sensitive: access === "approval" || row.sensitive || asks || COMPOSIO_ANY_ACTION.has(tool.name),
         // Its exact call may be approved ahead, except a tool that runs whatever its input says.
         ahead: !COMPOSIO_ANY_ACTION.has(tool.name),
-        external: true, // whatever the server returns is third-party text
+        external: true, // whatever the server returns is third-party text, unless the operator listed it as its own
+        ...(firstParty ? { firstParty: true as const } : {}),
         ...(vouched ? { server: "vouched" as const } : {}),
         ...(instructions ? { serverInstructions: instructions } : {}),
         // The executor names what each call does. A Composio action, and a custom server's own tool, is one action.

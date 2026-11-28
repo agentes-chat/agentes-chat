@@ -155,3 +155,21 @@ What still protects the agent: a custom server's new tools stay hidden until an 
 ## Addendum: a second mark, for confidential results
 
 ADR 0190 adds `confidential` beside `outside`, set and carried at the same places (the step, then every message the run posts). Where `readOutside` lowers trust, `confidential` also locks the run's tools, hides the thread's text from every reader outside it and dates it. A confidential result is still text from outside: its step carries both marks.
+
+## Addendum (2026-11-20): a server the operator lists as its own
+
+A company memory the team writes into (an MCP server the organization runs for itself) answered like any outside
+server, so every run that read it was marked: an agent that checked the team's memory before acting could no longer
+create a skill, change a setting at once or save a rule in that turn, and every message it posted carried the mark
+into the next agent's conversation. An agent whose work starts by reading that memory was never able to do those
+things at all.
+
+`MCP_FIRST_PARTY_HOSTS` (host names, https only, never Composio) lists such servers. Their tools carry `firstParty`
+beside `external`, and `readsOutsideText` in the gateway leaves them out: their answers don't mark the run. Nothing
+else changes for them: their calls still leave the instance (`external`: team actions, the envelope in shown results,
+learning's note that the text came from a connected app), their tools keep the access levels and approvals an admin
+set, and a run that also read the web, a mailbox or a page is marked as before.
+
+The cost is the operator's to weigh: what such a server returns is read as the team's own words, so text an outsider
+got into it (a pasted page, a forwarded mail kept as a note) is trusted too. List only servers whose content the team
+writes or reviews.

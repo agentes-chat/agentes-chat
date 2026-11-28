@@ -216,6 +216,12 @@ export interface ToolDefinition {
    * outside envelope (`serverInstructionsPrompt`).
    */
   serverInstructions?: string;
+  /**
+   * A tool of a server the operator listed in `MCP_FIRST_PARTY_HOSTS`: `external` still (its calls leave the
+   * instance), but its answers are the organization's own text and never mark the run as having read outside
+   * content (ADR 0117 addendum of 2026-11-20).
+   */
+  firstParty?: true;
   /** A mission's tool (agent mode, ADR 0029): its approvals are bound to that mission too. */
   missionId?: string;
   /**

@@ -13,6 +13,7 @@ import {
   type ToolContext,
 } from "../src";
 import { consultationNotice, consultationResult } from "../src/consultations";
+import { learnTrust } from "../src/context/learn";
 import { ensureThreadSummary, isTrustedMessage } from "../src/context/summaries";
 import {
   type ContinuationVerdict,
@@ -307,6 +308,54 @@ describe("an outside tool that answers with an error", () => {
     expect(await runReadOutsideById(fx.db, fx.org.id, run.id)).toBe(false);
     await invoke({ id: "7" });
     expect(await runReadOutsideById(fx.db, fx.org.id, run.id)).toBe(true);
+  });
+
+  test("a server the operator listed as its own (MCP_FIRST_PARTY_HOSTS) answers without marking the run", async () => {
+    const fx = await setup({
+      reply: () => ({ chunks: ["ok"] }),
+      toolSources: [
+        {
+          name: "company-memory",
+          tools: async () => [
+            {
+              name: "brain_lookup",
+              description: "Reads the company memory.",
+              inputSchema: { type: "object", properties: { q: { type: "string" } }, required: ["q"] },
+              scope: "",
+              external: true,
+              firstParty: true,
+              execute: async () => ({ content: "Decision: the weekly report goes out on Mondays." }),
+            },
+          ],
+        },
+      ],
+    });
+    f = fx;
+    const msg = await postPersonMessage({ db: fx.db, pubsub: fx.pubsub }, fx.owner.id, fx.org.id, fx.general.id, {
+      body: "@dev oi",
+    });
+    await drainOutbox(fx.db, fx.handlers);
+    const [run] = await fx.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.triggerMessageId, msg.id));
+    if (!run) throw new Error("no run");
+    const ctx: ToolContext = {
+      db: fx.db,
+      orgId: fx.org.id,
+      agentId: fx.agent.id,
+      runId: run.id,
+      channelId: fx.general.id,
+      threadRootId: run.threadRootId,
+      triggerMessageId: msg.id,
+    };
+    const result = await fx.tools?.invoke(ctx, {
+      toolUseId: crypto.randomUUID(),
+      name: "brain_lookup",
+      input: { q: "weekly report" },
+    });
+    expect(result?.type).toBe("result");
+    if (result?.type === "result") expect(result.output.isError).not.toBe(true);
+    expect(await runReadOutsideById(fx.db, fx.org.id, run.id)).toBe(false);
+    // Learning reads the step too: a skill or a rule may still be made in this run.
+    expect((await learnTrust({ ...ctx, db: fx.db })).outside).toBe(false);
   });
 });
 
