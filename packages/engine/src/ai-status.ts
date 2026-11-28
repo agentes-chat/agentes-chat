@@ -289,8 +289,11 @@ export async function orgAiStatus(deps: AiStatusDeps, orgId: string, viewer?: st
   return { any: states.some((s) => s.state !== "no_ai"), agents: states };
 }
 
-/** These agents' states (`agentAiState`) by id; archived agents and other organizations' are left out. */
-export async function agentAiStates(deps: AiStatusDeps, orgId: string, agentIds: string[]) {
+/**
+ * These agents' states (`agentAiState`) by id; archived agents and other organizations' are left out. `viewer`: whose
+ * conversation the list belongs to, so the right hand's AI is judged for the person it would answer (§11).
+ */
+export async function agentAiStates(deps: AiStatusDeps, orgId: string, agentIds: string[], viewer?: string | null) {
   const rows =
     agentIds.length === 0
       ? []
@@ -300,7 +303,11 @@ export async function agentAiStates(deps: AiStatusDeps, orgId: string, agentIds:
           .where(
             and(eq(schema.agents.orgId, orgId), inArray(schema.agents.id, agentIds), isNull(schema.agents.archivedAt)),
           );
-  return new Map(await Promise.all(rows.map(async (a) => [a.id, await agentAiState(deps, a)] as const)));
+  return new Map(
+    await Promise.all(
+      rows.map(async (a) => [a.id, await agentAiState(deps, a, undefined, viewer ?? undefined)] as const),
+    ),
+  );
 }
 
 /** `orgAiStatus(…).any`, stopping at the first agent that has an AI (it runs before routing every message). */

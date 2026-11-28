@@ -18,6 +18,7 @@ import {
   rosterScopeNames,
   setAgentAudience,
   summarizeScopes,
+  teammatesNowPrompt,
   teamPrompt,
   teamStatus,
 } from "../src";
@@ -161,6 +162,34 @@ test("an agent reads how its teammates are now, not what older messages say: no 
   expect(prompt).toContain("- @lia: has an AI, answers when called\n");
   expect(prompt).not.toMatch(/@[a-z]+: away/);
   expect(prompt).toContain("This is how they are now: it outweighs what older messages here say about them");
+});
+
+test("the right hand's own AI is the person's: the list says it has one when that person's AI thinks for it", async () => {
+  f = await setup({ rightHand: true });
+  const [rightHand] = await f.db.select().from(schema.agents).where(eq(schema.agents.builtin, "right_hand"));
+  if (!rightHand) throw new Error("no right hand");
+  // Its own row has no AI to think with (a model whose provider has no key here): only a person's own AI can (§11).
+  await f.db
+    .update(schema.agents)
+    .set({ brain: "model", model: "gpt-6-luna", credentialId: null })
+    .where(eq(schema.agents.id, rightHand.id));
+  const deps = { db: f.db, gateway: f.gateway };
+  const listed = [{ id: rightHand.id, handle: rightHand.handle }];
+  // Nobody's own AI for it: the row says so.
+  expect(await teammatesNowPrompt(deps, f.org.id, listed)).toContain(`@${rightHand.handle}: no AI connected yet`);
+  // The person's own AI for the right hand (§11): their computer's own sign-in. The list they read says it has an AI.
+  const { machineId } = await pairMachine({ db: f.db }, f.owner.id, f.org.id);
+  await f.db.update(schema.machines).set({ pairedByUserId: f.owner.id }).where(eq(schema.machines.id, machineId));
+  await f.db.insert(schema.rightHandBrains).values({
+    orgId: f.org.id,
+    userId: f.owner.id,
+    brain: "claude_code",
+    brainModel: null,
+    machineId,
+  });
+  expect(await teammatesNowPrompt(deps, f.org.id, listed, f.owner.id)).toContain(
+    `@${rightHand.handle}: has an AI, answers when called`,
+  );
 });
 
 test("find_agent searches by what agents do and shows what they can do", async () => {
