@@ -7,7 +7,18 @@
 import { currencyFormat, formatValue } from "../../format";
 import type { SheetLocale } from "../../locale";
 import type { CellError, CellValue } from "../../values";
-import { type Env, ERR, isArr, isErr, isRef, MAX_TEXT, textToNumber, toText, type Val } from "../runtime";
+import {
+  type Env,
+  ERR,
+  isArr,
+  isErr,
+  isRef,
+  MAX_TEXT,
+  textToNumber,
+  toText,
+  type Val,
+  wildcardIndex,
+} from "../runtime";
 import { cleanTrunc, type FnSpec, numArg, oneOf, optBool, roundTo, textArg, VARIADIC, valuesOf } from "./spec";
 
 /** Windows-1252's characters for 128–159 (the rest of 1–255 is Latin-1). */
@@ -38,21 +49,6 @@ function int(v: Val | undefined, env: Env, fallback?: number): number | CellErro
   if (v === undefined && fallback !== undefined) return fallback;
   const n = numArg(v, env);
   return isErr(n) ? n : cleanTrunc(n);
-}
-
-/** Excel's wildcards inside a text (not anchored), case-insensitive. */
-function wildcardSearch(pattern: string): RegExp {
-  let src = "";
-  for (let i = 0; i < pattern.length; i++) {
-    const c = pattern.charAt(i);
-    if (c === "~" && i + 1 < pattern.length && "*?~".includes(pattern.charAt(i + 1))) {
-      src += pattern.charAt(i + 1).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      i++;
-    } else if (c === "*") src += "[\\s\\S]*?";
-    else if (c === "?") src += "[\\s\\S]";
-    else src += c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  }
-  return new RegExp(src, "gi");
 }
 
 /**
@@ -348,10 +344,8 @@ export const TEXT: Record<string, FnSpec> = {
       const at = within.toLowerCase().indexOf(find.toLowerCase(), start - 1);
       return at < 0 ? ERR["#VALUE!"] : at + 1;
     }
-    const re = wildcardSearch(find);
-    re.lastIndex = start - 1;
-    const m = re.exec(within);
-    return m ? m.index + 1 : ERR["#VALUE!"];
+    const at = wildcardIndex(find, within, start - 1);
+    return at < 0 ? ERR["#VALUE!"] : at + 1;
   }),
   TEXT: textFn(["value", "format_text"], 2, ([v, f], env) => {
     const fmt = str(f, env);
