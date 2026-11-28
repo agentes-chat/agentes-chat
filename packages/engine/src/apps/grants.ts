@@ -2,6 +2,7 @@ import { and, type Database, desc, eq, gt, isNull, lt, or, schema, sql } from "@
 import { recordAudit } from "../audit";
 import { sha256 } from "../crypto";
 import { ConflictError, ForbiddenError, NotFoundError } from "../errors";
+import { firstAgentsOpen } from "../first-agents";
 import { can, getMembership, requireActiveMembership } from "../organizations";
 import { accountInUse, waitsForPlan, workRefusal, workRefusalBeforePlan } from "../standing";
 import { APP_FIRST_AGENT_TOOL_NAMES } from "./first-agents-tool";
@@ -37,6 +38,11 @@ export interface AppPrincipal {
    * plan, since its onboarding asks the person's AI for their first agents before Checkout (ADR 0264).
    */
   stillOpen?: readonly string[];
+  /**
+   * The person may still pick a first agent their own AI proposes (`firstAgentsOpen`, ADR 0264): only then is
+   * `propose_first_agents` offered and named in the instructions.
+   */
+  firstAgentsOpen?: boolean;
 }
 
 /**
@@ -79,6 +85,7 @@ export async function appPrincipal(
   const { grant } = row;
   let refusal: string | null = null;
   let stillOpen: readonly string[] = [];
+  let firstAgents = false;
   if (!row.open) {
     refusal = "This agentes.chat account can't be used right now.";
   } else {
@@ -87,10 +94,18 @@ export async function appPrincipal(
       await db.transaction((tx) => revokeMemberApps(tx, grant.orgId, grant.userId));
       return null;
     }
+    firstAgents = (await firstAgentsOpen(db, grant.orgId, grant.userId)).open;
     if (membership.standing && waitsForPlan(membership.standing)) {
-      refusal =
-        "This workspace waits for its first plan in agentes.chat. Until then propose_first_agents is the one tool that works through this app.";
-      stillOpen = APP_FIRST_AGENT_TOOL_NAMES;
+      // The onboarding asks the person's AI for their first agents before Checkout (ADR 0264): that tool alone, while
+      // they may still pick one.
+      if (firstAgents) {
+        refusal =
+          "This workspace waits for its first plan in agentes.chat. Until then propose_first_agents is the one tool that works through this app.";
+        stillOpen = APP_FIRST_AGENT_TOOL_NAMES;
+      } else {
+        refusal =
+          "This workspace waits for its first plan in agentes.chat. Nothing can be read or sent through this app until then.";
+      }
     } else if (workRefusal(membership.standing)) {
       refusal = "This workspace is paused in agentes.chat. Nothing can be read or sent through this app now.";
     }
@@ -110,6 +125,7 @@ export async function appPrincipal(
     app: { name: grant.displayName, brand: grant.brand, host: grant.displayHost, kind: grant.displayKind },
     refusal,
     ...(stillOpen.length > 0 ? { stillOpen } : {}),
+    ...(firstAgents ? { firstAgentsOpen: true } : {}),
   };
 }
 

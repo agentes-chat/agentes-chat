@@ -1,20 +1,20 @@
-import { eq, schema } from "@agenteschat/db";
-import { firstAgentsInput, saveFirstAgents } from "../first-agents";
-import { getMembership } from "../organizations";
+import { firstAgentsInput, firstAgentsOpen, saveFirstAgents } from "../first-agents";
 import type { AppPrincipal } from "./grants";
 import type { AppsToolDeps, RegisterTool } from "./tools";
 import { appsUrls } from "./urls";
 
-const { organizations } = schema;
-
 /**
  * The onboarding's ask (ADR 0119 addendum of 2026-11-26, ADR 0264): the person's own AI, which knows their work,
  * proposes their first agents. The tool only keeps the proposal for the person who connected it, so every connection
- * gets it, whatever its access, and it is the one tool that works while the workspace waits for its first plan.
+ * gets it, whatever its access, and it is the one tool that works while the workspace waits for its first plan. It is
+ * offered only while the person may still pick one (`firstAgentsOpen`: an owner on the onboarding, anyone else who may
+ * create agents on their welcome page, before their first agent's delivery is armed); called after that, it keeps
+ * nothing and says there is nothing to pick.
  */
 export const APP_FIRST_AGENT_TOOL_NAMES = ["propose_first_agents"] as const;
 
 export function registerFirstAgentTools(deps: AppsToolDeps, p: AppPrincipal, tool: RegisterTool) {
+  if (!p.firstAgentsOpen) return;
   const issuer = appsUrls(deps.publicUrl).issuer;
   const person = p.personName;
 
@@ -31,28 +31,22 @@ export function registerFirstAgentTools(deps: AppsToolDeps, p: AppPrincipal, too
       openWorld: false,
     },
     async (args) => {
+      // Read again at the call: the person may have moved past the work step since this connection's tools were listed.
+      const where = await firstAgentsOpen(deps.db, p.orgId, p.userId);
+      if (!where.open)
+        return {
+          received: 0,
+          next: `There is nothing to pick in agentes.chat now: ${person} already has their first agent there, or can't create agents in this workspace. Nothing was kept. Tell ${person} they can create more agents inside agentes.chat whenever they like.`,
+        };
       const saved = await saveFirstAgents(
         { db: deps.db, pubsub: deps.pubsub, rateLimiter: deps.rateLimiter, context: deps.context },
         { orgId: p.orgId, userId: p.userId, grantId: p.grantId, source: "mcp", app: p.app.name },
         args,
       );
-      // The owner picks on the onboarding while it is open; anyone else in the workspace.
-      const [membership, [org]] = await Promise.all([
-        getMembership(deps.db, p.userId, p.orgId),
-        deps.db
-          .select({ onboardedAt: organizations.onboardedAt })
-          .from(organizations)
-          .where(eq(organizations.id, p.orgId)),
-      ]);
-      const onboarding = membership?.role === "owner" && org !== undefined && org.onboardedAt === null;
       return {
         received: saved.options.length,
         // An owner picks on their onboarding; anyone else on their own welcome page (ADR 0264).
-        pickIn: onboarding
-          ? `${issuer}/onboarding`
-          : membership?.role === "owner"
-            ? `${issuer}/org/${p.orgId}`
-            : `${issuer}/welcome/${p.orgId}`,
+        pickIn: where.pickIn === "onboarding" ? `${issuer}/onboarding` : `${issuer}/welcome/${p.orgId}`,
         options: saved.options.map((o) => ({
           name: o.name,
           handle: o.handle,

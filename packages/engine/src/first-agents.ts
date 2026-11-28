@@ -15,7 +15,7 @@ import { ConflictError, ForbiddenError, NotFoundError, TooManyError, ValidationE
 import { publishUserEvent } from "./events";
 import { ASK_AREA, IMPORT_AREA, keptFirstAgent, takeFirstDelivery } from "./first-delivery";
 import { handleFromName } from "./imports";
-import { can, requireActiveMembership, updateOrganization } from "./organizations";
+import { can, getMembership, requireActiveMembership, updateOrganization } from "./organizations";
 import { personLocale } from "./requester";
 import { settleWelcome } from "./right-hand-welcome";
 import { SETUP_APPS_MAX } from "./setup-checklist";
@@ -889,4 +889,32 @@ export async function adoptFirstAgent(
   if (over) await retireFirstAgent(deps, orgId, userId, over);
   if (membership.role !== "owner") await settleWelcome(db, orgId, userId).catch(() => undefined);
   return homeOf(db, orgId, userId, agentId);
+}
+
+// ── Where a person's AI may still propose ────────────────────────────────────
+
+/**
+ * Whether the person may still pick a first agent their own AI proposes (ADR 0264, `propose_first_agents`): an owner
+ * while the workspace's onboarding is open, anyone else who may create agents on their own welcome page, and in both
+ * only until their first agent's delivery is armed or gone (the onboarding has moved past the work step then). Where
+ * they pick, when they may: the onboarding, or the welcome page.
+ */
+export async function firstAgentsOpen(
+  db: Database,
+  orgId: string,
+  userId: string,
+): Promise<{ open: false } | { open: true; pickIn: "onboarding" | "welcome" }> {
+  const membership = await getMembership(db, userId, orgId);
+  if (!membership || !can(membership, "create_agents")) return { open: false };
+  const owner = membership.role === "owner";
+  if (owner) {
+    const [org] = await db
+      .select({ onboardedAt: organizations.onboardedAt })
+      .from(organizations)
+      .where(eq(organizations.id, orgId));
+    if (!org || org.onboardedAt !== null) return { open: false };
+  }
+  const kept = await keptFirstAgent(db, orgId, userId);
+  if (kept && (kept.armedAt || kept.firedAt)) return { open: false };
+  return { open: true, pickIn: owner ? "onboarding" : "welcome" };
 }

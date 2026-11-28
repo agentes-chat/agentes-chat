@@ -268,6 +268,35 @@ describe("before the first plan", () => {
     expect((await me.paste(body([option({ name: "Caio", role: "Suporte" })]))).status).toBe(200);
   });
 
+  test("propose_first_agents only while I may still pick one: not once my first agent is armed or the onboarding ended", async () => {
+    const { owner, orgId } = await setup();
+    const app = await connectApp(t, owner, orgId, { name: "Claude", access: "read" });
+    const tools = async (bearer: string) => {
+      const res = await mcp(t, bearer, { jsonrpc: "2.0", id: 1, method: "tools/list" });
+      return ((await res.json()) as { result: { tools: { name: string }[] } }).result.tools.map((x) => x.name);
+    };
+    expect(await tools(app.access)).toContain("propose_first_agents");
+    // A member who may create agents picks on their own welcome page.
+    const bia = await joinByInvitation(t, owner, orgId, "bia@example.com");
+    const hers = await connectApp(t, bia, orgId, { name: "Claude", access: "read" });
+    const sent = await callTool(t, hers.access, "propose_first_agents", body());
+    expect(sent.structuredContent).toMatchObject({ received: 1, pickIn: `${ORIGIN}/welcome/${orgId}` });
+    // My first agent made and its step left (armed): the onboarding is past the work step.
+    const me = api(owner, orgId);
+    const picked = await me.pick((await me.paste(body())).json.proposal.id, 0);
+    const armed = await owner(`/api/app/organizations/${orgId}/first-delivery`, {
+      method: "PUT",
+      json: { agentId: picked.json.agentId },
+    });
+    expect(armed.status).toBe(200);
+    expect(await tools(app.access)).not.toContain("propose_first_agents");
+    // The owner's onboarding done: nothing to pick there either, armed or not.
+    await t.db.delete(schema.firstDeliveries).where(eq(schema.firstDeliveries.orgId, orgId));
+    await t.db.update(schema.organizations).set({ onboardedAt: new Date() }).where(eq(schema.organizations.id, orgId));
+    expect(await tools(app.access)).not.toContain("propose_first_agents");
+    expect(await tools(hers.access)).toContain("propose_first_agents");
+  });
+
   test("any other hold refuses the paste with org.paused", async () => {
     const { owner, orgId } = await setup();
     await setBillingHold({ db: t.db, pubsub: t.adapters.pubsub }, orgId, "unpaid");

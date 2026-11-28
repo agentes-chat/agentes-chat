@@ -8,6 +8,8 @@ import {
   APP_FIRST_AGENT_TOOL_NAMES,
   type AppPrincipal,
   appPrincipal,
+  appsInstructions,
+  armFirstDelivery,
   authenticateAppBearer,
   buildAppsMcpServer,
   createPersonalToken,
@@ -610,11 +612,17 @@ describe("before the first plan", () => {
         data: result.structuredContent as Record<string, unknown> | undefined,
       };
     };
-    return { principal, call, close: () => app.close() };
+    const list = async () => (await app.listTools()).tools.map((x) => x.name);
+    return { principal, call, list, close: () => app.close() };
   };
+
+  /** The workspace's onboarding still open, as on its owner's first visit. */
+  const onboarding = (fx: Fixture) =>
+    fx.db.update(schema.organizations).set({ onboardedAt: null }).where(eq(schema.organizations.id, fx.org.id));
 
   test("the AI connects and proposes while the workspace waits for its first plan; every other tool still refuses", async () => {
     f = await setup({ rightHand: true });
+    await onboarding(f);
     await hold(f, "payment");
     // The personal token its onboarding offers is made on the hold.
     const { secret, token } = await tokenOf(f, f.owner.id);
@@ -642,6 +650,7 @@ describe("before the first plan", () => {
 
   test("on any other hold no new token, and a connection made before gets the refusal on every tool", async () => {
     f = await setup({ rightHand: true });
+    await onboarding(f);
     const { secret } = await tokenOf(f, f.owner.id);
     await hold(f, "unpaid");
     expect(await failure(() => tokenOf(f, f.owner.id))).toMatchObject({ code: "workspace_paused" });
@@ -654,7 +663,7 @@ describe("before the first plan", () => {
     await app.close();
   });
 
-  test("pickIn: the onboarding for an owner on it, the workspace for an owner after it, the welcome page for a member", async () => {
+  test("pickIn: the onboarding for an owner on it, the welcome page for a member; offered only while they may pick", async () => {
     f = await setup({ rightHand: true });
     const pickIn = async (userId: string) => {
       const app = await serve(f, (await tokenOf(f, userId)).secret);
@@ -662,19 +671,42 @@ describe("before the first plan", () => {
       await app.close();
       return sent.data?.pickIn;
     };
-    await f.db.update(schema.organizations).set({ onboardedAt: null }).where(eq(schema.organizations.id, f.org.id));
+    await onboarding(f);
     expect(await pickIn(f.owner.id)).toBe("https://agentes.test/onboarding");
+    const bia = await join(f, "bia");
+    expect(await pickIn(bia.id)).toBe(`https://agentes.test/welcome/${f.org.id}`);
+    // Called once the owner's onboarding ended meanwhile: nothing kept, nothing to pick.
+    const app = await serve(f, (await tokenOf(f, f.owner.id)).secret);
+    expect(app.principal.firstAgentsOpen).toBe(true);
     await f.db
       .update(schema.organizations)
       .set({ onboardedAt: new Date() })
       .where(eq(schema.organizations.id, f.org.id));
-    expect(await pickIn(f.owner.id)).toBe(`https://agentes.test/org/${f.org.id}`);
-    const bia = await join(f, "bia");
-    expect(await pickIn(bia.id)).toBe(`https://agentes.test/welcome/${f.org.id}`);
+    const before = (await f.db.select().from(schema.firstAgentProposals)).length;
+    const late = await app.call("propose_first_agents", proposal([billing()]));
+    expect(late.isError).toBe(false);
+    expect(late.data).toMatchObject({ received: 0 });
+    expect(String(late.data?.next)).toContain("nothing to pick");
+    expect((await f.db.select().from(schema.firstAgentProposals)).length).toBe(before);
+    await app.close();
+    // A new connection after it: neither offered nor named in the instructions.
+    const after = await serve(f, (await tokenOf(f, f.owner.id)).secret);
+    expect(after.principal.firstAgentsOpen).toBeUndefined();
+    expect(await after.list()).not.toContain("propose_first_agents");
+    expect(appsInstructions(after.principal)).not.toContain("propose_first_agents");
+    await after.close();
+    // A member whose first agent's delivery is armed: past the work step.
+    const hers = await save(f, bia.id, proposal([billing({ name: "Nina", role: "Vendas" })]));
+    const nina = await pick(f, bia.id, hers.id, 0);
+    await armFirstDelivery(f.db, { orgId: f.org.id, userId: bia.id }, nina.agentId);
+    const armed = await serve(f, (await tokenOf(f, bia.id)).secret);
+    expect(await armed.list()).not.toContain("propose_first_agents");
+    await armed.close();
   });
 
   test("the plan-waiting emails speak of the agent picked, and of the AI that proposed it", async () => {
     f = await setup({ rightHand: true });
+    await onboarding(f);
     await hold(f, "payment");
     await f.db.update(schema.users).set({ emailVerified: true }).where(eq(schema.users.id, f.owner.id));
     // The workspace's first agent is the one picked.

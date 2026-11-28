@@ -475,7 +475,10 @@ export function appsInstructions(p: AppPrincipal) {
     p.stillOpen?.length
       ? "This workspace waits for its first plan: until then propose_first_agents is the one tool that works."
       : "",
-    "Asked for the person's first agents in agentes.chat, propose_first_agents sends up to 3 options: nothing is created until they pick one there.",
+    // Named only while the person may still pick one (`firstAgentsOpen`): after that, nothing would read it.
+    p.firstAgentsOpen
+      ? "Asked for the person's first agents in agentes.chat, propose_first_agents sends up to 3 options: nothing is created until they pick one there."
+      : "",
   ]
     .filter(Boolean)
     .join(" ")
