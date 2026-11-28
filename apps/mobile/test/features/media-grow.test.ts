@@ -54,17 +54,16 @@ describe("a picture growing out of its tile", () => {
 });
 
 describe("the wiring", () => {
-  test("a message's single picture, its video and its deck's top card grow out of their tiles where the system's zoom doesn't open them", () => {
+  test("a message's single picture and its deck's top card grow out of their tiles where the system's zoom doesn't open them", () => {
     const link = src("features/files/MediaLink.tsx");
     expect(link).toContain(
       "growOpen({ ...grow, open: () => openFile(file, siblings, { grow: true }), reduced }, plain)",
     );
     expect(src("features/files/MessageFiles.tsx")).toContain("const tile = useGrowTile(growKey);");
-    expect(src("features/files/VideoPlayer.tsx")).toContain("const grownTile = useGrowTile(growKey);");
     const deck = src("features/files/ImageStack.tsx");
     expect(deck).toContain("open: () => openFile(tapped, all, { from: key, grow: true }),");
     // The tile hides while its picture is out on the layer.
-    for (const file of ["MessageFiles.tsx", "VideoPlayer.tsx", "ImageStack.tsx"])
+    for (const file of ["MessageFiles.tsx", "ImageStack.tsx"])
       expect([file, src(`features/files/${file}`).includes("lifted: { opacity: 0 },")]).toEqual([file, true]);
   });
 
@@ -89,11 +88,12 @@ describe("the wiring", () => {
   });
 });
 
-test("a video never opens with the system's zoom (its player drew no picture under it), and its cover never stays over it", () => {
+test("a message's video plays in the system's own player in full screen, from its tile, a new link when its own is old", () => {
   const player = src("features/files/VideoPlayer.tsx");
-  expect(player).toMatch(/<MediaLink\s+file=\{opens\.file\}\s+siblings=\{opens\.siblings\}\s+zoom=\{false\}/);
-  expect(src("features/files/MediaLink.tsx")).toContain("if (!NATIVE_ZOOM || !zoom) {");
-  // The cover goes on the first frame, or a moment after playing starts, and a video playing with no frame is reported.
+  expect(player).not.toContain("MediaLink");
+  expect(player).toContain("view.current?.enterFullscreen().catch(() => done.current());");
+  expect(player).toContain("const old = Date.now() - linkReadAt > HANDED_LINK_MS;");
+  // The cover over the viewer's player never stays: it goes on the first frame, or a moment after playing starts.
   expect(player).toContain("const COVER_MAX_MS = 1500;");
   expect(player).toContain('reportError(new Error("A video played with no frame drawn"), { where: "video.noFrame" });');
 });

@@ -307,7 +307,8 @@ describe("what plays is the system's: its controls, who said it, paused there an
     expect(config).not.toContain('"android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",');
     const video = readFileSync(join(import.meta.dir, "../../src/features/files/VideoPlayer.tsx"), "utf8");
     expect(video).toContain("p.staysActiveInBackground = true;");
-    expect(video).toContain("p.showNowPlayingNotification = true;");
+    // No Now Playing entry for a video: the video module's own crashed a second video once the first was let go.
+    expect(video).not.toContain("p.showNowPlayingNotification = true;");
     // One thing plays at a time: a video stops a voice, a voice pauses a video.
     expect(video).toContain("onVoiceStarts(pauseCurrent);");
     expect(video).toMatch(/current = player;\s*stopPlayback\(\);/);

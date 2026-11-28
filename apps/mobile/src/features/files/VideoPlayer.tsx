@@ -8,19 +8,16 @@ import {
   type VideoThumbnail,
   VideoView,
 } from "expo-video";
-import { type RefObject, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, PixelRatio, Text as RNText, StyleSheet, View, type ViewInstance } from "react-native";
+import { ActivityIndicator, PixelRatio, Text as RNText, StyleSheet, View } from "react-native";
 import { reportError } from "@/lib/error-reports";
 import { CHROME_MAX_SCALE, Icon, PressScale } from "@/ui";
 import { useMessageCardCorners } from "../chat/look";
 import { useColors } from "../shared/hooks";
 import { onVoiceStarts, stopPlayback } from "../voice/playback";
-import { useGrowTile } from "./grow";
-import { handVideo } from "./handoff";
-import { type FileRef, stillAt, videoClock, videoHeight, viewerVersion } from "./logic";
-import { MediaLink, ZoomSource } from "./MediaLink";
-import { pictureKey } from "./source";
+import { HANDED_LINK_MS } from "./handoff";
+import { stillAt, videoClock, videoHeight } from "./logic";
 
 /**
  * Android draws a video on a SurfaceView by default, a window of its own that ignores the rounded corners it sits in
@@ -193,7 +190,7 @@ onVoiceStarts(pauseCurrent);
 export interface VideoPlayerProps {
   /** Where it plays from, with the session when the link is ours. */
   source: { uri: string; headers?: Record<string, string> };
-  /** When `source` was read: handed to the viewer it opens while it has life ahead (`handVideo`). */
+  /** When `source` was read: played from while it has life ahead, else a new one (`refreshLink`). */
   linkReadAt?: number | undefined;
   /** Its still's key, the same for every link to this version of the file (`pictureKey`). */
   stillKey: string;
@@ -202,69 +199,128 @@ export interface VideoPlayerProps {
   width?: number;
   /** Its height there: 16:9 for `width` unless the caller knows the video's own shape (`videoBox`). */
   height?: number;
-  /** What a tap opens in the picture viewer, where it plays, among the message's pictures and videos. */
-  opens?: { file: FileRef; siblings: readonly FileRef[] } | undefined;
+  /** A new link, when the tile's is too old to play from (the server's links live 5 minutes). */
+  refreshLink?: (() => Promise<VideoPlayerProps["source"] | null>) | undefined;
   /** It can't play on this device (a format it lacks): the caller shows the file's card instead. */
   onFailed?: () => void;
 }
 
 /**
  * A video. In a message, its first frame in a picture's shape with a play key and its length in a small badge (no name
- * over it, as a picture has none); a tap opens it in the picture viewer (`ViewerVideo`), where the system's own player
- * plays it at once with the platform's controls (play, the timeline to drag, full screen and back out of it, AirPlay),
- * so it feels like every other video on the phone, with no controls of ours to get stuck behind.
+ * over it, as a picture has none). A tap plays it in the system's own player in full screen (expo-video's
+ * `enterFullscreen`, `FullscreenVideo`): mounted over the tile, it grows out of it into full screen on iOS, with the
+ * phone's own controls (play, the timeline, swipe down to close, AirPlay); leaving full screen ends it.
  */
 export function VideoPlayer({
   source,
   linkReadAt = 0,
+  refreshLink,
   stillKey,
   name,
   width = 300,
   height,
-  opens,
   onFailed,
 }: VideoPlayerProps) {
-  // On the touch, the viewer about to open gets the cover shown here and the link held here (`handoff.ts`): it opens
-  // on the cover and starts playing from the link, never on black while it asks for its own.
-  const growKey = opens ? pictureKey(opens.file.id, viewerVersion(opens.file)) : null;
-  const hand = growKey ? (frame: VideoThumbnail | null) => handVideo(growKey, source, linkReadAt, frame) : undefined;
-  // The still grows out of the tile where there's no system's zoom (`grow.tsx`); the tile reports the still it shows.
-  const grownTile = useGrowTile(growKey);
-  const [shownFrame, setShownFrame] = useState<VideoThumbnail | null>(null);
-  const tileHeight = height ?? videoHeight(width);
-  const tile = (press: (() => void) | undefined) => (
+  // The link it plays from: the tile's, or a new one when the tile's is too old to outlive the player.
+  const [playing, setPlaying] = useState<VideoPlayerProps["source"] | null>(null);
+  const play = async () => {
+    const old = Date.now() - linkReadAt > HANDED_LINK_MS;
+    setPlaying((old && refreshLink ? await refreshLink().catch(() => null) : null) ?? source);
+  };
+  return (
     <InlineVideo
       source={source}
       stillKey={stillKey}
-      onHand={hand}
       name={name}
       width={width}
       height={height ?? videoHeight(width)}
-      onPress={press}
+      onPress={play}
       onFailed={onFailed}
-      growRef={grownTile.ref}
-      lifted={grownTile.hidden}
-      onFrame={setShownFrame}
-    />
-  );
-  // Opened with the system's zoom where there is one: the still grows into the viewer (`MediaLink`).
-  return opens ? (
-    // Never the system's zoom for a video: under it the player drew no picture (its sound played on black). Its cover
-    // grows out of the tile on the layer instead, and the viewer is a plain screen under it (`grow.tsx`).
-    <MediaLink
-      file={opens.file}
-      siblings={opens.siblings}
-      zoom={false}
-      grow={growKey ? { key: growKey, picture: shownFrame, aspect: width / tileHeight, corners: null } : undefined}
     >
-      {tile}
-    </MediaLink>
-  ) : (
-    tile(undefined)
+      {playing ? (
+        <FullscreenVideo
+          source={playing}
+          name={name}
+          onDone={() => setPlaying(null)}
+          onFailed={() => {
+            setPlaying(null);
+            onFailed?.();
+          }}
+        />
+      ) : null}
+    </InlineVideo>
   );
 }
 
-/** In a message: the first frame, the play key and the length; nothing plays here. */
+/**
+ * A message's video in the system's own player, full screen: over its tile for the moment before it goes full screen
+ * (so the system's player grows out of the tile), playing; leaving full screen pauses it and lets the player go.
+ */
+function FullscreenVideo({
+  source,
+  name,
+  onDone,
+  onFailed,
+}: {
+  source: VideoPlayerProps["source"];
+  name: string;
+  onDone: () => void;
+  onFailed: () => void;
+}) {
+  const player = useVideoPlayer({ ...source, metadata: { title: name } }, (p) => {
+    p.loop = false;
+  });
+  const view = useRef<VideoView>(null);
+  const done = useRef(onDone);
+  done.current = onDone;
+  useEffect(() => {
+    // Laid out over the tile on this frame: into full screen on the next, playing.
+    const frame = requestAnimationFrame(() => {
+      try {
+        player.play();
+      } catch {
+        // Released with its tile.
+      }
+      view.current?.enterFullscreen().catch(() => done.current());
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [player]);
+  useEventListener(player, "playingChange", ({ isPlaying }) => {
+    if (isPlaying) claim(player);
+  });
+  useEventListener(player, "statusChange", ({ status }) => {
+    if (status === "error") onFailed();
+  });
+  useEffect(
+    () => () => {
+      if (current === player) current = null;
+    },
+    [player],
+  );
+  return (
+    <VideoView
+      ref={view}
+      player={player}
+      nativeControls
+      contentFit="contain"
+      fullscreenOptions={{ enable: true }}
+      allowsPictureInPicture={false}
+      surfaceType={SURFACE}
+      accessibilityLabel={name}
+      onFullscreenExit={() => {
+        try {
+          player.pause();
+        } catch {
+          // Released with its tile.
+        }
+        done.current();
+      }}
+      style={StyleSheet.absoluteFill}
+    />
+  );
+}
+
+/** In a message: the first frame, the play key and the length; `children` over it (the full screen player, playing). */
 function InlineVideo({
   source,
   stillKey,
@@ -272,27 +328,18 @@ function InlineVideo({
   width,
   height,
   onPress,
-  onHand,
   onFailed,
-  growRef,
-  lifted = false,
-  onFrame,
+  children,
 }: {
   source: VideoPlayerProps["source"];
   stillKey: string;
-  /** On the touch: hands the viewer this cover (`handVideo`). */
-  onHand?: ((frame: VideoThumbnail | null) => void) | undefined;
-  /** The view its still grows out of (`useGrowTile`), hidden while the still is out on the layer (`lifted`). */
-  growRef?: RefObject<ViewInstance | null> | undefined;
-  lifted?: boolean;
-  /** The still it shows, once read: what grows out of it. */
-  onFrame?: ((frame: VideoThumbnail | null) => void) | undefined;
   name: string;
   width: number;
   height: number;
-  /** Opens it in the viewer: the tile's own, or the zoom's link's (`MediaLink` hands its press to this prop). */
+  /** Plays it (`FullscreenVideo`). */
   onPress?: (() => void) | undefined;
   onFailed?: (() => void) | undefined;
+  children?: ReactNode;
 }) {
   const { t } = useTranslation();
   const c = useColors();
@@ -308,37 +355,25 @@ function InlineVideo({
   }, [failed]);
   const duration = still?.duration ?? 0;
   const length = duration > 0 ? videoClock(duration) : "";
-  const frame = still?.frame ?? null;
-  const tellFrame = useRef(onFrame);
-  tellFrame.current = onFrame;
-  useEffect(() => {
-    tellFrame.current?.(frame);
-  }, [frame]);
   return (
-    // Opening it is navigation, as opening a picture: the press shows it, no tap.
+    // Playing it is the press's own: no tap.
     <PressScale
       haptic={false}
-      onPressIn={() => onHand?.(still?.frame ?? null)}
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole="button"
       accessibilityLabel={`${t("mobile.files.video.play")}: ${name}${length ? `, ${length}` : ""}`}
       style={[styles.inline, { width, height, backgroundColor: c.sunken, borderColor: c.line2 }, cardCorners]}
     >
-      {/* The still alone grows into the viewer (the play key and the length stay in the message). */}
-      <ZoomSource>
-        <View ref={growRef} style={[StyleSheet.absoluteFill, lifted && styles.lifted]} collapsable={false}>
-          {still?.frame ? (
-            <Image
-              source={still.frame}
-              contentFit="contain"
-              transition={0}
-              accessible={false}
-              style={StyleSheet.absoluteFill}
-            />
-          ) : null}
-        </View>
-      </ZoomSource>
+      {still?.frame ? (
+        <Image
+          source={still.frame}
+          contentFit="contain"
+          transition={0}
+          accessible={false}
+          style={StyleSheet.absoluteFill}
+        />
+      ) : null}
       <View style={styles.center} pointerEvents="none">
         <View style={[styles.big, { backgroundColor: c.raised }]}>
           <Icon name="play" size={24} color={c.ink} />
@@ -353,6 +388,7 @@ function InlineVideo({
           </RNText>
         </View>
       ) : null}
+      {children}
     </PressScale>
   );
 }
@@ -388,8 +424,8 @@ export function ViewerVideo({
   const [playing, setPlaying] = useState(false);
   const player = useVideoPlayer({ ...source, metadata: { title: name } }, (p) => {
     p.loop = false;
+    // No Now Playing entry for a video: the module's own crashed opening a second video once the first was let go.
     p.staysActiveInBackground = true;
-    p.showNowPlayingNotification = true;
   });
   useEffect(() => {
     onPlayer?.(player);
@@ -479,8 +515,6 @@ export function VideoFirstFrame({ uri }: { uri: string }) {
 }
 
 const styles = StyleSheet.create({
-  // Its still out on the layer, growing into the viewer or shrinking back (`grow.tsx`).
-  lifted: { opacity: 0 },
   // A picture's shape in a message (`MessageFiles`' `shot`): rounded, a hairline, its frame whole on the gray.
   inline: { borderRadius: 14, overflow: "hidden", borderWidth: StyleSheet.hairlineWidth },
   center: {

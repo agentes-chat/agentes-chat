@@ -341,9 +341,10 @@ function InlineImage({
 }
 
 /**
- * A video on a message: its first frame; a tap opens it in the viewer among the message's pictures and videos
- * (`siblings`); one this phone can't play becomes the file's card. Its link is read once, at the version the message
- * names, so a link refreshed later never reloads the frame (a flash); it's read again when the row comes back.
+ * A video on a message: its first frame; a tap plays it in the system's own player in full screen (`VideoPlayer`);
+ * one this phone can't play becomes the file's card (`siblings`: what that card opens among). Its link is read once,
+ * at the version the message names, so a link refreshed later never reloads the frame (a flash); it's read again when
+ * the row comes back, or when a tap finds it too old to play from.
  */
 function InlineVideo({
   file,
@@ -381,10 +382,11 @@ function InlineVideo({
           name={info?.name || file.title}
           width={box.width}
           height={box.height}
-          // In the same viewer as the pictures: one place where media opens.
-          opens={
-            detail ? { file: { id: file.id, version: file.version, title: file.title, detail }, siblings } : undefined
-          }
+          // Played by the system's own player in full screen; a new link when the tile's is too old to play from.
+          refreshLink={async () => {
+            const fresh = await link.refetch();
+            return fresh.data ? { uri: fresh.data.uri, headers: fresh.data.headers } : null;
+          }}
           onFailed={() => setFailed(true)}
         />
       ) : (

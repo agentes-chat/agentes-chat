@@ -288,14 +288,8 @@ describe("viewer", () => {
     const message = src("features/files/MessageFiles.tsx");
     expect(message).toMatch(/<MediaLink\s+file=\{opens\}\s+siblings=\{siblings\}/);
     expect(message).toContain("<ZoomSource>");
-    const player = src("features/files/VideoPlayer.tsx");
-    expect(player).toMatch(/<MediaLink\s+file=\{opens\.file\}\s+siblings=\{opens\.siblings\}/);
-    // The link hands its press to the tile's `onPress`; the still alone grows (not the play key), from the view the
-    // layer measures too (`useGrowTile`).
-    expect(player).toContain("onPress={press}");
-    expect(player).toMatch(
-      /<ZoomSource>\s*<View ref=\{growRef\} style=\{\[StyleSheet\.absoluteFill, lifted && styles\.lifted\]\} collapsable=\{false\}>\s*\{still\?\.frame/,
-    );
+    // A video never takes the zoom: the system's own player plays it in full screen (`FullscreenVideo`).
+    expect(src("features/files/VideoPlayer.tsx")).not.toContain("MediaLink");
     const viewer = src("features/files/ImageViewer.tsx");
     expect(viewer).toContain("<ZoomTarget on={zoom}>");
     // The system's swipe down waits while a picture is zoomed in; the viewer's own pull only without the zoom.
@@ -309,10 +303,6 @@ describe("viewer", () => {
     expect(src("../app/(app)/(main)/_layout.tsx")).toContain(
       'if (route.name === "images" && opensWithZoom(route.params)) return { ...options, animation: "default" };',
     );
-    // The tile hands its cover and link on the touch, under the page's own key.
-    expect(player).toContain("const growKey = opens ? pictureKey(opens.file.id, viewerVersion(opens.file)) : null;");
-    expect(player).toContain("(frame: VideoThumbnail | null) => handVideo(growKey, source, linkReadAt, frame)");
-    expect(player).toContain("onPressIn={() => onHand?.(still?.frame ?? null)}");
   });
 
   test("‹ › go one picture at a time and never round past the first or the last", () => {
@@ -685,15 +675,17 @@ describe("viewer", () => {
   test("on Android a video draws with the views around it, inside rounded corners and under a pull", () => {
     const player = src("features/files/VideoPlayer.tsx");
     expect(player).toContain('const SURFACE = "textureView";');
-    // Only the viewer's video is a live view: a message's and one on its way up are stills.
-    expect(player.match(/surfaceType=\{SURFACE\}/g)?.length).toBe(1);
+    // Live views: the viewer's video, and a message's while it plays full screen; one on its way up is a still.
+    expect(player.match(/surfaceType=\{SURFACE\}/g)?.length).toBe(2);
   });
 
   test("a video in a message is a still: no player stays mounted per row, a few decoders at most at a time", () => {
     const player = src("features/files/VideoPlayer.tsx");
-    // One player in the whole file stays mounted (the viewer's); the stills' players are released once read.
-    expect(player.match(/useVideoPlayer\(/g)?.length).toBe(1);
-    expect(player.match(/<VideoView\b/g)?.length).toBe(1);
+    // A player is mounted only while a video plays (the viewer's, or a message's full screen one, mounted on the tap
+    // and gone with full screen); the stills' players are released once read.
+    expect(player.match(/useVideoPlayer\(/g)?.length).toBe(2);
+    expect(player.match(/<VideoView\s/g)?.length).toBe(2);
+    expect(player).toContain("{playing ? (");
     expect(player).toContain("createVideoPlayer(source)");
     expect(player).toContain("player.generateThumbnailsAsync([stillAt(duration)], { maxWidth: STILL_PIXELS })");
     expect(player).toContain("player.release();");
@@ -759,8 +751,11 @@ describe("viewer", () => {
     const player = src("features/files/VideoPlayer.tsx");
     // In full screen the platform's controls are the only way back out: they are always on where it plays.
     expect(player).toContain("nativeControls\n");
-    expect(player).not.toContain("enterFullscreen");
     expect(player).not.toContain("<Glass");
+    // A message's video: the system's own player, full screen from its tile (as the phone's own apps play one),
+    // gone when full screen ends.
+    expect(player).toContain("view.current?.enterFullscreen().catch(() => done.current());");
+    expect(player).toContain("onFullscreenExit={() => {");
   });
 });
 
