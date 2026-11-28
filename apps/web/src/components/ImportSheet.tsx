@@ -143,7 +143,7 @@ export function ImportSheet({
   sheet: ImportSheetKind | null;
   orgId: string;
   onClose: () => void;
-  /** On the workspace's own pages: the sheet applies, and links to what came. */
+  /** On the workspace's own pages: the sheet links to what came (it applies wherever it runs). */
   standalone: boolean;
   /** What to set up afterwards, as the preview lists it. */
   todos: ReactNode;
