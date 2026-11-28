@@ -22552,6 +22552,7 @@
         "later": "Sonraya bırakırsanız bu liste {{name}} ile olan sohbetinizde kalır, istediğiniz zaman bitirirsiniz.",
         "none": "Her şey yerinde. Artık ekiple konuşmanız yeterli.",
         "nonePersonal": "Her şey yerinde. Artık ajanlarınızla konuşmanız yeterli.",
+        "noAi": "{{name}} ajanının henüz düşünmek için bir yapay zekası yok. İlk teslimatın başlaması için bir tane bağlayın.",
         "beta": "Beta aşamasındayız.",
         "betaText": "Her hafta daha iyi oluyor, bir şey ters giderse sorun bizde.",
         "feedback": "Eksik olanı kenar çubuğunun en altındaki {{where}} bölümünden bize söyleyin.",

@@ -23546,6 +23546,8 @@ export const ptBR = {
           "Se deixar para depois, esta lista continua na sua conversa com a {{name}}, para você terminar quando quiser.",
         none: "Está tudo no lugar. Agora é só conversar com o time.",
         nonePersonal: "Está tudo no lugar. Agora é só conversar com os seus agentes.",
+        noAi: "O {{name}} ainda não tem uma IA para pensar. Conecte uma para a primeira entrega começar.",
+        noAi_female: "A {{name}} ainda não tem uma IA para pensar. Conecte uma para a primeira entrega começar.",
         beta: "Estamos em beta.",
         betaText: "Melhora toda semana, e se algo falhar, o problema é nosso.",
         feedback: "Conte o que faltar em {{where}}, no fim da barra lateral.",

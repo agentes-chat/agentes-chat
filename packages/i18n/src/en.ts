@@ -23734,6 +23734,8 @@ export const en = {
           "If you leave it for later, this list stays in your conversation with {{name}}, for you to finish whenever you like.",
         none: "Everything is in place. Now just talk to the team.",
         nonePersonal: "Everything is in place. Now just talk to your agents.",
+        /** Someone who doesn't own the workspace, their own first agent with no AI yet. `{{name}}`: the agent's name. */
+        noAi: "{{name}} has no AI to think with yet. Connect one so its first delivery can start.",
         /** The beta line under the list: `beta` in bold, then the rest. */
         beta: "We're in beta.",
         betaText: "It gets better every week, and if something fails, the problem is ours.",

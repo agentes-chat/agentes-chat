@@ -22816,6 +22816,7 @@
         "later": "Als je het voor later bewaart, blijft deze lijst in je gesprek met {{name}}, zodat je hem afmaakt wanneer je wilt.",
         "none": "Alles staat klaar. Nu gewoon met het team praten.",
         "nonePersonal": "Alles staat klaar. Nu gewoon met je agents praten.",
+        "noAi": "{{name}} heeft nog geen AI om mee te denken. Koppel er een, dan begint de eerste levering.",
         "beta": "We zijn in bèta.",
         "betaText": "Het wordt elke week beter, en als er iets misgaat, ligt het aan ons.",
         "feedback": "Vertel ons wat er mist via {{where}}, onderaan de zijbalk.",

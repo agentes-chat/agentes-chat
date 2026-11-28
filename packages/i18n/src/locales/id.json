@@ -22030,6 +22030,7 @@
         "later": "Kalau kamu tunda, daftar ini tetap ada di percakapanmu dengan {{name}}, supaya bisa kamu selesaikan kapan pun.",
         "none": "Semuanya sudah siap. Sekarang tinggal ngobrol dengan tim.",
         "nonePersonal": "Semuanya sudah siap. Sekarang tinggal ngobrol dengan agen-agenmu.",
+        "noAi": "{{name}} belum punya AI untuk berpikir. Hubungkan satu agar hasil kerja pertama bisa dimulai.",
         "beta": "Kami masih beta.",
         "betaText": "Makin baik setiap minggu, dan kalau ada yang gagal, masalahnya ada di kami.",
         "feedback": "Ceritakan apa yang kurang lewat {{where}}, di bagian bawah bilah samping.",

@@ -24037,6 +24037,7 @@
         "later": "Jeśli odłożysz to na później, ta lista zostanie w twojej rozmowie z agentem {{name}}, żeby dokończyć ją, kiedy zechcesz.",
         "none": "Wszystko jest na swoim miejscu. Teraz po prostu rozmawiaj z zespołem.",
         "nonePersonal": "Wszystko jest na swoim miejscu. Teraz po prostu rozmawiaj ze swoimi agentami.",
+        "noAi": "Agent {{name}} nie ma jeszcze AI do myślenia. Podłącz ją, a ruszy pierwsza realizacja.",
         "beta": "Jesteśmy w becie.",
         "betaText": "Z każdym tygodniem jest lepiej, a jeśli coś zawiedzie, to nasz problem.",
         "feedback": "Powiedz nam, czego brakuje, przez {{where}} na dole paska bocznego.",

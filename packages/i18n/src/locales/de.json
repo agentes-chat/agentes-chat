@@ -22638,6 +22638,7 @@
         "later": "Wenn du es auf später verschiebst, bleibt diese Liste in deiner Unterhaltung mit {{name}}, damit du sie fertig machst, wann du willst.",
         "none": "Alles ist an seinem Platz. Jetzt einfach mit dem Team reden.",
         "nonePersonal": "Alles ist an seinem Platz. Jetzt einfach mit deinen Agenten reden.",
+        "noAi": "{{name}} hat noch keine KI zum Denken. Verbinde eine, damit die erste Lieferung beginnt.",
         "beta": "Wir sind in der Beta.",
         "betaText": "Es wird jede Woche besser, und wenn etwas schiefgeht, liegt es an uns.",
         "feedback": "Sag uns unter {{where}}, ganz unten in der Seitenleiste, was fehlt.",

@@ -189,6 +189,45 @@ describe("the welcome wizard, right after the onboarding", () => {
     expect(wizard().querySelector(".wiz-board")).toBeNull();
   });
 
+  test("someone who doesn't own the workspace, their own agent with no AI: the last step says so, with Connect for it", async () => {
+    const state = withList();
+    const org = state.me?.organizations[0];
+    if (org) org.role = "member";
+    const ada = state.agents.find((a) => a.name === "Ada");
+    state.agents.push({ ...(ada as (typeof state.agents)[number]), id: "agent-iara", name: "Iara", handle: "iara" });
+    const iara = state.agents.find((a) => a.id === "agent-iara");
+    if (iara) iara.ownerUserId = "u-walter";
+    state.aiStatus = {
+      any: true,
+      agents: state.agents.map((a) => ({ agentId: a.id, state: a.id === "agent-iara" ? "no_ai" : "ready" })),
+    };
+    await open(state, "?arrival=beta");
+    await toLast();
+    expect(wizard().querySelector(".wiz__text")?.textContent).toBe(
+      "A Iara ainda não tem uma IA para pensar. Conecte uma para a primeira entrega começar.",
+    );
+    const rows = [...wizard().querySelectorAll(".wiz-board > li")].map((li) => ({
+      text: li.querySelector(".wiz-board__text")?.textContent,
+      done: li.hasAttribute("data-done"),
+      action: li.querySelector("button")?.textContent ?? null,
+    }));
+    expect(rows).toEqual([{ text: "Conecte uma IA", done: false, action: "Conectar" }]);
+    // Its Connect closes the wizard and opens the Connect dialog, never anything after it.
+    await press("Conectar", 8);
+    expect(screen().queryByRole("dialog", { name: READY })).toBeNull();
+    expect(screen().getAllByRole("dialog")).toHaveLength(1);
+    cleanup();
+    localStorage.clear();
+    // Once it thinks: the last step as before, everything in place.
+    state.aiStatus = { any: true, agents: state.agents.map((a) => ({ agentId: a.id, state: "ready" })) };
+    await open(state, "?arrival=beta");
+    await toLast();
+    expect(wizard().querySelector(".wiz-board")).toBeNull();
+    expect(wizard().querySelector(".wiz__text")?.textContent).toBe(
+      "Está tudo no lugar. Agora é só conversar com o time.",
+    );
+  });
+
   test("its pictures: work any business has, done by the person's own agent under its role, never one trade's", async () => {
     const state = withList();
     state.agents.push({

@@ -1,5 +1,5 @@
 import type { Agent } from "@agenteschat/client";
-import { useAuthConfig, useCatalog } from "@agenteschat/client";
+import { useAiStatus, useAuthConfig, useCatalog } from "@agenteschat/client";
 import { standingActive } from "@agenteschat/client/lib/billing";
 import { firstName, joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
@@ -55,7 +55,9 @@ export function WelcomeWizard({ onDone }: { onDone: (handOff: boolean) => void }
   const [at, setAt] = useState(0);
   const go = useRef<HTMLButtonElement>(null);
   const lead = rightHandOf(dir.agents);
-  const board = useBoard(lead, (then) => {
+  // The person's own first agent: someone who doesn't own the workspace hears of its AI on the last step.
+  const own = dir.agents.filter((a) => !isRightHand(a) && a.ownerUserId === me.user.id).sort(byAge)[0];
+  const board = useBoard(lead, own, (then) => {
     onDone(false);
     then();
   });
@@ -83,14 +85,16 @@ export function WelcomeWizard({ onDone }: { onDone: (handOff: boolean) => void }
   const left = board.rows.filter((r) => !r.done).length;
   const readyText = !board.ready
     ? ""
-    : left === 0
-      ? t(modeKey(org, "arrival.welcome.ready.none"))
-      : lead
-        ? t("common.joinSentences", {
-            a: t("arrival.welcome.ready.left", { count: left }),
-            b: t("arrival.welcome.ready.later", agentGrammar(lead.name)),
-          })
-        : t("arrival.welcome.ready.left", { count: left });
+    : board.ownNoAi && own
+      ? t("arrival.welcome.ready.noAi", agentGrammar(own.name))
+      : left === 0
+        ? t(modeKey(org, "arrival.welcome.ready.none"))
+        : lead
+          ? t("common.joinSentences", {
+              a: t("arrival.welcome.ready.left", { count: left }),
+              b: t("arrival.welcome.ready.later", agentGrammar(lead.name)),
+            })
+          : t("arrival.welcome.ready.left", { count: left });
   const words: Record<WelcomeStep, { title: string; text: string }> = {
     hello: {
       title: first
@@ -215,15 +219,17 @@ interface BoardRow {
 /**
  * What the team still lacks to start, read from the same facts as the right hand's first-run card (`useFirstRun`,
  * ADR 0162) so both say the same: the plan, an AI, people and apps, each done or with its way there. Its rows are the
- * workspace owners' (the card's own rule); anyone else gets none. `leave`: the wizard closes, then the row's way runs.
+ * workspace owners' (the card's own rule); anyone else gets only their own first agent's AI while it has none (`own`,
+ * `ownNoAi`). `leave`: the wizard closes, then the row's way runs.
  */
-function useBoard(lead: Agent | undefined, leave: (then: () => void) => void) {
+function useBoard(lead: Agent | undefined, own: Agent | undefined, leave: (then: () => void) => void) {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const navigate = useNavigate();
   const powers = useFirstRunPowers();
   const run = useFirstRun(lead);
   const thinks = useAgentThinks(lead);
+  const status = useAiStatus(org.id);
   const catalog = useCatalog();
   const billingUrl = useAuthConfig().data?.billingUrl;
   const bought = usePaidPlan(org.id, org.standing);
@@ -231,7 +237,7 @@ function useBoard(lead: Agent | undefined, leave: (then: () => void) => void) {
   const connect = useConnectAi();
   const invite = useInviteDialog();
   const rows: BoardRow[] = [];
-  if (!lead) return { ready: run.ready, rows };
+  if (!lead) return { ready: run.ready, rows, ownNoAi: false };
   const state = (s: "ai" | "people" | "apps") => firstRunRowState(s, { done: run.done, held: run.held });
   const button = (label: string, then: () => void) => (
     <Button size="sm" onClick={() => leave(then)}>
@@ -289,6 +295,21 @@ function useBoard(lead: Agent | undefined, leave: (then: () => void) => void) {
     });
   }
 
+  // Someone who doesn't own the workspace has none of the owners' rows; their own first agent with no AI to think
+  // with is said, with Connect for it (ADR 0264 addendum), as the owners' AI row offers it for the team.
+  const ownAi = own ? status.data?.agents.find((a) => a.agentId === own.id)?.state : undefined;
+  const ownNoAi = !run.steps.includes("ai") && own !== undefined && ownAi === "no_ai";
+  if (ownNoAi && own) {
+    const agentId = own.id;
+    rows.push({
+      key: "ai",
+      done: false,
+      dim: false,
+      text: t("arrival.welcome.ready.rows.aiTodo"),
+      action: connect ? button(t("arrival.welcome.ready.rows.aiAction"), () => connect.open({ agentId })) : null,
+    });
+  }
+
   if (run.steps.includes("people")) {
     const s = state("people");
     const invited = run.invited.length;
@@ -338,7 +359,15 @@ function useBoard(lead: Agent | undefined, leave: (then: () => void) => void) {
           : null,
     });
   }
-  return { ready: run.ready && !named.loading && (run.steps.includes("apps") ? catalog.isSuccess : true), rows };
+  return {
+    ready:
+      run.ready &&
+      !named.loading &&
+      (run.steps.includes("apps") ? catalog.isSuccess : true) &&
+      (own ? status.data !== undefined || status.isError : true),
+    rows,
+    ownNoAi,
+  };
 }
 
 /**

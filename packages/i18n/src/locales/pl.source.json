@@ -55179,6 +55179,9 @@
   "arrival.welcome.ready.nonePersonal": {
     "value": "Everything is in place. Now just talk to your agents."
   },
+  "arrival.welcome.ready.noAi": {
+    "value": "{{name}} has no AI to think with yet. Connect one so its first delivery can start."
+  },
   "arrival.welcome.ready.beta": {
     "value": "We're in beta."
   },

@@ -23254,6 +23254,7 @@
         "later": "Si lo dejas para después, esta lista se queda en tu conversación con {{name}}, para que la termines cuando quieras.",
         "none": "Todo está en su lugar. Ahora solo habla con el equipo.",
         "nonePersonal": "Todo está en su lugar. Ahora solo habla con tus agentes.",
+        "noAi": "{{name}} todavía no tiene una IA para pensar. Conecta una para que empiece la primera entrega.",
         "beta": "Estamos en beta.",
         "betaText": "Mejora cada semana, y si algo falla, el problema es nuestro.",
         "feedback": "Cuéntanos qué falta en {{where}}, al final de la barra lateral.",

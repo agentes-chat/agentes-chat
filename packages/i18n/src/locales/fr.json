@@ -23406,6 +23406,7 @@
         "later": "Si vous remettez à plus tard, cette liste reste dans votre conversation avec {{name}}, pour la finir quand vous voulez.",
         "none": "Tout est en place. Il ne reste qu'à parler à l'équipe.",
         "nonePersonal": "Tout est en place. Il ne reste qu'à parler à vos agents.",
+        "noAi": "{{name}} n'a pas encore d'IA pour réfléchir. Connectez-en une pour que le premier livrable commence.",
         "beta": "Nous sommes en bêta.",
         "betaText": "Ça s'améliore chaque semaine, et si quelque chose échoue, le problème vient de nous.",
         "feedback": "Dites-nous ce qui manque dans {{where}}, en bas de la barre latérale.",
