@@ -309,13 +309,13 @@
     "value": "Reconnecting…"
   },
   "tray.offlineTitle": {
-    "value": "No internet. Trying again…"
+    "value": "No internet"
   },
   "tray.offlineBody": {
     "value": "What already started keeps running here and sends the result when the connection is back."
   },
   "tray.unreachable": {
-    "value": "Can't reach {{host}}. Trying again…"
+    "value": "Can't reach {{host}}"
   },
   "tray.unreachableBody": {
     "value": "What already started keeps running here and sends the result when the server is back."
@@ -544,6 +544,9 @@
   },
   "first.addNewLink": {
     "value": "Create one"
+  },
+  "first.companyFlow": {
+    "value": "Your company's server"
   },
   "first.welcome.title": {
     "value": "Welcome to agentes.chat"
@@ -971,6 +974,12 @@
   "here.setting": {
     "value": "Getting everything ready"
   },
+  "here.settingAlmost": {
+    "value": "Almost ready"
+  },
+  "here.settingFailed": {
+    "value": "Setup didn't finish"
+  },
   "here.step.database": {
     "value": "Making room for your data"
   },
@@ -1183,12 +1192,6 @@
   },
   "servers.removed": {
     "value": "{{host}} left this app"
-  },
-  "servers.workspaces": {
-    "value": {
-      "one": "{{count}} workspace",
-      "other": "{{count}} workspaces"
-    }
   },
   "servers.signedOut": {
     "value": "Not signed in"
@@ -1562,6 +1565,9 @@
   "pair.linkTitle": {
     "value": "Connect this {{device}} to {{org}}?"
   },
+  "pair.connectTitle": {
+    "value": "Connect this {{device}}?"
+  },
   "pair.askedBy": {
     "value": "Asked by"
   },
@@ -1576,6 +1582,9 @@
   },
   "pair.done": {
     "value": "Connected to {{org}}"
+  },
+  "pair.doneLead": {
+    "value": "Its agents can work on this {{device}} now."
   },
   "pair.share": {
     "value": "Let the whole workspace use it"
@@ -1610,14 +1619,29 @@
   "pair.addFolders": {
     "value": "Add folders"
   },
-  "pair.expired": {
-    "value": "This link expired. Make a new one in Devices."
-  },
   "pair.openDevices": {
     "value": "Open Devices"
   },
-  "pair.denied": {
-    "value": "{{by}} didn't let it in. Nothing changed."
+  "pair.expiredTitle": {
+    "value": "This link expired"
+  },
+  "pair.expiredLead": {
+    "value": "Make a new one in Devices on {{server}}."
+  },
+  "pair.deniedTitle": {
+    "value": "{{by}} didn't let it in"
+  },
+  "pair.deniedLead": {
+    "value": "Nothing changed on this {{device}}."
+  },
+  "pair.unreachableTitle": {
+    "value": "Couldn't reach {{server}}"
+  },
+  "pair.unreachableLead": {
+    "value": "Check the connection and try again."
+  },
+  "pair.failedTitle": {
+    "value": "Couldn't connect this {{device}}"
   },
   "pair.letOrg": {
     "value": "Let {{org}}'s agents use this {{device}}"
@@ -2884,6 +2908,12 @@
   },
   "settings.app.onlyHere": {
     "value": "Only on this {{device}}"
+  },
+  "settings.app.version": {
+    "value": "Version {{version}}"
+  },
+  "settings.app.otherServer": {
+    "value": "Another server"
   },
   "iphone.lead": {
     "value": "This {{device}} does the setup. You only tap on the iPhone when a step asks."
