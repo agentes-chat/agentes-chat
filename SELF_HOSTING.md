@@ -1849,6 +1849,11 @@ setup again installs nothing that's there; Claude Code and Codex update themselv
 with that command. A Codex an earlier setup installed as its lone binary can't run code mode (its
 agents fail on a missing `codex-code-mode-host`): `--requirements codex` installs it again, whole.
 
+The runner of the server's own computer doesn't have to run on the machine agentes.chat runs on: give a
+separate Linux VM the same token (`--server` takes the address it reaches the app at, over https) to keep
+agents' commands away from the app's database and keys. Stop and set aside the computer's earlier connection
+first: a runner that holds a connected computer's token refuses to become the server's own.
+
 By hand on Linux (a server set up before, say): set a token in `.env` and give the same one to the
 agents' computer, as root, in the folder with `.env` (3000 is the app's port, `HOST_PORT` if you
 changed it):
@@ -1894,6 +1899,13 @@ provider keys and never sent back to a browser. TypeSafe bills your account: US$
 tokens read, about US$ 0.0001 per routed message. An OpenRouter key (`sk-or-…`) works too: the same
 Jev, called and billed through OpenRouter at the same price, and the open workspace's OpenRouter key
 can turn it on with one press. Without it, see https://agentes.chat/docs/jev#without.
+
+**Who can add a plan to a computer.** Only the person who connected a computer adds Claude or ChatGPT
+sign-ins to it. Anyone may add one to the server's own computer (above) and to a workspace's managed
+computer. Pairing again keeps the person who connected it, and **Belongs to the workspace** only changes who
+may use the computer, not who may add sign-ins. An agent thinks only with a plan signed in on its own
+computer, and moving an agent to another computer clears its plan. To let several people bring their own
+plans to one computer that runs their agents, make it the server's own computer, as above.
 
 **Plans.** An agent can think with a Claude or ChatGPT subscription instead of a key, on a connected
 computer: Claude Code or Codex signs in there with the provider's own flow. Each account is a folder
